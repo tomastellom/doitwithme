@@ -39,11 +39,11 @@ after(() => {
   server.close();
 });
 
-function boot(fetchFn?: any) {
+function boot(fetchFn?: any, nowFn?: () => Date) {
   const document: any = new FakeDocument();
   const root = document.createElement('div');
   const win: any = { location: { hash: '' }, localStorage: undefined, listeners: {}, addEventListener(t: string, f: Function) { (this.listeners[t] ??= []).push(f); } };
-  const app: any = startApp({ root, document, fetch: fetchFn ?? ((p: string, i: any) => fetch(base + p, i)), win, now });
+  const app: any = startApp({ root, document, fetch: fetchFn ?? ((p: string, i: any) => fetch(base + p, i)), win, now: nowFn ?? now });
   return { app, root, document, win };
 }
 async function settled(app: any) {
@@ -143,6 +143,10 @@ test('offline never shows a blank screen, and Retry recovers', async () => {
   await settled(app);
   assert.match(textOf(root), /I can't reach the planner\./);
   assert.match(textOf(byClass(root, 'nudge')[0]), /npm run serve/);
+  const replanButton = byTag(root, 'button').find((b: any) => textOf(b).includes('Replan'))!;
+  assert.equal(replanButton.hasAttribute('disabled'), true);
+  replanButton.click();
+  assert.match(textOf(root), /I can't reach the planner\./);
   down = false;
   click(byClass(root, 'nudge')[0], 'Retry');
   await settled(app);
@@ -183,4 +187,47 @@ test('the Replan button is disabled while a request runs', async () => {
   release();
   await app.store.idle();
   assert.equal(replan().hasAttribute('disabled'), false);
+});
+
+test('keyboard focus survives a redraw, and falls back to Nudge when its button goes away', async () => {
+  assert.equal((await put(studyState())).status, 200);
+  const { app, root, document } = boot();
+  await settled(app);
+  const next = byTag(root, 'button').find((b: any) => textOf(b).trim() === 'Next')!;
+  next.focus();
+  next.click();
+  const active = document.activeElement;
+  assert.equal(active.getAttribute('data-fk'), 'next');
+  assert.equal(findAll(root, (e) => e === active).length, 1);
+  assert.notEqual(active, next);
+
+  const use = byTag(root, 'button').find((b: any) => textOf(b).trim() === 'Use Friday evening')!;
+  use.focus();
+  use.click();
+  await app.store.idle();
+  assert.equal(document.activeElement, app.nudge.el);
+});
+
+test('a failure while drawing shows a message instead of a blank screen', async () => {
+  const bad = { commitments: undefined, tasks: [{ id: 't' }], deadlines: [], preferences: {}, blocks: [], approvedSoft: [], dismissed: [] };
+  const { app, root } = boot(async (p: string) => ({
+    ok: true, status: 200,
+    json: async () => (p === '/api/state' ? bad : { blocks: [], warnings: [], approvedSoft: [], dismissed: [] }),
+  }));
+  await settled(app);
+  assert.match(textOf(root), /Something went wrong\./);
+  assert.match(textOf(root), /Reload the page/);
+});
+
+test('the page refreshes when the date changes while it stays open', async () => {
+  assert.equal((await put(studyState())).status, 200);
+  let clock = new Date(2026, 9, 5, 9, 0);
+  const { app, root, document } = boot(undefined, () => clock);
+  await settled(app);
+  assert.equal(byClass(root, 'day')[0].hasClass('today'), true);
+  clock = new Date(2026, 9, 6, 0, 5);
+  document.dispatch('visibilitychange');
+  await settled(app);
+  assert.equal(byClass(root, 'day')[0].hasClass('today'), false);
+  assert.equal(byClass(root, 'day')[1].hasClass('today'), true);
 });

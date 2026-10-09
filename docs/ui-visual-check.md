@@ -11,6 +11,7 @@ Nothing in this project can see a rendered page, so the look is checked by a per
 - Block colors: black fixed, vermilion study, cobalt gym, mustard chores and errands, outlined projects. Each block shows a small label at its top right.
 - "Show" filter list at the bottom left with counts. Clicking a row dims it and hides those blocks.
 - Today's column has a vermilion top rule.
+- Keyboard: Tab to the big "Week NN" title; the left and right arrow keys change week. Focus should stay on the control you used after every action.
 
 ## First run (board I)
 - Empty the data file (`echo '{}' > data/db.json`, then reload): "Nothing planned yet" text, a vermilion "Load the example" button, dashed empty days.

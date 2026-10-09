@@ -30,6 +30,18 @@ function saveVisible(win, visible) {
   }
 }
 
+const RENDER_FAILED = 'Something unexpected happened. Reload the page.';
+
+function findByKey(node, key) {
+  if (!node || !node.children) return null;
+  if (node.getAttribute && node.getAttribute('data-fk') === key) return node;
+  for (const child of node.children) {
+    const found = findByKey(child, key);
+    if (found) return found;
+  }
+  return null;
+}
+
 export function startApp({ root, document, fetch, win, now = () => new Date() }) {
   const dom = createDom(document);
   const { h, clear } = dom;
@@ -38,6 +50,8 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   const registry = createRegistry();
   let visible = loadVisible(win);
   let route = { id: 'week', param: null };
+  let pendingKey = null;
+  let lastDay = getClock().today;
 
   registry.register({ id: 'week', title: 'Week', group: 'views', description: 'Your plan for the week.', primary: true });
 
@@ -54,7 +68,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   });
   const main = h('main', { class: 'view', id: 'view' });
   const bar = h('header', { class: 'bar' });
-  const menuButton = h('button', { type: 'button', class: 'btn dark mono', onclick: () => menu.open(menuButton) }, 'Menu');
+  const menuButton = h('button', { type: 'button', class: 'btn dark mono', 'data-fk': 'menu', onclick: () => menu.open(menuButton) }, 'Menu');
   root.append(h('div', { class: 'app' }, bar, main), nudge.el, menu.el);
 
   const currentWeek = () => weekStart(weekParam(route.param, getClock().today));
@@ -81,13 +95,13 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   function renderBar() {
     const s = store.get();
     clear(bar,
-      h('a', { class: 'brand mono', href: '#/week' }, 'doitwithme'),
+      h('a', { class: 'brand mono', href: '#/week', 'data-fk': 'brand' }, 'doitwithme'),
       h('nav', { class: 'tabs mono', 'aria-label': 'Main' },
         registry.primary().map((section) =>
-          h('a', { class: 'tab', href: `#/${section.id}`, 'aria-current': section.id === route.id ? 'page' : null }, section.title))),
+          h('a', { class: 'tab', href: `#/${section.id}`, 'data-fk': `tab-${section.id}`, 'aria-current': section.id === route.id ? 'page' : null }, section.title))),
       h('div', { class: 'actions' },
         menuButton,
-        h('button', { type: 'button', class: 'btn go mono', disabled: s.busy, onclick: () => store.replan() }, s.busy ? 'Replanning' : 'Replan')));
+        h('button', { type: 'button', class: 'btn go mono', 'data-fk': 'replan', disabled: s.busy || s.status !== 'ready', onclick: () => store.replan() }, 'Replan')));
   }
 
   function renderMain(s) {
@@ -103,18 +117,50 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     return renderWeek(dom, { model, visible, needsYou, isEmpty: s.isEmpty }, actions);
   }
 
-  function render() {
+  // Everything is rebuilt on each render, so remember which control had the keyboard
+  // focus and put it back. A disabled control cannot take focus; the key is kept for the next render.
+  function focusKey() {
+    const active = document.activeElement;
+    if (active && active.getAttribute) return active.getAttribute('data-fk');
+    return !active || active.tagName === 'BODY' ? pendingKey : null;
+  }
+
+  function restoreFocus(key) {
+    pendingKey = null;
+    if (!key) return;
+    const target = findByKey(root, key);
+    if (target) {
+      target.focus();
+      if (document.activeElement !== target) pendingKey = key;
+    } else if (key.startsWith('nudge-')) {
+      nudge.focus();
+    }
+  }
+
+  function draw() {
     route = resolveRoute(win.location.hash, registry.ids());
     const s = store.get();
     renderBar();
     clear(main, renderMain(s));
     nudge.update({
       status: s.status,
-      items: s.isEmpty ? [] : buildNudge(s.warnings).items,
+      items: s.isEmpty || !s.state ? [] : buildNudge(s.warnings).items,
       confirm: s.confirm,
       error: s.error,
       busy: s.busy,
+      notice: s.notice,
     });
+  }
+
+  function render() {
+    const key = focusKey();
+    try {
+      draw();
+    } catch {
+      // A bug while drawing must never leave a blank page.
+      clear(main, h('div', { class: 'state' }, h('h2', {}, 'Something went wrong.'), h('p', {}, RENDER_FAILED)));
+    }
+    restoreFocus(key);
   }
 
   function navigate(hash) {
@@ -123,13 +169,24 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   }
 
   document.addEventListener('keydown', (e) => {
-    const tag = e.target && e.target.tag ? e.target.tag : e.target && e.target.tagName ? e.target.tagName.toLowerCase() : '';
+    const tag = ((e.target && (e.target.tagName || e.target.tag)) || '').toLowerCase();
     if (e.key === '/' && !['input', 'textarea', 'select'].includes(tag) && !menu.isOpen()) {
       e.preventDefault();
       menu.open(menuButton);
     }
   });
   win.addEventListener('hashchange', render);
+  // A page left open overnight must not keep planning for yesterday.
+  const refreshIfNewDay = () => {
+    if (document.visibilityState === 'hidden') return;
+    const day = getClock().today;
+    if (day !== lastDay) {
+      lastDay = day;
+      store.load();
+    }
+  };
+  document.addEventListener('visibilitychange', refreshIfNewDay);
+  win.addEventListener('focus', refreshIfNewDay);
   store.subscribe(render);
   render();
   store.load();

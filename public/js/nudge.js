@@ -21,44 +21,65 @@ export function createMascot(dom, { eyes = 'center', badge = null, width = 96 } 
   );
 }
 
+function spokenFor(view, item) {
+  if (view.status === 'offline') return "I can't reach the planner.";
+  if (view.status === 'error') return 'Something went wrong.';
+  if (view.confirm) {
+    const c = view.confirm;
+    return c.used ? `Done. ${c.weekday} evening is in your plan.` : `${c.weekday} evening is open.`;
+  }
+  if (view.notice) return view.notice;
+  if (item) return item.headline;
+  return view.status === 'loading' ? '' : 'All clear.';
+}
+
 export function createNudge(dom, handlers) {
   const { h, clear } = dom;
-  const el = h('aside', { class: 'nudge', 'aria-label': 'Nudge', tabindex: '-1' });
-  let view = { status: 'loading', items: [], confirm: null, error: null, busy: false };
+  // One live region for the whole life of the component: it is only touched when the
+  // spoken message changes, so screen readers announce changes and not every redraw.
+  const live = h('div', { class: 'sr-only', role: 'status', 'aria-live': 'polite' });
+  const body = h('div', { class: 'nudge-body' });
+  const el = h('aside', { class: 'nudge', 'aria-label': 'Nudge', tabindex: '-1' }, live, body);
+  let view = { status: 'loading', items: [], confirm: null, error: null, busy: false, notice: null };
   let index = 0;
   let askMessage = null;
+  let draft = '';
   let signature = '';
+  let lastSpoken = null;
 
-  const button = (label, onclick, cls = '', extra = {}) =>
-    h('button', { type: 'button', class: cls, onclick, disabled: view.busy, ...extra }, label);
+  const button = (label, onclick, cls, fk) =>
+    h('button', { type: 'button', class: cls, 'data-fk': fk, onclick, disabled: view.busy }, label);
 
-  function say(...children) {
-    return h('div', { class: 'say', 'aria-live': 'polite' }, ...children);
-  }
+  const say = (...children) => h('div', { class: 'say' }, ...children);
 
   function speaking() {
     const item = view.items[index];
     const many = view.items.length > 1;
     const reply = h('p', { class: 'reply' }, askMessage);
-    const input = h('input', { type: 'text', 'aria-label': 'Ask Nudge', placeholder: 'Ask me to move something' });
+    const input = h('input', {
+      type: 'text', 'aria-label': 'Ask Nudge', placeholder: 'Ask me to move something', 'data-fk': 'nudge-ask', value: draft,
+      oninput: (e) => { draft = e.target.value; },
+    });
     const form = h('form', { class: 'ask', onsubmit: (e) => {
       e.preventDefault();
       askMessage = ASK_REPLY;
       reply.textContent = askMessage;
+      draft = '';
       input.value = '';
     } }, input);
     return say(
       h('div', { class: 'pager' },
         h('span', { class: 'mono k' }, many ? `Nudge / ${index + 1} of ${view.items.length}` : 'Nudge'),
         many && h('div', { class: 'pg' },
-          h('button', { type: 'button', 'aria-label': 'Previous warning', onclick: () => { index = (index + view.items.length - 1) % view.items.length; render(); } }, '<'),
-          h('button', { type: 'button', 'aria-label': 'Next warning', onclick: () => { index = (index + 1) % view.items.length; render(); } }, '>')),
+          h('button', { type: 'button', 'data-fk': 'nudge-prev', 'aria-label': 'Previous warning', onclick: () => { index = (index + view.items.length - 1) % view.items.length; render(); } }, '<'),
+          h('button', { type: 'button', 'data-fk': 'nudge-next', 'aria-label': 'Next warning', onclick: () => { index = (index + 1) % view.items.length; render(); } }, '>')),
       ),
       h('b', {}, item.headline),
       item.offer && h('p', {}, item.offer.line),
+      view.notice && h('p', { class: 'notice' }, view.notice),
       h('div', { class: 'acts' },
-        item.offer && button(item.offer.button, () => handlers.approve(item.offer.date), 'y'),
-        button('Leave it', () => handlers.dismiss(keysOf(item))),
+        item.offer && button(item.offer.button, () => handlers.approve(item.offer.date), 'y', 'nudge-use'),
+        button('Leave it', () => handlers.dismiss(keysOf(item)), '', 'nudge-leave'),
       ),
       form,
       reply,
@@ -70,6 +91,7 @@ export function createNudge(dom, handlers) {
     let eyes = 'center';
     let badge = null;
     let width = 96;
+    const item = view.items[index];
     if (view.status === 'offline' || view.status === 'error') {
       eyes = 'sleepy';
       badge = '!';
@@ -78,7 +100,7 @@ export function createNudge(dom, handlers) {
         h('span', { class: 'mono k' }, 'Nudge'),
         h('b', {}, offline ? "I can't reach the planner." : 'Something went wrong.'),
         h('p', {}, offline ? 'The local server is not running. Start it with npm run serve, then try again. Nothing was lost.' : view.error),
-        h('div', { class: 'acts' }, button('Retry', () => handlers.retry(), 'y')),
+        h('div', { class: 'acts' }, button('Retry', () => handlers.retry(), 'y', 'nudge-retry')),
       );
     } else if (view.confirm) {
       const c = view.confirm;
@@ -86,7 +108,7 @@ export function createNudge(dom, handlers) {
         h('span', { class: 'mono k' }, 'Nudge'),
         h('b', {}, c.used ? `Done. ${c.weekday} evening is in your plan.` : `${c.weekday} evening is open.`),
         h('p', {}, c.used ? `${c.minutes} min of ${c.titles.join(', ')} moved in. You can take it back.` : 'Nothing needed it, so your plan did not change. You can take it back.'),
-        h('div', { class: 'acts' }, button('Okay', () => handlers.okay(), 'y'), button('Undo', () => handlers.undo(c.date))),
+        h('div', { class: 'acts' }, button('Okay', () => handlers.okay(), 'y', 'nudge-okay'), button('Undo', () => handlers.undo(c.date), '', 'nudge-undo')),
       );
     } else if (view.items.length > 0) {
       eyes = 'side';
@@ -96,15 +118,23 @@ export function createNudge(dom, handlers) {
     } else if (view.status === 'loading') {
       bubble = h('div', { class: 'quiet' }, h('span', { class: 'mono' }, 'Loading'));
     } else {
-      bubble = h('div', { class: 'quiet' }, h('b', {}, 'All clear.'), h('span', { class: 'mono' }, 'No open warnings this week'));
+      bubble = h('div', { class: 'quiet' },
+        h('b', {}, 'All clear.'),
+        h('span', { class: 'mono' }, 'No open warnings'),
+        view.notice && h('span', { class: 'notice' }, view.notice));
     }
-    clear(el, bubble, createMascot(dom, { eyes, badge, width }));
+    clear(body, bubble, createMascot(dom, { eyes, badge, width }));
+    const spoken = spokenFor(view, item);
+    if (spoken !== lastSpoken) {
+      lastSpoken = spoken;
+      live.textContent = spoken;
+    }
   }
 
   return {
     el,
     update(next) {
-      view = next;
+      view = { notice: null, ...next };
       const sig = JSON.stringify([view.status, view.items.map((i) => i.key), view.confirm, view.error]);
       if (sig !== signature) {
         signature = sig;

@@ -50,7 +50,7 @@ test('speaking: headline, offer line, both buttons and the badge', () => {
   labelled(nudge.el, 'Leave it')!.click();
   assert.deepEqual(calls, [['approve', '2026-10-09'], ['dismiss', [item().key, offer.key]]]);
   assert.equal(textOf(byClass(nudge.el, 'mascot-badge-text')[0]), '1');
-  assert.equal(byClass(nudge.el, 'say')[0].getAttribute('aria-live'), 'polite');
+  assert.equal(byClass(nudge.el, 'say')[0].hasAttribute('aria-live'), false);
 });
 
 test('a warning without an offer only has Leave it', () => {
@@ -151,4 +151,45 @@ test('the mascot has an accessible name and the three eye styles', () => {
   const sleepy: any = createMascot(dom, { eyes: 'sleepy', badge: null, width: 96 });
   assert.equal(byClass(sleepy, 'mascot-badge').length, 0);
   assert.equal(byClass(sleepy, 'mascot-eye')[0].getAttribute('height'), '8');
+});
+
+test('one persistent live region announces changes and stays quiet when nothing changed', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base, items: [item()] });
+  const live = byClass(nudge.el, 'sr-only')[0];
+  assert.equal(live.getAttribute('aria-live'), 'polite');
+  assert.equal(live.getAttribute('role'), 'status');
+  assert.match(textOf(live), /Chemistry exam, Fri 23 Oct, is 90 min short\./);
+  const node = live.children[0];
+  nudge.update({ ...base, items: [item()], busy: true });
+  assert.equal(byClass(nudge.el, 'sr-only')[0], live);
+  assert.equal(live.children[0], node);
+  nudge.update({ ...base, confirm: { date: '2026-10-09', weekday: 'Friday', minutes: 120, titles: ['Chemistry'], used: true } });
+  assert.match(textOf(live), /Done\. Friday evening is in your plan\./);
+});
+
+test('typed Ask text survives paging between warnings', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base, items: [item(), item({ key: 'b', headline: 'Second.', offer: null })] });
+  const input = () => byTag(nudge.el, 'input')[0];
+  input().value = 'move my gym';
+  input().dispatch('input');
+  buttons(nudge.el).find((b) => b.getAttribute('aria-label') === 'Next warning')!.click();
+  assert.equal(input().value, 'move my gym');
+});
+
+test('a notice is shown in both the quiet and the speaking state', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base, notice: 'That warning changed, so I refreshed the plan.' });
+  assert.match(textOf(nudge.el), /That warning changed, so I refreshed the plan\./);
+  nudge.update({ ...base, items: [item()], notice: 'That warning changed, so I refreshed the plan.' });
+  assert.match(textOf(nudge.el), /That warning changed, so I refreshed the plan\./);
+});
+
+test('the controls carry stable focus keys so focus can be restored after a redraw', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base, items: [item()] });
+  const keys = byTag(nudge.el, 'button').map((b) => b.getAttribute('data-fk'));
+  assert.ok(keys.includes('nudge-use') && keys.includes('nudge-leave'));
+  assert.equal(byTag(nudge.el, 'input')[0].getAttribute('data-fk'), 'nudge-ask');
 });

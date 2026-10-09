@@ -128,3 +128,40 @@ test('subscribe notifies on change and idle resolves when not busy', async () =>
   assert.ok(seen.includes('loading') && seen.includes('ready'));
   await store.idle();
 });
+
+test('actions do nothing before any data is loaded, so Replan cannot break an offline page', async () => {
+  const { store, calls } = make({ getState: () => { throw new ApiError(0, 'The planner is not reachable'); } });
+  await store.load();
+  const before = [...calls];
+  await store.replan();
+  await store.approve('2026-10-09');
+  await store.undo('2026-10-09');
+  await store.dismiss(['k']);
+  await store.loadExample();
+  assert.deepEqual(calls, before);
+  assert.equal(store.get().state, null);
+  assert.equal(store.get().status, 'offline');
+  assert.equal(store.get().busy, false);
+});
+
+test('an unexpected failure shows a generic message, never an internal one', async () => {
+  const { store } = make({ replan: () => { throw new TypeError('commitments is not iterable'); } });
+  await store.load();
+  assert.equal(store.get().status, 'error');
+  assert.equal(store.get().error, 'Something unexpected happened. Reload the page.');
+});
+
+test('when every dismissed key is stale the plan is refreshed and the user is told', async () => {
+  const { store, calls } = make({
+    dismiss: () => { throw new ApiError(409, 'That warning is no longer open'); },
+    replan: () => result({ blocks: [{ date: '2026-10-06' }] }),
+  });
+  await store.load();
+  await store.dismiss(['gone', 'also-gone']);
+  assert.equal(store.get().notice, 'That warning changed, so I refreshed the plan.');
+  assert.equal(store.get().status, 'ready');
+  assert.deepEqual(store.get().state.blocks, [{ date: '2026-10-06' }]);
+  assert.equal(calls.filter((c) => c === 'replan').length, 2);
+  await store.replan();
+  assert.equal(store.get().notice, null);
+});

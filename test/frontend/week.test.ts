@@ -118,3 +118,21 @@ test('first run offers Add a commitment only when the setup section exists', () 
   assert.equal(textOf(link).trim(), 'Add a commitment');
   assert.equal(link.getAttribute('href'), '#/setup');
 });
+
+test('the week header takes focus and the arrow keys change week', () => {
+  const { el, calls } = setup();
+  const h1 = byTag(el, 'h1')[0];
+  assert.equal(h1.getAttribute('tabindex'), '0');
+  assert.equal(h1.getAttribute('data-fk'), 'week-header');
+  h1.dispatch('keydown', { key: 'ArrowRight' });
+  h1.dispatch('keydown', { key: 'ArrowLeft' });
+  const other = h1.dispatch('keydown', { key: 'a' });
+  assert.deepEqual(calls, [['go', 1], ['go', -1]]);
+  assert.equal(other.defaultPrevented, false);
+});
+
+test('controls carry stable focus keys', () => {
+  const { el } = setup({ needsYou: 1 });
+  const keys = byTag(el, 'button').map((b) => b.getAttribute('data-fk'));
+  for (const k of ['prev', 'today', 'next', 'needs', 'fl-study', 'fl-gym']) assert.ok(keys.includes(k), k);
+});

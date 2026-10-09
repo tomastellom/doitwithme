@@ -28,7 +28,10 @@ a { color: inherit; }
 
 /* Nudge */
 .nudge { position: fixed; right: 40px; bottom: 24px; display: flex; align-items: flex-end; gap: 14px; z-index: 20; }
-.nudge:focus { outline: none; }
+.nudge-body { display: flex; align-items: flex-end; gap: 14px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.notice { color: var(--paper); font-family: var(--font-mono); font-size: 12px; }
+.quiet .notice { color: var(--ink); }
 .say { width: 430px; max-width: calc(100vw - 200px); background: var(--ink); color: var(--paper); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
 .say b { font-size: 20px; line-height: 1.1; font-weight: 800; letter-spacing: -.02em; }
 .say p { margin: 0; font-size: 14px; line-height: 1.35; color: #CFCBC0; }
@@ -78,7 +81,7 @@ a { color: inherit; }
 .g-gym { background: var(--gym); color: var(--on-gym); }
 .g-admin { background: var(--admin); color: var(--on-admin); }
 .g-outline { border: 2px solid var(--ink); padding: 6px 8px 7px; }
-.ghost { border: 2px dashed var(--line); min-height: 60px; padding: 8px 10px; color: var(--ghost); }
+.ghost { border: 2px dashed var(--line); min-height: 60px; padding: 8px 10px; color: var(--muted); }
 .foot { margin: 40px 40px 0; }
 .filters { display: flex; flex-direction: column; gap: 4px; width: 250px; }
 .filters .h { margin-bottom: 4px; color: var(--muted); }
@@ -112,7 +115,7 @@ a { color: inherit; }
 .jump { margin: 26px 40px 0; display: flex; align-items: baseline; gap: 18px; border-bottom: 2px solid var(--paper); padding-bottom: 12px; }
 .jump label { color: var(--study); }
 .jump input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: var(--paper); font-size: 64px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
-.jump input::placeholder { color: #4A4740; }
+.jump input::placeholder { color: var(--ghost); }
 .jump input:focus-visible { outline: 2px solid var(--paper); outline-offset: 6px; }
 .jump .key { border: 2px solid #4A4740; padding: 4px 10px; color: var(--ghost); }
 .menu .cols { margin: 48px 40px 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; }

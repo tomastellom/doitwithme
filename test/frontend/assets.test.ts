@@ -80,3 +80,31 @@ test('every JavaScript file in public/js is syntactically valid and avoids banne
     assert.doesNotMatch(src, /setAttribute\(\s*['"]style['"]/, f);
   }
 });
+
+function luminance(hex: string): number {
+  const c = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+const contrast = (a: string, b: string) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+const token = (name: string) => readFileSync('public/css/tokens.css', 'utf8').match(new RegExp(`${name}: (#[0-9A-Fa-f]{6})`))![1];
+
+test('text colors meet 4.5:1 on their backgrounds', () => {
+  assert.ok(contrast(token('--muted'), token('--paper')) >= 4.5, 'muted on paper');
+  assert.ok(contrast(token('--ghost'), token('--ink')) >= 4.5, 'ghost on ink');
+  assert.ok(contrast(token('--ink'), token('--paper')) >= 4.5);
+  assert.ok(contrast(token('--on-study'), token('--study')) >= 4.5);
+  assert.ok(contrast(token('--on-gym'), token('--gym')) >= 4.5);
+  assert.ok(contrast(token('--on-admin'), token('--admin')) >= 4.5);
+});
+
+test('placeholder and empty-day text use colors that pass, and the screen-reader class exists', () => {
+  const css = readFileSync('public/css/app.css', 'utf8');
+  const ghost = css.match(/\.ghost \{[^}]*\}/)![0];
+  assert.match(ghost, /color: var\(--muted\)/);
+  assert.match(css, /\.jump input::placeholder \{ color: var\(--ghost\); \}/);
+  assert.match(css, /\.sr-only \{/);
+  assert.doesNotMatch(css, /\.nudge:focus \{ outline: none/);
+});

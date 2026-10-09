@@ -122,6 +122,17 @@ export function createStore(api, getClock) {
           await api.putState(typeof next === 'function' ? next(await api.getState()) : next);
         } catch (e) {
           if (e && e.status === 400) {
+            if (/[pP]laceId does not match any place/.test(e.message)) {
+              // A place was deleted in another tab: show today's places so the next try can work.
+              let fresh = current.state;
+              try {
+                fresh = await api.getState();
+              } catch {
+                // Keep the old copy; the message below still tells the truth.
+              }
+              set({ state: fresh, formError: 'A place you picked was deleted elsewhere. Your places are up to date now, so pick again.' });
+              return;
+            }
             set({ formError: e.message });
             return;
           }

@@ -280,3 +280,23 @@ test('the store learns whether Google Maps is ready, and treats any trouble as u
   await none.store.load();
   assert.equal(none.store.get().maps, 'unavailable');
 });
+
+test('a save that names a place deleted elsewhere says so in plain words and refreshes the state', async () => {
+  let reads = 0;
+  const fresh = full({ places: [{ id: 'home' }] });
+  const { store, calls } = make({
+    getState: () => (++reads === 1 ? full({ places: [{ id: 'home' }, { id: 'anna' }] }) : fresh),
+    putState: () => { throw new ApiError(400, 'commitments[2].placeId does not match any place'); },
+  });
+  await store.load();
+  calls.length = 0;
+  await store.saveState(full());
+  assert.match(store.get().formError, /place you picked was deleted elsewhere/i);
+  assert.doesNotMatch(store.get().formError, /placeId/);
+  assert.deepEqual(store.get().state.places, [{ id: 'home' }]);
+  assert.equal(store.get().busy, false);
+  const commute = make({ putState: () => { throw new ApiError(400, 'commutes[0].toPlaceId does not match any place'); } });
+  await commute.store.load();
+  await commute.store.saveState(full());
+  assert.match(commute.store.get().formError, /deleted elsewhere/i);
+});

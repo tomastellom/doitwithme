@@ -251,10 +251,10 @@ export function plan(input: PlanInput): PlanResult {
     const day = travelOn(input, addDays(input.today, i));
     travel.push(...day.legs);
     for (const w of day.warnings) {
-      if (w.kind === 'address-missing') {
-        const name = w.detail?.placeName ?? '';
-        if (missing.has(name)) continue;
-        missing.add(name);
+      if (w.kind === 'address-missing' || w.kind === 'travel-tight') {
+        const same = `${w.kind}|${w.detail?.placeName ?? ''}|${w.kind === 'travel-tight' ? (w.detail?.titles?.[0] ?? '') : ''}`;
+        if (missing.has(same)) continue;
+        missing.add(same);
       }
       travelWarnings.push(w);
     }

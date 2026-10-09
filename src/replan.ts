@@ -7,6 +7,8 @@ import type { Block, DateStr, Leg, Minutes, State, Warning } from './types.ts';
 export function warningKey(w: Warning): string {
   const d = w.detail;
   if (!d) return `${w.kind}|${w.message}`;
+  // The same trip failing every week is one problem, so it is named by place and event, not by date.
+  if (w.kind === 'travel-tight') return [w.kind, d.placeName, d.titles?.[0]].join('|');
   const about = [d.taskTitle, d.placeName, d.kind, d.dueDate, d.weekStart, d.date].filter((x) => x !== undefined);
   return [w.kind, ...about].join('|');
 }

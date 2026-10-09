@@ -167,3 +167,11 @@ test('overlapping events at different places still produce legs in order and a w
   assert.deepEqual(r.legs.map((l) => l.toName), ['Campus', 'Anna', 'Home']);
   assert.ok(r.warnings.some((w) => w.kind === 'travel-tight'));
 });
+
+test('many places and commitments stay fast over two months of days', () => {
+  const places = [home, ...Array.from({ length: 200 }, (_, i) => place(`p${i}`, `Place number ${i}`, 'other', 'x'))];
+  const events = Array.from({ length: 150 }, (_, i) => commitment({ id: `e${i}`, title: `Event ${i}`, pattern: { kind: 'once', date: `2027-03-${String((i % 28) + 1).padStart(2, '0')}` } }));
+  const t0 = performance.now();
+  for (let d = 1; d <= 60; d++) legsOn(`2026-10-${String(((d - 1) % 28) + 1).padStart(2, '0')}`, events, ctx({ places }));
+  assert.ok(performance.now() - t0 < 600, `took ${Math.round(performance.now() - t0)} ms`);
+});

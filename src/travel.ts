@@ -56,8 +56,10 @@ export function legsOn(date: DateStr, commitments: Commitment[], ctx: TravelCont
 
   const located = commitments
     .flatMap((c) => {
+      const today = occurrencesOn(date, [c]);
+      if (today.length === 0) return [];
       const place = placeFor(c, ctx.places);
-      return place ? occurrencesOn(date, [c]).map((o) => ({ o, place })) : [];
+      return place ? today.map((o) => ({ o, place })) : [];
     })
     .sort((a, b) => a.o.start - b.o.start || a.o.end - b.o.end);
 

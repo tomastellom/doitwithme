@@ -57,7 +57,7 @@ test('warning keys name the place, so a dismissal survives a day change', () => 
   const missing = r.warnings.find((w) => w.kind === 'address-missing')!;
   assert.equal(warningKey(missing), 'address-missing|Anna');
   const tight = { kind: 'travel-tight' as const, message: 'm', detail: { placeName: 'Anna', date: '2026-10-05', titles: ['Lesson Anna'] } };
-  assert.equal(warningKey(tight), 'travel-tight|Anna|2026-10-05');
+  assert.equal(warningKey(tight), 'travel-tight|Anna|Lesson Anna');
   const later = replan({ ...emptyState(), commitments: [lesson('a', '2026-10-09')], places: [home, anna], dismissed: ['address-missing|Anna'] }, '2026-10-06');
   assert.deepEqual(later.state.dismissed, ['address-missing|Anna']);
   assert.equal(describeWarnings(later.warnings, later.state.dismissed).find((w) => w.kind === 'address-missing')!.dismissed, true);
@@ -78,4 +78,15 @@ test('a 60 day horizon with many places and events stays fast', () => {
   const r = plan(input({ preferences: prefs(), commitments, places, tasks: [task({ weeklyMinutes: 600 })], horizonDays: 60 }));
   assert.ok(performance.now() - t0 < 3000, `took ${Math.round(performance.now() - t0)} ms`);
   assert.ok(r.travel.length > 0);
+});
+
+test('a weekly trip that never fits warns once, not once per week', () => {
+  const weekly = (id: string, title: string, placeId: string, start: number, end: number) =>
+    commitment({ id, title, placeId, start, end, pattern: { kind: 'weekly', weekdays: [1], from: '2026-10-05', to: '2026-12-31' } });
+  const r = plan(input({
+    preferences: prefs(), horizonDays: 14, places: [home, campus, place('studio', 'Studio')],
+    commitments: [weekly('a', 'Class', 'campus', 600, 720), weekly('b', 'Rehearsal', 'studio', 720, 780)],
+  }));
+  assert.equal(r.warnings.filter((w) => w.kind === 'travel-tight').length, 1);
+  assert.equal(r.warnings.find((w) => w.kind === 'travel-tight')!.detail!.date, '2026-10-05');
 });

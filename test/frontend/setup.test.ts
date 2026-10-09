@@ -272,3 +272,118 @@ test('a cancelled date that was picked but not added is saved with the item', as
   await submit(el);
   assert.ok(calls[0].commitments.find((c: any) => c.id === 'mass').exceptions.includes('2026-10-18'));
 });
+
+test('the sub-navigation lists six screens with Places and Commutes', () => {
+  const { render } = setup();
+  const el: any = render('places');
+  const links = byClass(el, 'sub')[0].children.filter((c: any) => c.tag === 'a');
+  assert.deepEqual(links.map((l: any) => textOf(l)), ['Commitments', 'Tasks', 'Due dates', 'Places', 'Commutes', 'Preferences']);
+});
+
+test('the places list shows address or "Address missing", and the form edits the place', async () => {
+  const { render, calls } = setup();
+  const el: any = render('places', 'anna');
+  const rows = byClass(el, 'item').map((r: any) => textOf(r));
+  assert.ok(rows.some((r: string) => /Anna/.test(r) && /Address missing/.test(r)));
+  assert.ok(rows.some((r: string) => /Home/.test(r) && /Calle Ejemplo 123/.test(r)));
+  assert.equal(byKey(el, 'f-name').value, 'Anna');
+  assert.match(textOf(el), /address missing/i);
+  type(el, 'f-address', 'Los Olmos 88');
+  await submit(el);
+  assert.equal(calls[0].places.find((p: any) => p.id === 'anna').address, 'Los Olmos 88');
+});
+
+test('a hostile place name is saved and shown as text, and a second Home is refused in words', async () => {
+  const { render, calls } = setup();
+  const el: any = render('places', 'new');
+  type(el, 'f-name', '<img src=x onerror=alert(1)> C++ (Room [2])');
+  await submit(el);
+  assert.equal(calls[0].places.at(-1).name, '<img src=x onerror=alert(1)> C++ (Room [2])');
+  const again: any = render('places', 'new');
+  type(again, 'f-name', 'Second home');
+  byKey(again, 'f-kind').value = 'home';
+  byKey(again, 'f-kind').dispatch('change');
+  await submit(again);
+  assert.match(textOf(byClass(again, 'err')[0]), /already a Home/);
+  assert.equal(calls.length, 1);
+});
+
+test('deleting a place says what goes with it', () => {
+  const { render } = setup();
+  const el: any = render('places', 'campus');
+  byKey(el, 'setup-delete').click();
+  assert.match(textOf(byClass(el, 'confirm')[0]), /Delete "Campus"\? Its 1 commute goes too\. 1 commitment loses its place\./);
+});
+
+test('deleting a task still says how many due dates go with it', () => {
+  const { render } = setup();
+  const el: any = render('tasks', 'chem');
+  byKey(el, 'setup-delete').click();
+  assert.match(textOf(byClass(el, 'confirm')[0]), /Delete "Chemistry"\? Its 1 due date goes too\./);
+});
+
+test('a commitment can be given a place', async () => {
+  const { render, calls } = setup();
+  const el: any = render('commitments', 'lesson-1');
+  const select = byKey(el, 'f-placeId');
+  assert.ok(select);
+  select.value = 'anna';
+  select.dispatch('change');
+  await submit(el);
+  assert.equal(calls[0].commitments.find((c: any) => c.id === 'lesson-1').placeId, 'anna');
+});
+
+test('a new commute starts at Home, saves as typed time, and is appended', async () => {
+  const { render, calls } = setup();
+  const el: any = render('commutes', 'new');
+  const chosen = byTag(byKey(el, 'f-fromPlaceId'), 'option').find((o: any) => o.getAttribute('selected') !== null);
+  assert.equal(chosen.value, 'home');
+  type(el, 'f-minutes', '40');
+  type(el, 'f-margin', '5');
+  await submit(el);
+  const saved = calls[0].commutes.at(-1);
+  assert.deepEqual(saved.source, { method: 'typed', minutes: 40 });
+  assert.equal(saved.marginMinutes, 5);
+  assert.deepEqual(saved.repeats, { kind: 'weekly', weekdays: [1, 2, 3, 4] });
+});
+
+test('Google Maps is dimmed until the server says it is ready', () => {
+  const off = setup();
+  const el: any = off.render('commutes', 'new');
+  assert.notEqual(byKey(el, 'f-method-maps').getAttribute('disabled'), null);
+  assert.equal(byKey(el, 'f-method-typed').getAttribute('disabled'), null);
+  assert.match(textOf(el), /Google Maps is not connected yet/);
+  const on = setup(stateWith(), { storeState: { maps: 'ready' } });
+  const el2: any = on.render('commutes', 'new');
+  assert.equal(byKey(el2, 'f-method-maps').getAttribute('disabled'), null);
+  assert.doesNotMatch(textOf(el2), /not connected yet/);
+});
+
+test('with fewer than two places the commutes list asks for places first', () => {
+  const { render } = setup(stateWith({ places: [], commutes: [] }));
+  const el: any = render('commutes');
+  assert.match(textOf(el), /Add at least two places first/);
+});
+
+test('monthly routes ask for days of the month, and the preview shows minutes plus margin after a redraw', async () => {
+  const { render, calls } = setup();
+  const el: any = render('commutes', 'new');
+  byKey(el, 'f-repeats').value = 'monthly';
+  byKey(el, 'f-repeats').dispatch('change');
+  const again: any = render('commutes', 'new');
+  type(again, 'f-monthDays', '1, 15');
+  type(again, 'f-minutes', '45');
+  const third: any = render('commutes', 'new');
+  assert.match(textOf(third), /Commute 55/);
+  await submit(third);
+  assert.deepEqual(calls[0].commutes.at(-1).repeats, { kind: 'monthly', monthDays: [1, 15] });
+});
+
+test('the travel allowance sits with the other preferences', async () => {
+  const { render, calls } = setup();
+  const el: any = render('preferences');
+  assert.equal(byKey(el, 'f-travelAllowance').value, '30');
+  type(el, 'f-travelAllowance', '45');
+  await submit(el);
+  assert.equal(calls[0].preferences.travelAllowanceMinutes, 45);
+});

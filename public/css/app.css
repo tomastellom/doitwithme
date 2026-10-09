@@ -189,3 +189,10 @@ a { color: inherit; }
 .travel { border: 2px solid var(--ink); color: var(--ink); background: repeating-linear-gradient(135deg, var(--paper) 0 6px, #DAD5C8 6px 12px); }
 .travel-off { color: var(--muted); margin: 8px 0 0; }
 .seg button:disabled { color: var(--muted); border-style: dashed; cursor: not-allowed; }
+
+.setup .sub { flex-wrap: wrap; }
+.prev { border-top: 4px solid var(--ink); padding-top: 12px; }
+.strip { display: flex; gap: 6px; margin-top: 8px; }
+.strip .b { flex: 1; box-sizing: border-box; padding: 10px; border: 2px solid var(--ink); font-size: 13px; overflow-wrap: anywhere; }
+.strip .b.cls { flex: 3; background: var(--study); color: var(--on-study); }
+.strip .b.com { color: var(--ink); background: repeating-linear-gradient(135deg, var(--paper) 0 6px, #DAD5C8 6px 12px); }

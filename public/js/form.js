@@ -25,17 +25,21 @@ export function renderField(dom, def, draft, ctx) {
       const current = draft[def.name];
       const known = current === '' || options.some((o) => o.value === current);
       const all = known ? options : [{ value: current, label: current }, ...options];
-      return wrap(label(def.label), h('select', { id, 'data-fk': id, onchange: (e) => { draft[def.name] = e.target.value; } },
-        all.map((o) => h('option', { value: o.value, selected: o.value === current }, o.label))));
+      return wrap(label(def.label), h('select', {
+        id, 'data-fk': id,
+        onchange: (e) => { draft[def.name] = e.target.value; if (def.redraw) ctx.rerender(); },
+      }, all.map((o) => h('option', { value: o.value, selected: o.value === current }, o.label))));
     }
 
-    case 'choice':
+    case 'choice': {
+      const off = def.disabledValues ? def.disabledValues(ctx) : [];
       return seg(def.label, def.options.map((o) =>
         h('button', {
           type: 'button', class: draft[def.name] === o.value ? 'on' : '', 'data-fk': `${id}-${String(o.value)}`,
-          'aria-pressed': String(draft[def.name] === o.value),
-          onclick: () => { draft[def.name] = o.value; ctx.rerender(); },
+          'aria-pressed': String(draft[def.name] === o.value), disabled: off.includes(o.value),
+          onclick: () => { if (off.includes(o.value)) return; draft[def.name] = o.value; ctx.rerender(); },
         }, o.label)));
+    }
 
     case 'weekdays':
       return seg(def.label, WEEK_ORDER.map((w) => {
@@ -94,6 +98,11 @@ export function renderField(dom, def, draft, ctx) {
           type: 'button', class: 'addbtn mono', 'data-fk': `${id}-add`,
           onclick: () => { draft[def.name] = [...draft[def.name], { weekday: 5, start: '18:00', end: '24:00' }]; ctx.rerender(); },
         }, 'Add soft window')));
+    }
+
+    case 'custom': {
+      const node = def.render(dom, draft, ctx);
+      return node === null ? null : wrap(node);
     }
 
     default:

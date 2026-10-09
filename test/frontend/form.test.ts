@@ -172,3 +172,35 @@ test('soft windows can be edited, added and removed', () => {
   assert.equal(draft.softWindows.length, 1);
   assert.equal(rerenders(), 2);
 });
+
+test('a custom field draws what its render function returns, and nothing when it returns null', () => {
+  const { ctx } = setup();
+  const def = { name: 'note', type: 'custom', span: 3, render: (d: any) => d.h('p', { class: 'hint' }, 'Hello') };
+  const el: any = renderField(dom, { ...def, render: (_d: any) => dom.h('p', { class: 'hint' }, 'Hello') }, {}, ctx);
+  assert.ok(el.hasClass('span3'));
+  assert.equal(textOf(byClass(el, 'hint')[0]), 'Hello');
+  assert.equal(renderField(dom, { name: 'note', type: 'custom', render: () => null }, {}, ctx), null);
+});
+
+test('a choice can dim some of its options, and a dimmed option cannot be picked', () => {
+  const { ctx } = setup();
+  const draft: any = { method: 'typed' };
+  const def = { name: 'method', label: 'How long', type: 'choice', options: [{ value: 'typed', label: 'I type it' }, { value: 'maps', label: 'Maps' }], disabledValues: () => ['maps'] };
+  const el: any = renderField(dom, def, draft, ctx);
+  assert.notEqual(byKey(el, 'f-method-maps').getAttribute('disabled'), null);
+  assert.equal(byKey(el, 'f-method-typed').getAttribute('disabled'), null);
+  byKey(el, 'f-method-maps').click();
+  assert.equal(draft.method, 'typed');
+});
+
+test('a select flagged redraw asks the screen to redraw when it changes', () => {
+  const { ctx, rerenders } = setup();
+  const draft: any = { repeats: 'weekly' };
+  const def = { name: 'repeats', label: 'Repeats', type: 'select', redraw: true, options: () => [{ value: 'weekly', label: 'Every week' }, { value: 'monthly', label: 'Every month' }] };
+  const el: any = renderField(dom, def, draft, ctx);
+  const select = byKey(el, 'f-repeats');
+  select.value = 'monthly';
+  select.dispatch('change');
+  assert.equal(draft.repeats, 'monthly');
+  assert.equal(rerenders(), 1);
+});

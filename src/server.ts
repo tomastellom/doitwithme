@@ -1,5 +1,8 @@
+import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
+import { extname, resolve, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describeWarnings, replan } from './replan.ts';
 import { loadState, saveState } from './store.ts';
 import type { State } from './types.ts';
@@ -15,6 +18,28 @@ const MAX_BODY = 1_000_000;
 const MAX_LIST = 400;
 const ALLOWED_HOSTS = /^(localhost|127\.0\.0\.1)(:\d+)?$/;
 
+const HEADERS = {
+  'content-security-policy':
+    "default-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+  'x-content-type-options': 'nosniff',
+  'referrer-policy': 'no-referrer',
+};
+
+const TYPES: Record<string, string> = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.svg': 'image/svg+xml',
+  '.woff2': 'font/woff2',
+  '.png': 'image/png',
+  '.ico': 'image/x-icon',
+  '.txt': 'text/plain; charset=utf-8',
+};
+
+const DEFAULT_PUBLIC = fileURLToPath(new URL('../public/', import.meta.url));
+const DEFAULT_EXAMPLE = fileURLToPath(new URL('../examples/sample-state.json', import.meta.url));
+
 class HttpError extends Error {
   status: number;
   constructor(status: number, message: string) {
@@ -24,7 +49,7 @@ class HttpError extends Error {
 }
 
 function send(res: ServerResponse, status: number, body: unknown): void {
-  res.writeHead(status, { 'content-type': 'application/json' });
+  res.writeHead(status, { ...HEADERS, 'content-type': 'application/json' });
   res.end(JSON.stringify(body));
 }
 
@@ -64,7 +89,42 @@ function replanAndSave(statePath: string, state: State, clock: Clock) {
   };
 }
 
-export function createApp(statePath: string): Server {
+function serveStatic(publicDir: string, pathname: string, method: string, res: ServerResponse): void {
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(pathname);
+  } catch {
+    throw new HttpError(400, 'Bad path');
+  }
+  if (decoded.includes('\0') || decoded.includes('\\')) throw new HttpError(404, 'Not found');
+  let root: string;
+  try {
+    root = realpathSync(publicDir);
+  } catch {
+    throw new HttpError(404, 'Not found');
+  }
+  const relative = decoded.endsWith('/') ? `${decoded}index.html` : decoded;
+  const full = resolve(root, `.${relative}`);
+  if (full !== root && !full.startsWith(root + sep)) throw new HttpError(404, 'Not found');
+  const type = TYPES[extname(full).toLowerCase()];
+  if (!type) throw new HttpError(404, 'Not found');
+  let real: string;
+  try {
+    real = realpathSync(full);
+  } catch {
+    throw new HttpError(404, 'Not found');
+  }
+  if (!real.startsWith(root + sep) || !statSync(real).isFile()) throw new HttpError(404, 'Not found');
+  res.writeHead(200, { ...HEADERS, 'content-type': type, 'cache-control': 'no-store' });
+  res.end(method === 'HEAD' ? undefined : readFileSync(real));
+}
+
+export function createApp(
+  statePath: string,
+  options: { publicDir?: string; exampleFile?: string } = {},
+): Server {
+  const publicDir = options.publicDir ?? DEFAULT_PUBLIC;
+  const exampleFile = options.exampleFile ?? DEFAULT_EXAMPLE;
   return createServer(async (req, res) => {
     try {
       if (!ALLOWED_HOSTS.test(req.headers.host ?? '')) throw new HttpError(403, 'Forbidden host');
@@ -106,6 +166,12 @@ export function createApp(statePath: string): Server {
           state.dismissed = [...state.dismissed, request.key];
         }
         return send(res, 200, replanAndSave(statePath, state, request));
+      }
+      if (req.method === 'GET' && pathname === '/api/example') {
+        return send(res, 200, validateState(JSON.parse(readFileSync(exampleFile, 'utf8'))));
+      }
+      if ((req.method === 'GET' || req.method === 'HEAD') && !pathname.startsWith('/api/')) {
+        return serveStatic(publicDir, pathname, req.method, res);
       }
       throw new HttpError(404, 'Not found');
     } catch (err) {

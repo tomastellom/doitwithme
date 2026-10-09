@@ -91,9 +91,12 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   registry.register({
     id: 'week', title: 'Week', group: 'views', description: 'Your plan for the week.', primary: true,
     render: (ctx) => {
-      const model = weekModel(ctx.s.state, currentWeek(), visible, getClock().today);
-      const { needsYou } = buildNudge(ctx.s.warnings);
-      return renderWeek(dom, { model, visible, needsYou, isEmpty: ctx.s.isEmpty }, weekActions);
+      const s = ctx.s;
+      const model = weekModel(s.state, currentWeek(), visible, getClock().today, s.travel);
+      const { needsYou } = buildNudge(s.warnings);
+      const places = s.state.places ?? [];
+      const travelOff = places.length > 0 && !places.some((p) => p.kind === 'home');
+      return renderWeek(dom, { model, visible, needsYou, isEmpty: s.isEmpty, travelOff }, weekActions);
     },
   });
 
@@ -101,11 +104,13 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   const setupPage = (kindId) => (ctx) => setup.render(kindId, ctx);
   registry.register({
     id: 'setup', title: 'Setup', group: 'setup', primary: true, inMenu: false,
-    activeFor: ['commitments', 'tasks', 'due-dates', 'preferences'], render: setupPage('commitments'),
+    activeFor: ['commitments', 'tasks', 'due-dates', 'places', 'commutes', 'preferences'], render: setupPage('commitments'),
   });
   registry.register({ id: 'commitments', title: 'Commitments', group: 'setup', description: 'What is fixed.', render: setupPage('commitments') });
   registry.register({ id: 'tasks', title: 'Tasks', group: 'setup', description: 'What needs time but no fixed slot.', render: setupPage('tasks') });
   registry.register({ id: 'due-dates', title: 'Due dates', group: 'setup', description: 'When things are due and how much effort they need.', render: setupPage('due-dates') });
+  registry.register({ id: 'places', title: 'Places', group: 'setup', description: 'Home, campus and where your lessons are.', render: setupPage('places') });
+  registry.register({ id: 'commutes', title: 'Commutes', group: 'setup', description: 'How long it takes to get around.', render: setupPage('commutes') });
   registry.register({ id: 'preferences', title: 'Preferences', group: 'setup', description: 'Windows, breaks and days off.', render: setupPage('preferences') });
 
   function renderBar() {

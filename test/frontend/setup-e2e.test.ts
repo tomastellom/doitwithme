@@ -58,7 +58,7 @@ test('the Setup tab and Menu entries exist, and the tab is current on every setu
   await settled(app);
   const tabs = () => findAll(root, (e) => e.tag === 'a' && e.hasClass('tab'));
   assert.deepEqual(tabs().map(textOf), ['Week', 'Setup']);
-  for (const id of ['setup', 'commitments', 'tasks', 'due-dates', 'preferences']) {
+  for (const id of ['setup', 'commitments', 'tasks', 'due-dates', 'places', 'commutes', 'preferences']) {
     app.navigate(`#/${id}`);
     assert.equal(tabs().find((t: any) => textOf(t) === 'Setup').getAttribute('aria-current'), 'page', id);
     assert.equal(textOf(byTag(root, 'h1')[0]), 'Setup');
@@ -67,7 +67,7 @@ test('the Setup tab and Menu entries exist, and the tab is current on every setu
   assert.equal(tabs().find((t: any) => textOf(t) === 'Setup').getAttribute('aria-current'), null);
   app.menu.open(null);
   const menuLinks = byClass(app.menu.el, 'it').map((l: any) => l.getAttribute('href'));
-  assert.deepEqual(menuLinks, ['#/week', '#/commitments', '#/tasks', '#/due-dates', '#/preferences']);
+  assert.deepEqual(menuLinks, ['#/week', '#/commitments', '#/tasks', '#/due-dates', '#/places', '#/commutes', '#/preferences']);
 });
 
 test('add a commitment through the form: it is saved on the server and shows on the week', async () => {
@@ -195,4 +195,71 @@ test('keyboard focus stays on a toggle after it redraws the form', async () => {
   assert.equal(document.activeElement.getAttribute('data-fk'), 'f-weekdays-5');
   assert.equal(document.activeElement.getAttribute('aria-pressed'), 'true');
   assert.equal(findAll(root, (e) => e === document.activeElement).length, 1);
+});
+
+const placeRows = [
+  { id: 'home', name: 'Home', kind: 'home', address: 'Calle 1' },
+  { id: 'campus', name: 'Campus', kind: 'campus', address: 'Av 2' },
+];
+const route = { id: 'r1', fromPlaceId: 'home', toPlaceId: 'campus', repeats: null, source: { method: 'typed', minutes: 45 }, marginMinutes: 10 };
+const lecture = { id: 'lec', title: 'Lecture', category: 'class', start: 600, end: 720, pattern: { kind: 'once', date: '2026-10-05' }, exceptions: [], bufferBefore: 0, placeId: 'campus' };
+
+test('travel reaches the week and the plan keeps its blocks out of it', async () => {
+  assert.equal((await put(baseState({ places: placeRows, commutes: [route], commitments: [lecture] }))).status, 200);
+  const { app, root } = boot();
+  await settled(app);
+  const legs = app.store.get().travel;
+  assert.deepEqual(legs.map((l: any) => [l.start, l.end]), [[545, 600], [720, 775]]);
+  assert.match(textOf(root), /Commute 55/);
+  for (const b of app.store.get().state.blocks.filter((x: any) => x.date === '2026-10-05')) {
+    for (const l of legs) assert.ok(b.end <= l.start || b.start >= l.end);
+  }
+});
+
+test('add a place through the form, then a commute between two places, and both are on the server', async () => {
+  assert.equal((await put(baseState({ places: placeRows }))).status, 200);
+  const { app, root, win } = boot();
+  await settled(app);
+  app.navigate('#/places/new');
+  type(root, 'f-name', 'Parish');
+  type(root, 'f-address', 'Plaza 1');
+  await save(app, root);
+  assert.ok((await serverState()).places.some((p: any) => p.name === 'Parish' && p.address === 'Plaza 1'));
+  assert.match(win.location.hash, /^#\/places\//);
+  app.navigate('#/commutes/new');
+  type(root, 'f-minutes', '25');
+  await save(app, root);
+  const state = await serverState();
+  assert.equal(state.commutes.length, 1);
+  assert.deepEqual(state.commutes[0].source, { method: 'typed', minutes: 25 });
+});
+
+test('deleting a place through the form removes its commute from the server too', async () => {
+  assert.equal((await put(baseState({ places: placeRows, commutes: [route], commitments: [lecture] }))).status, 200);
+  const { app, root } = boot();
+  await settled(app);
+  app.navigate('#/places/campus');
+  key(root, 'setup-delete').click();
+  assert.match(textOf(byClass(root, 'confirm')[0]), /Its 1 commute goes too\. 1 commitment loses its place\./);
+  key(root, 'setup-confirm').click();
+  await app.store.idle();
+  await tick();
+  const state = await serverState();
+  assert.deepEqual(state.commutes, []);
+  assert.equal(state.places.some((p: any) => p.id === 'campus'), false);
+  assert.equal('placeId' in state.commitments[0], false);
+});
+
+test('a missing address shows up in the Nudge and the week says when travel is off', async () => {
+  const anna = { id: 'anna', name: 'Anna', kind: 'student', address: '' };
+  const les = { ...lecture, id: 'les', title: 'Lesson Anna', placeId: 'anna' };
+  assert.equal((await put(baseState({ places: [placeRows[0], anna], commitments: [les] }))).status, 200);
+  const a = boot();
+  await settled(a.app);
+  assert.ok(a.app.store.get().warnings.some((w: any) => w.kind === 'address-missing'));
+  assert.match(textOf(a.root), /Anna has no address and no commute/);
+  assert.equal((await put(baseState({ places: [anna] }))).status, 200);
+  const b = boot();
+  await settled(b.app);
+  assert.match(textOf(b.root), /Travel is off\. Add a Home place\./);
 });

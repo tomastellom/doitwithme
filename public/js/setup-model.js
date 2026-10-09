@@ -81,3 +81,151 @@ export const commitmentKind = {
     return `${days} / ${time} / ${shortDate(c.pattern.from)} – ${shortDate(c.pattern.to)}${buffer}`;
   },
 };
+
+const TITLE_ERROR = 'The title can be at most 200 characters.';
+
+export const taskKind = {
+  blank() {
+    return { title: '', category: 'study', weekly: '', maxBlock: '90', onePerDay: false, priority: '3' };
+  },
+  toDraft(t) {
+    return {
+      title: t.title, category: t.category, weekly: t.weeklyMinutes === null ? '' : String(t.weeklyMinutes),
+      maxBlock: String(t.maxBlock), onePerDay: t.onePerDay, priority: String(t.priority),
+    };
+  },
+  fromDraft(d, id) {
+    const title = d.title.trim();
+    if (!title) return { error: 'Give it a title.' };
+    if (title.length > 200) return { error: TITLE_ERROR };
+    const weeklyText = d.weekly.trim();
+    const weekly = weeklyText === '' ? null : parseWhole(weeklyText, 0, 10080);
+    if (weeklyText !== '' && weekly === null) return { error: 'Weekly minutes must be a whole number from 0 to 10080, or empty.' };
+    const maxBlock = parseWhole(d.maxBlock, 5, 1440);
+    if (maxBlock === null) return { error: 'Longest block must be a whole number of minutes, 5 to 1440.' };
+    const priority = parseWhole(d.priority, 1, 5);
+    if (priority === null) return { error: 'Priority must be 1 to 5.' };
+    return { item: { id, title, category: d.category, weeklyMinutes: weekly, maxBlock, onePerDay: Boolean(d.onePerDay), priority } };
+  },
+  summary(t) {
+    const weekly = t.weeklyMinutes === null ? 'no weekly target' : `${t.weeklyMinutes} min a week`;
+    return `${weekly} / blocks up to ${t.maxBlock} min / priority ${t.priority}${t.onePerDay ? ' / one session a day' : ''}`;
+  },
+};
+
+export const deadlineKind = {
+  blank(today, state) {
+    return { taskId: state.tasks[0] ? state.tasks[0].id : '', kind: 'exam', dueDate: addDays(today, 14), effort: '120' };
+  },
+  toDraft(d) {
+    return { taskId: d.taskId, kind: d.kind, dueDate: d.dueDate, effort: String(d.effortMinutes) };
+  },
+  fromDraft(d, id, state) {
+    if (state.tasks.length === 0) return { error: 'Add a task first, then give it a due date.' };
+    if (!state.tasks.some((t) => t.id === d.taskId)) return { error: 'Pick a task.' };
+    const kind = d.kind.trim();
+    if (!kind) return { error: 'Give the kind a name (like exam).' };
+    if (kind.length > 200) return { error: 'The kind can be at most 200 characters.' };
+    if (!isValidDate(d.dueDate)) return { error: 'Pick a real due date.' };
+    const effort = parseWhole(d.effort, 0, 100000);
+    if (effort === null) return { error: 'Effort must be a whole number of minutes, 0 to 100000.' };
+    return { item: { id, taskId: d.taskId, kind, dueDate: d.dueDate, effortMinutes: effort } };
+  },
+  summary(d, state) {
+    const task = state.tasks.find((t) => t.id === d.taskId);
+    return `${task ? task.title : 'A task that no longer exists'} / due ${longDate(d.dueDate)} / ${d.effortMinutes} min`;
+  },
+};
+
+export const preferencesKind = {
+  blank: (today, state) => preferencesKind.toDraft(state.preferences),
+  toDraft(p) {
+    return {
+      weekdayStart: hhmm(p.weekdayWindow.start), weekdayEnd: hhmm(p.weekdayWindow.end),
+      dayOffStart: hhmm(p.dayOffWindow.start), dayOffEnd: hhmm(p.dayOffWindow.end),
+      daysOff: [...p.daysOff], minBlock: String(p.minBlock), minBreak: String(p.minBreak),
+      softWindows: p.softWindows.map((s) => ({ weekday: s.weekday, start: hhmm(s.start), end: hhmm(s.end) })),
+    };
+  },
+  fromDraft(d, id, state) {
+    const window = (startText, endText, label) => {
+      const start = parseTime(startText);
+      const end = parseTime(endText);
+      if (start === null) return { error: `${label} start must look like 08:00.` };
+      if (end === null) return { error: `${label} end must look like 22:00.` };
+      if (end <= start) return { error: `${label} end must be after its start.` };
+      return { start, end };
+    };
+    const weekday = window(d.weekdayStart, d.weekdayEnd, 'Weekday');
+    if (weekday.error) return weekday;
+    const dayOff = window(d.dayOffStart, d.dayOffEnd, 'Days-off');
+    if (dayOff.error) return dayOff;
+    const minBlock = parseWhole(d.minBlock, 5, 240);
+    if (minBlock === null) return { error: 'Shortest block must be a whole number of minutes, 5 to 240.' };
+    const minBreak = parseWhole(d.minBreak, 0, 120);
+    if (minBreak === null) return { error: 'Break must be a whole number of minutes, 0 to 120.' };
+    const softWindows = [];
+    for (const s of d.softWindows) {
+      const start = parseTime(s.start);
+      const end = parseTime(s.end);
+      if (start === null || end === null || end <= start) return { error: 'Soft window times must look like 18:00 and end after they start.' };
+      softWindows.push({ weekday: Number(s.weekday), start, end });
+    }
+    for (let i = 0; i < softWindows.length; i++) {
+      for (let j = i + 1; j < softWindows.length; j++) {
+        const a = softWindows[i];
+        const b = softWindows[j];
+        if (a.weekday === b.weekday && a.start < b.end && b.start < a.end) return { error: 'Soft windows on the same day must not overlap.' };
+      }
+    }
+    return {
+      item: {
+        ...state.preferences,
+        weekdayWindow: { start: weekday.start, end: weekday.end },
+        dayOffWindow: { start: dayOff.start, end: dayOff.end },
+        daysOff: [...d.daysOff].sort(byNumber),
+        minBlock,
+        minBreak,
+        softWindows,
+      },
+    };
+  },
+};
+
+export const KINDS = {
+  commitments: {
+    id: 'commitments', title: 'Commitments', list: 'commitments', add: 'Add a commitment', prefix: 'c', kind: commitmentKind,
+    itemTitle: (c) => c.title, itemLabel: (c) => c.category,
+  },
+  tasks: {
+    id: 'tasks', title: 'Tasks', list: 'tasks', add: 'Add a task', prefix: 't', kind: taskKind,
+    itemTitle: (t) => t.title, itemLabel: (t) => t.category,
+  },
+  'due-dates': {
+    id: 'due-dates', title: 'Due dates', list: 'deadlines', add: 'Add a due date', prefix: 'd', kind: deadlineKind,
+    itemTitle: (d, state) => {
+      const task = state.tasks.find((t) => t.id === d.taskId);
+      return `${task ? task.title : 'Unknown task'} ${d.kind}`;
+    },
+    itemLabel: (d) => d.kind,
+  },
+  preferences: { id: 'preferences', title: 'Preferences', single: true, kind: preferencesKind },
+};
+export const KIND_IDS = ['commitments', 'tasks', 'due-dates', 'preferences'];
+
+export const itemsOf = (state, kindId) => (KINDS[kindId].list ? state[KINDS[kindId].list] : []);
+
+export function applyItem(state, kindId, item) {
+  const spec = KINDS[kindId];
+  if (spec.single) return { ...state, preferences: item };
+  const list = state[spec.list];
+  const exists = list.some((x) => x.id === item.id);
+  return { ...state, [spec.list]: exists ? list.map((x) => (x.id === item.id ? item : x)) : [...list, item] };
+}
+
+export function removeItem(state, kindId, id) {
+  const spec = KINDS[kindId];
+  const next = { ...state, [spec.list]: state[spec.list].filter((x) => x.id !== id) };
+  if (kindId === 'tasks') next.deadlines = next.deadlines.filter((d) => d.taskId !== id);
+  return next;
+}

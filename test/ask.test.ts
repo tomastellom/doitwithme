@@ -34,7 +34,7 @@ test('ask mode never opens soft time by itself and offers the best date', () => 
     {
       kind: 'soft-offer',
       message: `Soft time on ${FRI} could cover 120 min of study`,
-      detail: { date: FRI, minutes: 120 },
+      detail: { date: FRI, minutes: 120, costMinutes: 0 },
     },
   ]);
 });
@@ -77,7 +77,7 @@ test('a deadline shortfall also gets an offer', () => {
     {
       kind: 'soft-offer',
       message: `Soft time on ${FRI} could cover 120 min of study`,
-      detail: { date: FRI, minutes: 120 },
+      detail: { date: FRI, minutes: 120, costMinutes: 0 },
     },
   ]);
 });
@@ -123,4 +123,25 @@ test('auto mode still opens soft time on its own', () => {
   );
   assert.equal(result.blocks.filter((b) => b.date === FRI).length, 1);
   assert.ok(result.warnings.every((w) => w.kind !== 'soft-offer'));
+});
+
+test('an offer that costs other tasks says so, and the cost is real', () => {
+  const tasks = [
+    task({ weeklyMinutes: 600, maxBlock: 120, priority: 3 }),
+    task({ id: 'chores', title: 'Chores', category: 'chores', weeklyMinutes: 360, maxBlock: 60, priority: 3 }),
+  ];
+  const base = input({ preferences: evening(), tasks });
+  const before = plan(base);
+  const offer = before.warnings.find((w) => w.kind === 'soft-offer');
+  assert.deepEqual(offer, {
+    kind: 'soft-offer',
+    message: `Soft time on ${FRI} could cover 75 min of study, but other tasks lose 20 min`,
+    detail: { date: FRI, minutes: 75, costMinutes: 20 },
+  });
+  const other = (r: PlanResult): number =>
+    r.warnings
+      .filter((w) => w.kind === 'weekly-short' && w.detail?.taskTitle === 'Chores')
+      .reduce((t, w) => t + (w.detail?.minutes ?? 0), 0);
+  const after = plan({ ...base, approvedSoft: [FRI] });
+  assert.equal(other(after) - other(before), offer.detail?.costMinutes);
 });

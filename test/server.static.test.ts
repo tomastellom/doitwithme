@@ -19,6 +19,9 @@ before(async () => {
   writeFileSync(join(pub, 'index.html'), '<h1>home</h1>');
   writeFileSync(join(pub, 'app.js'), 'export {};');
   writeFileSync(join(pub, 'blob.exe'), 'x');
+  writeFileSync(join(pub, '.secret.json'), '{"k":"DOTSECRET"}');
+  mkdirSync(join(pub, 'sub'));
+  writeFileSync(join(pub, 'sub', '.hidden.txt'), 'DOTSECRET');
   writeFileSync(join(root, 'secret.txt'), 'TOPSECRET');
   symlinkSync(join(root, 'secret.txt'), join(pub, 'link.txt'));
   stateFile = join(root, 'db.json');
@@ -104,4 +107,25 @@ test('/api/example returns a valid example state and writes nothing', async () =
   assert.ok(state.tasks.length > 0);
   assert.ok(Array.isArray(state.approvedSoft));
   assert.equal(existsSync(stateFile), false);
+});
+
+test('dotfiles are never served, at the top or inside folders', async () => {
+  for (const path of ['/.secret.json', '/sub/.hidden.txt', '/%2esecret.json']) {
+    const r = await raw(path);
+    assert.equal(r.status, 404, path);
+    assert.ok(!r.body.includes('DOTSECRET'), path);
+  }
+});
+
+test('a missing example file is a 500 that does not leak the path', async () => {
+  const s = createApp(stateFile, { exampleFile: '/nonexistent-dir/example.json' });
+  await new Promise<void>((resolve) => s.listen(0, '127.0.0.1', resolve));
+  try {
+    const p = (s.address() as AddressInfo).port;
+    const res = await fetch(`http://127.0.0.1:${p}/api/example`);
+    assert.equal(res.status, 500);
+    assert.ok(!(await res.text()).includes('nonexistent-dir'));
+  } finally {
+    s.close();
+  }
 });

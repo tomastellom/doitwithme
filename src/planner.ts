@@ -165,6 +165,9 @@ function softUseWarnings(input: PlanInput, blocks: Block[], opened: ReadonlySet<
 const studyDeficit = (found: Shortfall[]): number =>
   found.filter((f) => f.category === 'study').reduce((t, f) => t + f.minutes, 0);
 
+const otherDeficit = (found: Shortfall[]): number =>
+  found.filter((f) => f.category !== 'study').reduce((t, f) => t + f.minutes, 0);
+
 export function plan(input: PlanInput): PlanResult {
   const softDates = Array.from({ length: input.horizonDays }, (_, i) => addDays(input.today, i)).filter(
     (d) => input.preferences.softWindows.some((s) => s.weekday === weekdayOf(d)),
@@ -178,7 +181,7 @@ export function plan(input: PlanInput): PlanResult {
 
   let { blocks, found } = run(opened);
   let deficit = studyDeficit(found);
-  let offer: { date: DateStr; minutes: number } | null = null;
+  let offer: { date: DateStr; minutes: number; cost: number } | null = null;
 
   if (input.preferences.softMode === 'auto') {
     for (const date of candidates) {
@@ -193,9 +196,14 @@ export function plan(input: PlanInput): PlanResult {
       }
     }
   } else if (deficit > 0) {
+    const baseOther = otherDeficit(found);
     for (const date of candidates) {
-      const gain = deficit - studyDeficit(run(new Set(opened).add(date)).found);
-      if (gain > 0 && (offer === null || gain > offer.minutes)) offer = { date, minutes: gain };
+      const trial = run(new Set(opened).add(date));
+      const gain = deficit - studyDeficit(trial.found);
+      const cost = Math.max(0, otherDeficit(trial.found) - baseOther);
+      if (gain > 0 && (offer === null || gain > offer.minutes || (gain === offer.minutes && cost < offer.cost))) {
+        offer = { date, minutes: gain, cost };
+      }
     }
   }
 
@@ -203,8 +211,10 @@ export function plan(input: PlanInput): PlanResult {
   if (offer) {
     warnings.push({
       kind: 'soft-offer',
-      message: `Soft time on ${offer.date} could cover ${offer.minutes} min of study`,
-      detail: { date: offer.date, minutes: offer.minutes },
+      message:
+        `Soft time on ${offer.date} could cover ${offer.minutes} min of study` +
+        (offer.cost > 0 ? `, but other tasks lose ${offer.cost} min` : ''),
+      detail: { date: offer.date, minutes: offer.minutes, costMinutes: offer.cost },
     });
   }
   return { blocks, warnings };

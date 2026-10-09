@@ -115,3 +115,29 @@ test('a dismissed warning is forgotten once its shortfall disappears', () => {
   const fixed = studyState({ tasks: [task({ weeklyMinutes: 100 })], dismissed: [key] });
   assert.deepEqual(replan(fixed, '2026-10-05', undefined, 7).state.dismissed, []);
 });
+
+test('a warning key ignores the minutes, so it survives time passing', () => {
+  const detail = { taskTitle: 'Study', weekStart: '2026-10-05', minutes: 4340 };
+  const a = { kind: 'weekly-short' as const, message: 'Study is short by 4340 min in the week of 2026-10-05', detail };
+  const b = {
+    kind: 'weekly-short' as const,
+    message: 'Study is short by 4335 min in the week of 2026-10-05',
+    detail: { ...detail, minutes: 4335 },
+  };
+  assert.equal(warningKey(a), warningKey(b));
+  assert.equal(warningKey(a), 'weekly-short|Study|2026-10-05');
+  assert.equal(
+    warningKey({ kind: 'soft-offer', message: 'x', detail: { date: '2026-10-09', minutes: 75, costMinutes: 20 } }),
+    'soft-offer|2026-10-09',
+  );
+});
+
+test('a dismissed warning stays dismissed while its minutes drift during the day', () => {
+  const early = replan(studyState(), '2026-10-05', 1080, 7);
+  const w1 = early.warnings.find((w) => w.kind === 'weekly-short')!;
+  const key = warningKey(w1);
+  const later = replan(studyState({ dismissed: [key] }), '2026-10-05', 1145, 7);
+  const w2 = later.warnings.find((w) => w.kind === 'weekly-short')!;
+  assert.notEqual(w1.message, w2.message);
+  assert.deepEqual(later.state.dismissed, [key]);
+});

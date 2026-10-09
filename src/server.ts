@@ -3,7 +3,8 @@ import { createServer } from 'node:http';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describeWarnings, replan } from './replan.ts';
+import { addDays, weekdayOf } from './dates.ts';
+import { describeWarnings, replan, warningKey } from './replan.ts';
 import { loadState, saveState } from './store.ts';
 import type { State } from './types.ts';
 import {
@@ -78,15 +79,23 @@ interface Clock {
   horizonDays: number;
 }
 
-function replanAndSave(statePath: string, state: State, clock: Clock) {
+function replanned(state: State, clock: Clock) {
   const result = replan(state, clock.today, clock.nowMinutes, clock.horizonDays);
-  saveState(statePath, result.state);
   return {
-    blocks: result.state.blocks,
-    warnings: describeWarnings(result.warnings, result.state.dismissed),
-    approvedSoft: result.state.approvedSoft,
-    dismissed: result.state.dismissed,
+    result,
+    body: {
+      blocks: result.state.blocks,
+      warnings: describeWarnings(result.warnings, result.state.dismissed),
+      approvedSoft: result.state.approvedSoft,
+      dismissed: result.state.dismissed,
+    },
   };
+}
+
+function replanAndSave(statePath: string, state: State, clock: Clock) {
+  const { result, body } = replanned(state, clock);
+  saveState(statePath, result.state);
+  return body;
 }
 
 function serveStatic(publicDir: string, pathname: string, method: string, res: ServerResponse): void {
@@ -97,6 +106,7 @@ function serveStatic(publicDir: string, pathname: string, method: string, res: S
     throw new HttpError(400, 'Bad path');
   }
   if (decoded.includes('\0') || decoded.includes('\\')) throw new HttpError(404, 'Not found');
+  if (decoded.split('/').some((segment) => segment.startsWith('.'))) throw new HttpError(404, 'Not found');
   let root: string;
   try {
     root = realpathSync(publicDir);
@@ -145,7 +155,11 @@ export function createApp(
       if (req.method === 'POST' && pathname === '/api/soft/approve') {
         const request = validateSoftRequest(await readJson(req));
         if (request.date < request.today) throw new HttpError(400, 'date must not be in the past');
+        if (request.date > addDays(request.today, 60)) throw new HttpError(400, 'date is too far ahead');
         const state = loadState(statePath);
+        if (!state.preferences.softWindows.some((s) => s.weekday === weekdayOf(request.date))) {
+          throw new HttpError(400, 'date is not a soft evening');
+        }
         if (!state.approvedSoft.includes(request.date)) {
           if (state.approvedSoft.length >= MAX_LIST) throw new HttpError(400, 'too many approved dates');
           state.approvedSoft = [...state.approvedSoft, request.date];
@@ -165,10 +179,21 @@ export function createApp(
           if (state.dismissed.length >= MAX_LIST) throw new HttpError(400, 'too many dismissed warnings');
           state.dismissed = [...state.dismissed, request.key];
         }
-        return send(res, 200, replanAndSave(statePath, state, request));
+        const { result, body } = replanned(state, request);
+        if (!result.warnings.some((w) => warningKey(w) === request.key)) {
+          throw new HttpError(409, 'That warning is no longer open');
+        }
+        saveState(statePath, result.state);
+        return send(res, 200, body);
       }
       if (req.method === 'GET' && pathname === '/api/example') {
-        return send(res, 200, validateState(JSON.parse(readFileSync(exampleFile, 'utf8'))));
+        let example: State;
+        try {
+          example = validateState(JSON.parse(readFileSync(exampleFile, 'utf8')));
+        } catch {
+          throw new HttpError(500, 'The example schedule could not be read');
+        }
+        return send(res, 200, example);
       }
       if ((req.method === 'GET' || req.method === 'HEAD') && !pathname.startsWith('/api/')) {
         return serveStatic(publicDir, pathname, req.method, res);

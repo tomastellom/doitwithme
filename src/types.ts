@@ -73,6 +73,7 @@ export interface WarningDetail {
   date?: DateStr;
   titles?: string[];
   minutes?: number;
+  costMinutes?: number;
 }
 
 export interface Warning {

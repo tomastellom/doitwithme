@@ -91,6 +91,10 @@ test('garbage is a 4xx and leaves the data file byte-for-byte unchanged', async 
     ['/api/soft/undo', { ...clock, date: 5 }, 400],
     ['/api/warnings/dismiss', { ...clock, key: 'x'.repeat(301) }, 400],
     ['/api/warnings/dismiss', { ...clock, key: '' }, 400],
+    ['/api/warnings/dismiss', { ...clock, key: 'nope|x' }, 409],
+    ['/api/soft/approve', { ...clock, date: '2026-10-06' }, 400],
+    ['/api/soft/approve', { ...clock, date: '9999-12-31' }, 400],
+    ['/api/soft/approve', { ...clock, date: '2026-12-25' }, 400],
     ['/api/soft/approve', { ...clock, date: FRI }, 415, { 'content-type': 'text/plain' }],
   ];
   for (const [path, body, status, headers] of cases) {

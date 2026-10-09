@@ -2,7 +2,14 @@ import { addDays, weekStart } from './dates.ts';
 import { plan } from './planner.ts';
 import type { Block, DateStr, Minutes, State, Warning } from './types.ts';
 
-export const warningKey = (w: Warning): string => `${w.kind}|${w.message}`;
+// A warning's identity is what it is about, not its wording: the minutes in the
+// message change as the day goes on, and a dismissal must survive that.
+export function warningKey(w: Warning): string {
+  const d = w.detail;
+  if (!d) return `${w.kind}|${w.message}`;
+  const about = [d.taskTitle, d.kind, d.dueDate, d.weekStart, d.date].filter((x) => x !== undefined);
+  return [w.kind, ...about].join('|');
+}
 
 export interface DescribedWarning extends Warning {
   key: string;

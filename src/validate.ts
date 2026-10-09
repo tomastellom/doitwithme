@@ -202,11 +202,34 @@ export function validateState(x: unknown): State {
   };
 }
 
-export function validateReplanRequest(x: unknown): { today: string; nowMinutes?: number; horizonDays: number } {
-  const o = obj(x, 'request');
+function replanFields(o: Record<string, unknown>): { today: string; nowMinutes?: number; horizonDays: number } {
   return {
     today: dateStr(o.today, 'today'),
     ...(o.nowMinutes === undefined ? {} : { nowMinutes: int(o.nowMinutes, 'nowMinutes', 0, 1440) }),
     horizonDays: o.horizonDays === undefined ? 14 : int(o.horizonDays, 'horizonDays', 1, 60),
   };
+}
+
+export function validateReplanRequest(x: unknown): { today: string; nowMinutes?: number; horizonDays: number } {
+  return replanFields(obj(x, 'request'));
+}
+
+export function validateSoftRequest(x: unknown): {
+  today: string;
+  nowMinutes?: number;
+  horizonDays: number;
+  date: string;
+} {
+  const o = obj(x, 'request');
+  return { ...replanFields(o), date: dateStr(o.date, 'date') };
+}
+
+export function validateDismissRequest(x: unknown): {
+  today: string;
+  nowMinutes?: number;
+  horizonDays: number;
+  key: string;
+} {
+  const o = obj(x, 'request');
+  return { ...replanFields(o), key: str(o.key, 'key', 300) };
 }

@@ -1,10 +1,18 @@
 import { createServer } from 'node:http';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
-import { replan } from './replan.ts';
+import { describeWarnings, replan } from './replan.ts';
 import { loadState, saveState } from './store.ts';
-import { ValidationError, validateReplanRequest, validateState } from './validate.ts';
+import type { State } from './types.ts';
+import {
+  ValidationError,
+  validateDismissRequest,
+  validateReplanRequest,
+  validateSoftRequest,
+  validateState,
+} from './validate.ts';
 
 const MAX_BODY = 1_000_000;
+const MAX_LIST = 400;
 const ALLOWED_HOSTS = /^(localhost|127\.0\.0\.1)(:\d+)?$/;
 
 class HttpError extends Error {
@@ -39,6 +47,23 @@ async function readJson(req: IncomingMessage): Promise<unknown> {
   }
 }
 
+interface Clock {
+  today: string;
+  nowMinutes?: number;
+  horizonDays: number;
+}
+
+function replanAndSave(statePath: string, state: State, clock: Clock) {
+  const result = replan(state, clock.today, clock.nowMinutes, clock.horizonDays);
+  saveState(statePath, result.state);
+  return {
+    blocks: result.state.blocks,
+    warnings: describeWarnings(result.warnings, result.state.dismissed),
+    approvedSoft: result.state.approvedSoft,
+    dismissed: result.state.dismissed,
+  };
+}
+
 export function createApp(statePath: string): Server {
   return createServer(async (req, res) => {
     try {
@@ -55,9 +80,32 @@ export function createApp(statePath: string): Server {
       }
       if (req.method === 'POST' && pathname === '/api/replan') {
         const request = validateReplanRequest(await readJson(req));
-        const result = replan(loadState(statePath), request.today, request.nowMinutes, request.horizonDays);
-        saveState(statePath, result.state);
-        return send(res, 200, { blocks: result.state.blocks, warnings: result.warnings });
+        return send(res, 200, replanAndSave(statePath, loadState(statePath), request));
+      }
+      if (req.method === 'POST' && pathname === '/api/soft/approve') {
+        const request = validateSoftRequest(await readJson(req));
+        if (request.date < request.today) throw new HttpError(400, 'date must not be in the past');
+        const state = loadState(statePath);
+        if (!state.approvedSoft.includes(request.date)) {
+          if (state.approvedSoft.length >= MAX_LIST) throw new HttpError(400, 'too many approved dates');
+          state.approvedSoft = [...state.approvedSoft, request.date];
+        }
+        return send(res, 200, replanAndSave(statePath, state, request));
+      }
+      if (req.method === 'POST' && pathname === '/api/soft/undo') {
+        const request = validateSoftRequest(await readJson(req));
+        const state = loadState(statePath);
+        state.approvedSoft = state.approvedSoft.filter((d) => d !== request.date);
+        return send(res, 200, replanAndSave(statePath, state, request));
+      }
+      if (req.method === 'POST' && pathname === '/api/warnings/dismiss') {
+        const request = validateDismissRequest(await readJson(req));
+        const state = loadState(statePath);
+        if (!state.dismissed.includes(request.key)) {
+          if (state.dismissed.length >= MAX_LIST) throw new HttpError(400, 'too many dismissed warnings');
+          state.dismissed = [...state.dismissed, request.key];
+        }
+        return send(res, 200, replanAndSave(statePath, state, request));
       }
       throw new HttpError(404, 'Not found');
     } catch (err) {

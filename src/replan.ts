@@ -1,13 +1,13 @@
 import { addDays, weekStart } from './dates.ts';
 import { plan } from './planner.ts';
-import type { Block, DateStr, Minutes, State, Warning } from './types.ts';
+import type { Block, DateStr, Leg, Minutes, State, Warning } from './types.ts';
 
 // A warning's identity is what it is about, not its wording: the minutes in the
 // message change as the day goes on, and a dismissal must survive that.
 export function warningKey(w: Warning): string {
   const d = w.detail;
   if (!d) return `${w.kind}|${w.message}`;
-  const about = [d.taskTitle, d.kind, d.dueDate, d.weekStart, d.date].filter((x) => x !== undefined);
+  const about = [d.taskTitle, d.placeName, d.kind, d.dueDate, d.weekStart, d.date].filter((x) => x !== undefined);
   return [w.kind, ...about].join('|');
 }
 
@@ -25,7 +25,7 @@ export function replan(
   today: DateStr,
   nowMinutes?: Minutes,
   horizonDays = 14,
-): { state: State; warnings: Warning[] } {
+): { state: State; warnings: Warning[]; travel: Leg[] } {
   const kept: Block[] = [];
   for (const b of state.blocks) {
     if (b.date < today) kept.push(b);
@@ -43,6 +43,8 @@ export function replan(
     ...(nowMinutes === undefined ? {} : { nowMinutes }),
     horizonDays,
     commitments: state.commitments,
+    places: state.places,
+    commutes: state.commutes,
     tasks: state.tasks,
     deadlines: state.deadlines,
     preferences: state.preferences,
@@ -54,5 +56,6 @@ export function replan(
   return {
     state: { ...state, approvedSoft, dismissed, blocks: [...kept, ...result.blocks] },
     warnings: result.warnings,
+    travel: result.travel,
   };
 }

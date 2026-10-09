@@ -1,3 +1,5 @@
+import { unavailableProvider } from './maps.ts';
+import type { TravelTimeProvider } from './maps.ts';
 import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
@@ -88,6 +90,7 @@ function replanned(state: State, clock: Clock) {
       warnings: describeWarnings(result.warnings, result.state.dismissed),
       approvedSoft: result.state.approvedSoft,
       dismissed: result.state.dismissed,
+      travel: result.travel,
     },
   };
 }
@@ -131,10 +134,11 @@ function serveStatic(publicDir: string, pathname: string, method: string, res: S
 
 export function createApp(
   statePath: string,
-  options: { publicDir?: string; exampleFile?: string } = {},
+  options: { publicDir?: string; exampleFile?: string; maps?: TravelTimeProvider } = {},
 ): Server {
   const publicDir = options.publicDir ?? DEFAULT_PUBLIC;
   const exampleFile = options.exampleFile ?? DEFAULT_EXAMPLE;
+  const maps = options.maps ?? unavailableProvider;
   return createServer(async (req, res) => {
     try {
       if (!ALLOWED_HOSTS.test(req.headers.host ?? '')) throw new HttpError(403, 'Forbidden host');
@@ -185,6 +189,9 @@ export function createApp(
         }
         saveState(statePath, result.state);
         return send(res, 200, body);
+      }
+      if (req.method === 'GET' && pathname === '/api/commute/status') {
+        return send(res, 200, { maps: maps.status });
       }
       if (req.method === 'GET' && pathname === '/api/example') {
         let example: State;

@@ -39,7 +39,7 @@ test('week order is Monday to Sunday and the commitment categories include the o
 
 test('every example commitment survives a trip through a draft unchanged', () => {
   for (const c of example.commitments) {
-    const result = commitmentKind.fromDraft(commitmentKind.toDraft(c), c.id);
+    const result = commitmentKind.fromDraft(commitmentKind.toDraft(c), c.id, example);
     assert.deepEqual(result.item, c, c.id);
   }
 });

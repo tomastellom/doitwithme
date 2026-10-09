@@ -1,7 +1,17 @@
 {
+  "places": [
+    { "id": "home", "name": "Home", "kind": "home", "address": "Calle Ejemplo 123, Santiago" },
+    { "id": "campus", "name": "Campus", "kind": "campus", "address": "Av. Universidad 450, Santiago" },
+    { "id": "parish", "name": "Parish", "kind": "other", "address": "Plaza 1, Santiago" },
+    { "id": "anna", "name": "Anna", "kind": "student", "address": "" }
+  ],
+  "commutes": [
+    { "id": "home-campus", "fromPlaceId": "home", "toPlaceId": "campus", "repeats": { "kind": "weekly", "weekdays": [2, 4] }, "source": { "method": "typed", "minutes": 45 }, "marginMinutes": 10 }
+  ],
   "commitments": [
     {
       "id": "mass",
+      "placeId": "parish",
       "title": "Mass",
       "category": "mass",
       "start": 1200,
@@ -12,6 +22,7 @@
     },
     {
       "id": "chem-lecture",
+      "placeId": "campus",
       "title": "Chemistry lecture",
       "category": "class",
       "start": 600,
@@ -22,7 +33,7 @@
     },
     {
       "id": "lesson-1",
-      "title": "Private lesson",
+      "title": "Private lesson, Anna",
       "category": "lesson",
       "start": 960,
       "end": 1020,

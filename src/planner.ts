@@ -2,16 +2,43 @@ import { addDays, daysBetween, weekdayOf, weekStart } from './dates.ts';
 import { busyOn } from './busy.ts';
 import { demandsFor } from './demand.ts';
 import { freeSlots } from './slots.ts';
-import type { Block, DateStr, PlanInput, PlanResult, Warning, Window } from './types.ts';
+import { legsOn } from './travel.ts';
+import type { DayTravel, TravelContext } from './travel.ts';
+import type { Block, DateStr, Leg, PlanInput, PlanResult, Warning, Window } from './types.ts';
 
 export interface Slot extends Window {
   soft: boolean;
 }
 
+const travelContext = (input: PlanInput): TravelContext => ({
+  places: input.places ?? [],
+  commutes: input.commutes ?? [],
+  allowance: input.preferences.travelAllowanceMinutes,
+});
+
+// The planner asks about the same day many times while it tries options, so each day is worked out once per input.
+const travelCache = new WeakMap<PlanInput, Map<DateStr, DayTravel>>();
+export function travelOn(input: PlanInput, date: DateStr): DayTravel {
+  let days = travelCache.get(input);
+  if (!days) {
+    days = new Map();
+    travelCache.set(input, days);
+  }
+  let day = days.get(date);
+  if (!day) {
+    day = legsOn(date, input.commitments, travelContext(input));
+    days.set(date, day);
+  }
+  return day;
+}
+
 export function daySlots(input: PlanInput, date: DateStr, opened: ReadonlySet<DateStr>): Slot[] {
   const pref = input.preferences;
   const window = pref.daysOff.includes(weekdayOf(date)) ? pref.dayOffWindow : pref.weekdayWindow;
-  const busy = busyOn(date, input.commitments);
+  const busy = [
+    ...busyOn(date, input.commitments),
+    ...travelOn(input, date).legs.map((l) => ({ title: 'Travel', start: l.start, end: l.end })),
+  ];
   const softs = pref.softWindows.filter((s) => s.weekday === weekdayOf(date));
   const normal = freeSlots(window, [...busy, ...softs]).map((s) => ({ ...s, soft: false }));
   const soft = opened.has(date)
@@ -217,5 +244,20 @@ export function plan(input: PlanInput): PlanResult {
       detail: { date: offer.date, minutes: offer.minutes, costMinutes: offer.cost },
     });
   }
-  return { blocks, warnings };
+  const travel: Leg[] = [];
+  const travelWarnings: Warning[] = [];
+  const missing = new Set<string>();
+  for (let i = 0; i < input.horizonDays; i++) {
+    const day = travelOn(input, addDays(input.today, i));
+    travel.push(...day.legs);
+    for (const w of day.warnings) {
+      if (w.kind === 'address-missing') {
+        const name = w.detail?.placeName ?? '';
+        if (missing.has(name)) continue;
+        missing.add(name);
+      }
+      travelWarnings.push(w);
+    }
+  }
+  return { blocks, warnings: [...warnings, ...travelWarnings], travel };
 }

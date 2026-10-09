@@ -72,7 +72,7 @@ test('with nothing selected the form column says what to do, and an empty list s
 test('selecting an item fills the form with its values', () => {
   const { render } = setup();
   const el: any = render('commitments', 'lesson-1');
-  assert.equal(byKey(el, 'f-title').value, 'Private lesson');
+  assert.equal(byKey(el, 'f-title').value, 'Private lesson, Anna');
   assert.equal(byKey(el, 'f-start').value, '16:00');
   assert.equal(byKey(el, 'f-end').value, '17:00');
   assert.equal(byKey(el, 'f-buffer').value, '30');
@@ -157,7 +157,7 @@ test('Discard changes puts the saved values back', () => {
   const el: any = render('commitments', 'lesson-1');
   type(el, 'f-title', 'Changed my mind');
   named(el, 'Discard changes')!.click();
-  assert.equal(byKey(el, 'f-title').value, 'Private lesson');
+  assert.equal(byKey(el, 'f-title').value, 'Private lesson, Anna');
 });
 
 test('typing survives a redraw of the same item, and opening another item starts fresh', () => {
@@ -169,7 +169,7 @@ test('typing survives a redraw of the same item, and opening another item starts
   const other: any = render('commitments', 'mass');
   assert.equal(byKey(other, 'f-title').value, 'Mass');
   const back: any = render('commitments', 'lesson-1');
-  assert.equal(byKey(back, 'f-title').value, 'Private lesson');
+  assert.equal(byKey(back, 'f-title').value, 'Private lesson, Anna');
 });
 
 test('deleting asks first, then removes the item and returns to the list', async () => {
@@ -177,7 +177,7 @@ test('deleting asks first, then removes the item and returns to the list', async
   const el: any = render('commitments', 'lesson-1');
   named(el, 'Delete')!.click();
   assert.equal(calls.length, 0);
-  assert.match(textOf(el), /Delete "Private lesson"\?/);
+  assert.match(textOf(el), /Delete "Private lesson, Anna"\?/);
   named(el, 'Keep it')!.click();
   assert.equal(named(el, 'Delete') !== undefined, true);
   named(el, 'Delete')!.click();

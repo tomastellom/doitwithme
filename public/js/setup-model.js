@@ -32,14 +32,14 @@ const byNumber = (a, b) => a - b;
 export const commitmentKind = {
   blank(today) {
     return {
-      title: '', category: 'class', start: '09:00', end: '10:00', buffer: '0',
+      title: '', category: 'class', start: '09:00', end: '10:00', buffer: '0', placeId: '',
       repeats: 'weekly', weekdays: [1], from: today, to: addDays(today, 112), date: today, exceptions: [],
     };
   },
   toDraft(c) {
     const weekly = c.pattern.kind === 'weekly';
     return {
-      title: c.title, category: c.category, start: hhmm(c.start), end: hhmm(c.end), buffer: String(c.bufferBefore),
+      title: c.title, category: c.category, start: hhmm(c.start), end: hhmm(c.end), buffer: String(c.bufferBefore), placeId: c.placeId ?? '',
       repeats: weekly ? 'weekly' : 'once',
       weekdays: weekly ? [...c.pattern.weekdays] : [1],
       from: weekly ? c.pattern.from : '', to: weekly ? c.pattern.to : '',
@@ -47,7 +47,7 @@ export const commitmentKind = {
       exceptions: [...c.exceptions],
     };
   },
-  fromDraft(d, id) {
+  fromDraft(d, id, state) {
     const title = d.title.trim();
     if (!title) return { error: 'Give it a title.' };
     if (title.length > 200) return { error: 'The title can be at most 200 characters.' };
@@ -69,8 +69,9 @@ export const commitmentKind = {
       pattern = { kind: 'weekly', weekdays: [...d.weekdays].sort(byNumber), from: d.from, to: d.to };
     }
     if (!isDates(d.exceptions)) return { error: 'Cancelled dates must be real dates.' };
+    if (d.placeId && !(state.places ?? []).some((p) => p.id === d.placeId)) return { error: 'Pick a place from the list.' };
     return {
-      item: { id, title, category: d.category, start, end, pattern, exceptions: [...d.exceptions].sort(), bufferBefore: buffer },
+      item: { id, title, category: d.category, start, end, pattern, exceptions: [...d.exceptions].sort(), bufferBefore: buffer, ...(d.placeId ? { placeId: d.placeId } : {}) },
     };
   },
   summary(c) {

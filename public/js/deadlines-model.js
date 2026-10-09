@@ -33,6 +33,7 @@ export function deadlinesModel(state, clock) {
         day: Number(d.dueDate.slice(8)),
         month: MONTHS[Number(d.dueDate.slice(5, 7)) - 1],
         weekday: WEEKDAYS[weekdayOf(d.dueDate)],
+        days: daysBetween(today, d.dueDate),
         daysLabel: daysLabel(daysBetween(today, d.dueDate)),
         title: `${task ? task.title : 'Unknown task'} ${d.kind}`,
         sub: task ? `${cap(labelOf(task.category))} / ${task.title}` : 'Unknown task',
@@ -47,4 +48,10 @@ export function deadlinesModel(state, clock) {
       };
     });
   return { rows, open: rows.length, shorts: rows.filter((r) => r.status === 'short').length };
+}
+
+// True when something is due in the next seven days and every such due date is covered.
+export function coveredThisWeek(model) {
+  const soon = model.rows.filter((r) => r.days <= 7);
+  return soon.length > 0 && soon.every((r) => r.status === 'covered');
 }

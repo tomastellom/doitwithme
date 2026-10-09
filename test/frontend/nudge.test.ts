@@ -239,3 +239,98 @@ test('clicking the mascot makes it blink once, and the blink clears itself', () 
   mascot.dispatch('animationend');
   assert.equal(mascot.hasClass('blinking'), false);
 });
+
+import { FACES, faceFor } from '../../public/js/nudge.js';
+
+test('all twelve faces from board R can be drawn, each tagged with its name and keeping the same body', () => {
+  assert.deepEqual(Object.keys(FACES), ['resting', 'glance-left', 'glance-right', 'blink', 'happy', 'sleepy', 'surprised', 'thinking', 'worried', 'working', 'celebrating', 'peeking']);
+  for (const name of Object.keys(FACES)) {
+    const m: any = createMascot(dom, { face: name, badge: null, width: 96 });
+    assert.equal(m.getAttribute('data-face'), name);
+    assert.equal(m.getAttribute('role'), 'img');
+    assert.match(m.getAttribute('aria-label'), /^Nudge/);
+    assert.equal(byClass(m, 'mascot-body').length, 1, name);
+  }
+});
+
+test('the faces differ where board R says they do', () => {
+  const draw = (face: string): any => createMascot(dom, { face });
+  assert.equal(byClass(draw('resting'), 'mascot-eye').length, 2);
+  assert.equal(byClass(draw('happy'), 'mascot-eye').length, 0);
+  assert.equal(byClass(draw('happy'), 'mascot-arc').length, 2);
+  assert.equal(byClass(draw('celebrating'), 'mascot-arc').length, 2);
+  assert.equal(byClass(draw('celebrating'), 'mascot-confetti').length, 8);
+  assert.equal(byClass(draw('thinking'), 'mascot-dot').length, 3);
+  assert.equal(byClass(draw('working'), 'mascot-ring').length, 1);
+  assert.equal(byClass(draw('worried'), 'mascot-eye')[0].getAttribute('transform'), 'rotate(14 42 82)');
+  assert.equal(byClass(draw('worried'), 'mascot-eye')[1].getAttribute('transform'), 'rotate(-14 78 82)');
+  assert.equal(byClass(draw('peeking'), 'mascot-mask').length, 1);
+  assert.equal(byClass(draw('blink'), 'mascot-eye')[0].getAttribute('height'), '7');
+  assert.equal(byClass(draw('sleepy'), 'mascot-eye')[0].getAttribute('height'), '8');
+  assert.equal(byClass(draw('surprised'), 'mascot-eye')[0].getAttribute('height'), '44');
+  assert.notEqual(byClass(draw('glance-left'), 'mascot-eye')[0].getAttribute('x'), byClass(draw('glance-right'), 'mascot-eye')[0].getAttribute('x'));
+});
+
+test('the old eye names still work', () => {
+  assert.equal((createMascot(dom, { eyes: 'sleepy' }) as any).getAttribute('data-face'), 'sleepy');
+  assert.equal((createMascot(dom, { eyes: 'side' }) as any).getAttribute('data-face'), 'glance-left');
+  assert.equal((createMascot(dom, { eyes: 'center' }) as any).getAttribute('data-face'), 'resting');
+});
+
+test('which face goes with which situation', () => {
+  const view = (over: any = {}) => ({ ...base, ...over });
+  assert.equal(faceFor(view({ status: 'offline' })), 'sleepy');
+  assert.equal(faceFor(view({ status: 'error' })), 'sleepy');
+  assert.equal(faceFor(view({ confirm: { used: true } })), 'happy');
+  assert.equal(faceFor(view({ confirm: { used: false } })), 'resting');
+  assert.equal(faceFor(view({ busy: true })), 'working');
+  assert.equal(faceFor(view({ items: [item()] })), 'glance-left');
+  assert.equal(faceFor(view({ items: [item({ offer: null })] })), 'worried');
+  assert.equal(faceFor(view({ items: [item()], surprised: true })), 'surprised');
+  assert.equal(faceFor(view({ notice: 'hello' })), 'resting');
+  assert.equal(faceFor(view()), 'resting');
+  assert.equal(faceFor(view({ celebrate: true })), 'celebrating');
+  assert.equal(faceFor(view({ celebrate: true, items: [item()] })), 'glance-left');
+  assert.equal(faceFor(view({ glance: 'right' })), 'glance-right');
+  assert.equal(faceFor(view({ glance: 'left', celebrate: true })), 'celebrating');
+});
+
+function timed() {
+  const timers: Array<{ fn: Function; ms: number }> = [];
+  const env = {
+    setTimer: (fn: Function, ms: number) => { timers.push({ fn, ms }); return timers.length; },
+    clearTimer: (id: number) => { timers[id - 1] = { fn: () => {}, ms: 0 }; },
+    random: () => 0.9,
+  };
+  const nudge: any = createNudge(dom, { approve() {}, undo() {}, dismiss() {}, okay() {}, retry() {} }, env);
+  const face = () => byClass(nudge.el, 'mascot')[0].getAttribute('data-face');
+  const fire = () => { const t = timers.shift()!; t.fn(); };
+  return { nudge, face, fire, timers };
+}
+
+test('while he is just waiting he glances to the side now and then and comes back', () => {
+  const { nudge, face, fire, timers } = timed();
+  nudge.update({ ...base });
+  assert.equal(face(), 'resting');
+  assert.ok(timers.length >= 1);
+  fire();
+  assert.equal(face(), 'glance-right');
+  fire();
+  assert.equal(face(), 'resting');
+});
+
+test('a warning that arrives after the first look surprises him for a moment', () => {
+  const { nudge, face, fire } = timed();
+  nudge.update({ ...base, items: [item()] });
+  assert.equal(face(), 'glance-left', 'warnings that were already there do not startle him');
+  nudge.update({ ...base, items: [item(), item({ key: 'another|key' })] });
+  assert.equal(face(), 'surprised');
+  fire();
+  assert.equal(face(), 'glance-left');
+});
+
+test('without timers he simply stays still', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base });
+  assert.equal(byClass(nudge.el, 'mascot')[0].getAttribute('data-face'), 'resting');
+});

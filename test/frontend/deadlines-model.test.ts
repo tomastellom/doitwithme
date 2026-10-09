@@ -70,3 +70,19 @@ test('a due date whose task was deleted still lists without crashing', () => {
   assert.equal(m.rows[0].title, 'Unknown task exam');
   assert.equal(m.rows[0].sub, 'Unknown task');
 });
+
+import { coveredThisWeek } from '../../public/js/deadlines-model.js';
+
+test('everything due in the next seven days being covered is worth a celebration', () => {
+  const covered = deadlinesModel(base({ deadlines: [dl('a', 'tax', '2026-10-12', 60)], blocks: [blk('a', '2026-10-10', 480, 540)] }), clock);
+  assert.equal(coveredThisWeek(covered), true);
+  const short = deadlinesModel(base({ deadlines: [dl('a', 'tax', '2026-10-12', 120)], blocks: [blk('a', '2026-10-10', 480, 540)] }), clock);
+  assert.equal(coveredThisWeek(short), false);
+  const none = deadlinesModel(base({ deadlines: [] }), clock);
+  assert.equal(coveredThisWeek(none), false, 'nothing due is not a victory');
+  const later = deadlinesModel(base({ deadlines: [dl('a', 'tax', '2026-10-20', 60)] }), clock);
+  assert.equal(coveredThisWeek(later), false, 'nothing due this week');
+  const mixed = deadlinesModel(base({ deadlines: [dl('a', 'tax', '2026-10-12', 60), dl('b', 'chem', '2026-10-15', 300)], blocks: [blk('a', '2026-10-10', 480, 540)] }), clock);
+  assert.equal(coveredThisWeek(mixed), false);
+  assert.equal(covered.rows[0].days, 3);
+});

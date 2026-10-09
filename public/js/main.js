@@ -1,7 +1,7 @@
 import { createApi } from './api.js';
 import { dayModel } from './day-model.js';
 import { renderDay } from './day.js';
-import { deadlinesModel } from './deadlines-model.js';
+import { coveredThisWeek, deadlinesModel } from './deadlines-model.js';
 import { renderDeadlines } from './deadlines.js';
 import { createDom } from './dom.js';
 import { replacingLink, startFavicon } from './favicon.js';
@@ -57,7 +57,14 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     dismiss: (keys) => store.dismiss(keys),
     okay: () => store.clearConfirm(),
     retry: () => store.load(),
-  });
+  }, typeof win.setTimeout === 'function'
+    ? {
+        setTimer: (fn, ms) => win.setTimeout(fn, ms),
+        clearTimer: (id) => win.clearTimeout(id),
+        random: Math.random,
+        reduceMotion: Boolean(win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches),
+      }
+    : {});
   const menu = createMenu(dom, registry, {
     navigate: (id) => navigate(buildHash(id, null)),
     current: () => route.id,
@@ -193,6 +200,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       error: s.error,
       busy: s.busy,
       notice: s.notice,
+      celebrate: Boolean(s.state) && !s.isEmpty && coveredThisWeek(deadlinesModel(s.state, getClock())),
     });
   }
 

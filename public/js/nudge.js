@@ -2,20 +2,57 @@ import { keysOf } from './nudge-model.js';
 
 const ASK_REPLY = "I can't answer questions yet. That arrives with the AI phase.";
 
-export function createMascot(dom, { eyes = 'center', badge = null, width = 96 } = {}) {
+const bar = (svg, x, y, w, h, extra = {}) =>
+  svg('rect', { class: 'mascot-eye', x, y, width: w, height: h, rx: Math.min(w, h) / 2, ...extra });
+const eyePair = (left, right, rotate = 0) => (svg) =>
+  [left, right].map((e, i) => {
+    const [x, y, w, h] = e;
+    return bar(svg, x, y, w, h, rotate ? { transform: `rotate(${i === 0 ? rotate : -rotate} ${x + w / 2} ${y + h / 2})` } : {});
+  });
+const arc = (svg, x1, x2) => svg('path', { class: 'mascot-arc', d: `M${x1} 92 Q${(x1 + x2) / 2} 68 ${x2} 92` });
+const happyEyes = (svg) => [arc(svg, 31, 53), arc(svg, 67, 89)];
+const RESTING = [[36.5, 66, 11, 32], [72.5, 66, 11, 32]];
+const CONFETTI = [[-14, 20, 'c1', 20], [2, -6, 'c2', -15], [112, -4, 'c3', 30], [132, 28, 'c1', -25], [-20, 70, 'c2', 40], [136, 78, 'c2', 10], [100, -18, 'c1', 55], [14, -22, 'c3', 5]];
+
+// The twelve faces on board R. Every face keeps the same arch; only the eyes and a few plain shapes change.
+export const FACES = {
+  resting: eyePair(...RESTING),
+  'glance-left': eyePair([26, 66, 11, 32], [62, 66, 11, 32]),
+  'glance-right': eyePair([47, 66, 11, 32], [83, 66, 11, 32]),
+  blink: eyePair([33, 88, 17, 7], [69, 88, 17, 7]),
+  happy: happyEyes,
+  sleepy: eyePair([29, 84, 17, 8], [65, 84, 17, 8]),
+  surprised: eyePair([32, 56, 11, 44], [77, 56, 11, 44]),
+  thinking: (svg) => [
+    ...eyePair([36.5, 66, 11, 32], [72.5, 80, 11, 14])(svg),
+    ...[[132, 44, 4], [146, 28, 5.5], [162, 8, 7.5]].map(([cx, cy, r]) => svg('circle', { class: 'mascot-dot', cx, cy, r })),
+  ],
+  worried: eyePair(...RESTING, 14),
+  working: (svg) => [
+    ...eyePair([36.5, 78, 11, 32], [72.5, 78, 11, 32])(svg),
+    svg('circle', { class: 'mascot-ring', cx: 152, cy: 40, r: 13 }),
+  ],
+  celebrating: (svg) => [
+    ...happyEyes(svg),
+    ...CONFETTI.map(([x, y, tone, r]) => svg('rect', { class: `mascot-confetti ${tone}`, x, y, width: 9, height: 9, transform: `rotate(${r} ${x + 4} ${y + 4})` })),
+  ],
+  peeking: (svg) => [
+    ...eyePair(...RESTING)(svg),
+    svg('rect', { class: 'mascot-mask', x: -30, y: 84, width: 190, height: 80 }),
+    svg('rect', { class: 'mascot-edge', x: -30, y: 84, width: 190, height: 4 }),
+  ],
+};
+
+const LEGACY_EYES = { center: 'resting', side: 'glance-left', sleepy: 'sleepy' };
+
+export function createMascot(dom, { face, eyes = 'center', badge = null, width = 96 } = {}) {
   const { svg } = dom;
-  const eye = (x, y, w, h, r) => svg('rect', { class: 'mascot-eye', x, y, width: w, height: h, rx: r });
-  const eyeShapes =
-    eyes === 'sleepy'
-      ? [eye(29, 84, 17, 8, 4), eye(65, 84, 17, 8, 4)]
-      : eyes === 'side'
-        ? [eye(30, 66, 11, 32, 5.5), eye(66, 66, 11, 32, 5.5)]
-        : [eye(36.5, 66, 11, 32, 5.5), eye(72.5, 66, 11, 32, 5.5)];
+  const name = face && FACES[face] ? face : LEGACY_EYES[eyes] ?? 'resting';
   const root = svg(
     'svg',
-    { class: 'mascot', width, height: Math.round((width * 4) / 3), viewBox: '0 0 120 160', role: 'img', 'aria-label': 'Nudge, the planner assistant' },
+    { class: 'mascot', 'data-face': name, width, height: Math.round((width * 4) / 3), viewBox: '0 0 120 160', role: 'img', 'aria-label': 'Nudge, the planner assistant' },
     svg('path', { class: 'mascot-body', d: 'M6 160V62C6 28 32 4 60 4s54 24 54 58v98Z' }),
-    ...eyeShapes,
+    ...FACES[name](svg),
     badge !== null && svg('circle', { class: 'mascot-badge', cx: 100, cy: 22, r: 15 }),
     badge !== null && svg('text', { class: 'mascot-badge-text', x: 100, y: 28, 'text-anchor': 'middle' }, badge),
   );
@@ -23,6 +60,19 @@ export function createMascot(dom, { eyes = 'center', badge = null, width = 96 } 
   root.addEventListener('click', () => root.setAttribute('class', 'mascot blinking'));
   root.addEventListener('animationend', () => root.setAttribute('class', 'mascot'));
   return root;
+}
+
+// Which face fits the moment. The order matters: trouble first, then busy, then news, then calm.
+export function faceFor(view) {
+  if (view.status === 'offline' || view.status === 'error') return 'sleepy';
+  if (view.confirm) return view.confirm.used ? 'happy' : 'resting';
+  if (view.busy) return 'working';
+  if (view.surprised) return 'surprised';
+  if (view.items.length > 0) return view.items.some((i) => !i.offer) ? 'worried' : 'glance-left';
+  if (view.notice) return 'resting';
+  if (view.celebrate) return 'celebrating';
+  if (view.glance) return `glance-${view.glance}`;
+  return 'resting';
 }
 
 function spokenFor(view, item) {
@@ -37,7 +87,7 @@ function spokenFor(view, item) {
   return view.status === 'loading' ? '' : 'All clear.';
 }
 
-export function createNudge(dom, handlers) {
+export function createNudge(dom, handlers, env = {}) {
   const { h, clear } = dom;
   // One live region for the whole life of the component: it is only touched when the
   // spoken message changes, so screen readers announce changes and not every redraw.
@@ -46,6 +96,13 @@ export function createNudge(dom, handlers) {
   const el = h('aside', { class: 'nudge', 'aria-label': 'Nudge', tabindex: '-1' }, live, body);
   let view = { status: 'loading', items: [], confirm: null, error: null, busy: false, notice: null };
   let index = 0;
+  let glance = null;
+  let surprised = false;
+  let prevKeys = null;
+  let glanceTimer = null;
+  let surpriseTimer = null;
+  // Timers are optional: without them Nudge simply keeps one face for each situation.
+  const animated = typeof env.setTimer === 'function' && !env.reduceMotion;
   let askMessage = null;
   let draft = '';
   let signature = '';
@@ -92,12 +149,10 @@ export function createNudge(dom, handlers) {
 
   function render() {
     let bubble = null;
-    let eyes = 'center';
     let badge = null;
     let width = 96;
     const item = view.items[index];
     if (view.status === 'offline' || view.status === 'error') {
-      eyes = 'sleepy';
       badge = '!';
       const offline = view.status === 'offline';
       bubble = say(
@@ -115,7 +170,6 @@ export function createNudge(dom, handlers) {
         h('div', { class: 'acts' }, button('Okay', () => handlers.okay(), 'y', 'nudge-okay'), button('Undo', () => handlers.undo(c.date), '', 'nudge-undo')),
       );
     } else if (view.items.length > 0) {
-      eyes = 'side';
       badge = String(view.items.length);
       width = 124;
       bubble = speaking();
@@ -135,7 +189,7 @@ export function createNudge(dom, handlers) {
     el.setAttribute('data-state', attention ? 'alert' : 'resting');
     if (attention) body.removeAttribute('aria-hidden');
     else body.setAttribute('aria-hidden', 'true');
-    clear(body, bubble, createMascot(dom, { eyes, badge, width }));
+    clear(body, bubble, createMascot(dom, { face: faceFor({ ...view, glance, surprised }), badge, width }));
     const spoken = spokenFor(view, item);
     if (spoken !== lastSpoken) {
       lastSpoken = spoken;
@@ -143,10 +197,51 @@ export function createNudge(dom, handlers) {
     }
   }
 
+  function stopGlance() {
+    if (glanceTimer !== null) env.clearTimer(glanceTimer);
+    glanceTimer = null;
+    glance = null;
+  }
+
+  // While he only waits, he looks to one side now and then, then back.
+  function armGlance() {
+    if (!animated || glanceTimer !== null) return;
+    glanceTimer = env.setTimer(() => {
+      glance = env.random() < 0.5 ? 'left' : 'right';
+      render();
+      glanceTimer = env.setTimer(() => {
+        glanceTimer = null;
+        glance = null;
+        render();
+        armGlance();
+      }, 1200);
+    }, 4000 + env.random() * 5000);
+  }
+
+  function startle(keys) {
+    if (prevKeys !== null && keys.some((k) => !prevKeys.includes(k))) {
+      surprised = true;
+      if (surpriseTimer !== null) env.clearTimer(surpriseTimer);
+      surpriseTimer = env.setTimer(() => {
+        surprised = false;
+        surpriseTimer = null;
+        render();
+      }, 2500);
+    }
+    prevKeys = keys;
+  }
+
   return {
     el,
     update(next) {
       view = { notice: null, ...next };
+      if (animated) {
+        if (view.status === 'ready') startle(view.items.map((i) => i.key));
+        else prevKeys = null;
+        const attention = view.status === 'offline' || view.status === 'error' || Boolean(view.confirm) || view.items.length > 0 || Boolean(view.notice);
+        if (attention) stopGlance();
+        else armGlance();
+      }
       const sig = JSON.stringify([view.status, view.items.map((i) => i.key), view.confirm, view.error]);
       if (sig !== signature) {
         signature = sig;

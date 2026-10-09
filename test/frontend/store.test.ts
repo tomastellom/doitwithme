@@ -300,3 +300,26 @@ test('a save that names a place deleted elsewhere says so in plain words and ref
   await commute.store.saveState(full());
   assert.match(commute.store.get().formError, /deleted elsewhere/i);
 });
+
+test('an estimate runs beside everything else: it flags itself, returns the answer and never takes the busy flag', async () => {
+  let release: Function = () => {};
+  const { store } = make({ estimate: () => new Promise((resolve) => { release = () => resolve({ rule: { minutes: 240 } }); }) });
+  await store.load();
+  const seen: any[] = [];
+  store.subscribe((s: any) => seen.push([s.estimating, s.busy]));
+  const first = store.estimate({ title: 'x' });
+  assert.equal(store.get().estimating, true);
+  assert.equal(store.get().busy, false);
+  assert.equal(await store.estimate({ title: 'x' }), null, 'a second press while one runs is ignored');
+  release();
+  assert.deepEqual(await first, { rule: { minutes: 240 } });
+  assert.equal(store.get().estimating, false);
+});
+
+test('a failed estimate clears the flag and passes the error on', async () => {
+  const { store } = make({ estimate: () => { throw new ApiError(400, 'request.credits must be a number between 0.5 and 100'); } });
+  await store.load();
+  await assert.rejects(store.estimate({}), /request\.credits/);
+  assert.equal(store.get().estimating, false);
+  assert.equal(store.get().status, 'ready');
+});

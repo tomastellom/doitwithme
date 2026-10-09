@@ -51,3 +51,10 @@ test('commuteStatus asks the server whether Google Maps can be used', async () =
   assert.deepEqual(await api.commuteStatus(), { maps: 'unavailable' });
   assert.deepEqual([f.calls[0].init.method, f.calls[0].path], ['GET', '/api/commute/status']);
 });
+
+test('estimate posts the course to the estimate endpoint', async () => {
+  const f = fakeFetch([{ status: 200, body: { rule: { minutes: 240 } } }]);
+  const api = createApi(f.fn as any);
+  assert.deepEqual(await api.estimate({ title: 'x' }), { rule: { minutes: 240 } });
+  assert.deepEqual([f.calls[0].init.method, f.calls[0].path, JSON.parse(f.calls[0].init.body)], ['POST', '/api/estimate', { title: 'x' }]);
+});

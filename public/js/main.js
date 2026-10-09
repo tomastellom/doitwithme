@@ -200,6 +200,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       error: s.error,
       busy: s.busy,
       notice: s.notice,
+      estimating: s.estimating,
       celebrate: Boolean(s.state) && !s.isEmpty && coveredThisWeek(deadlinesModel(s.state, getClock())),
     });
   }

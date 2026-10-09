@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { CATEGORIES, WEEK_ORDER, commitmentKind, newId, parseTime, parseWhole } from '../../public/js/setup-model.js';
-import { KINDS, KIND_IDS, PLACE_KINDS, TRAVEL_MODES, applyItem, commuteKind, deadlineKind, itemsOf, placeKind, preferencesKind, removeItem, taskKind } from '../../public/js/setup-model.js';
+import { KINDS, KIND_IDS, PLACE_KINDS, TRAVEL_MODES, parseDecimal, applyItem, commuteKind, deadlineKind, itemsOf, placeKind, preferencesKind, removeItem, taskKind } from '../../public/js/setup-model.js';
 
 const example = JSON.parse(readFileSync('examples/sample-state.json', 'utf8'));
 const lesson = () => example.commitments.find((c: any) => c.id === 'lesson-1');
@@ -131,7 +131,7 @@ test('due dates round-trip and need a real task', () => {
 });
 
 test('preferences round-trip, keep softMode, and validate windows', () => {
-  const prefs = { ...example.preferences, softMode: 'auto', travelAllowanceMinutes: 30 };
+  const prefs = { ...example.preferences, softMode: 'auto', travelAllowanceMinutes: 30, hoursPerCredit: null, normalCredits: 30, fullLoadHours: 40 };
   const state = { ...example, preferences: prefs };
   const draft = preferencesKind.toDraft(prefs);
   const result = preferencesKind.fromDraft(draft, '-', state);
@@ -281,7 +281,7 @@ test('the travel allowance is a preference with limits, and nothing else about p
   assert.equal(preferencesKind.fromDraft({ ...d, travelAllowance: '45' }, '-', s).item.travelAllowanceMinutes, 45);
   assert.match(preferencesKind.fromDraft({ ...d, travelAllowance: '601' }, '-', s).error, /Travel allowance/);
   assert.match(preferencesKind.fromDraft({ ...d, travelAllowance: 'x' }, '-', s).error, /Travel allowance/);
-  assert.deepEqual(preferencesKind.fromDraft(d, '-', s).item, { ...s.preferences, travelAllowanceMinutes: 30 });
+  assert.deepEqual(preferencesKind.fromDraft(d, '-', s).item, { ...s.preferences, travelAllowanceMinutes: 30, hoursPerCredit: null, normalCredits: 30, fullLoadHours: 40 });
 });
 
 test('deleting a place removes its commutes and clears it from commitments, and nothing else changes', () => {
@@ -315,4 +315,52 @@ test('adding and editing a commute only touches the commutes list', () => {
   const next = applyItem(s, 'commutes', item);
   assert.equal(next.commutes.length, s.commutes.length + 1);
   assert.deepEqual({ ...next, commutes: null }, { ...s, commutes: null });
+});
+
+test('parseDecimal accepts plain decimals inside the limits only', () => {
+  assert.equal(parseDecimal('3', 0.5, 100), 3);
+  assert.equal(parseDecimal(' 2.5 ', 0.5, 100), 2.5);
+  assert.equal(parseDecimal('0.5', 0.5, 100), 0.5);
+  for (const bad of ['', 'abc', '1e3', '-1', '0.4', '100.5', '2,5', '1.', '.5x', 'NaN', 'Infinity', '０５']) assert.equal(parseDecimal(bad, 0.5, 100), null, bad);
+});
+
+test('a study task keeps its course details through a draft, and other tasks have none', () => {
+  const study = { id: 't', title: 'Chemistry', category: 'study', weeklyMinutes: 360, maxBlock: 90, onePerDay: false, priority: 2,
+    course: { credits: 3, difficulty: 4, examOnly: false, weeklyGraded: true, lab: true, syllabus: 'Sets.' } };
+  const draft = taskKind.toDraft(study);
+  assert.deepEqual([draft.credits, draft.difficulty, draft.examOnly, draft.weeklyGraded, draft.lab, draft.syllabus], ['3', '4', false, true, true, 'Sets.']);
+  assert.deepEqual(taskKind.fromDraft(draft, 't', example).item, study);
+  const plain = taskKind.toDraft({ ...study, course: undefined });
+  assert.deepEqual([plain.credits, plain.difficulty, plain.syllabus], ['', '3', '']);
+  assert.equal('course' in taskKind.fromDraft(plain, 't', example).item, false);
+  assert.equal('course' in taskKind.fromDraft({ ...draft, category: 'gym' }, 't', example).item, false);
+  assert.equal(taskKind.fromDraft({ ...draft, credits: '2.5' }, 't', example).item.course.credits, 2.5);
+});
+
+test('course details are refused in plain sentences', () => {
+  const draft = { ...taskKind.blank(), title: 'Chemistry', category: 'study', credits: '3' };
+  const err = (over: any) => taskKind.fromDraft({ ...draft, ...over }, 't', example).error;
+  assert.match(err({ credits: '0' }), /Credits/);
+  assert.match(err({ credits: 'x' }), /Credits/);
+  assert.match(err({ credits: '101' }), /Credits/);
+  assert.match(err({ difficulty: '6' }), /Difficulty/);
+  assert.match(err({ syllabus: 'x'.repeat(20001) }), /Syllabus/);
+  assert.match(err({ credits: '', syllabus: 'Some text' }), /credits/);
+  assert.equal(taskKind.fromDraft({ ...draft, credits: '', syllabus: '' }, 't', example).error, undefined);
+});
+
+test('the scale preferences round trip, blank hours per credit means none, and limits are enforced', () => {
+  const s = structuredClone(example);
+  s.preferences.hoursPerCredit = 1;
+  const d = preferencesKind.toDraft(s.preferences);
+  assert.deepEqual([d.hoursPerCredit, d.normalCredits, d.fullLoadHours], ['1', '30', '40']);
+  const item = preferencesKind.fromDraft(d, '-', s).item;
+  assert.deepEqual([item.hoursPerCredit, item.normalCredits, item.fullLoadHours], [1, 30, 40]);
+  assert.equal(preferencesKind.fromDraft({ ...d, hoursPerCredit: '' }, '-', s).item.hoursPerCredit, null);
+  const err = (over: any) => preferencesKind.fromDraft({ ...d, ...over }, '-', s).error;
+  assert.match(err({ hoursPerCredit: '0' }), /Hours a week per credit/);
+  assert.match(err({ hoursPerCredit: '21' }), /Hours a week per credit/);
+  assert.match(err({ normalCredits: '0' }), /normal semester/);
+  assert.match(err({ fullLoadHours: '101' }), /full load/);
+  assert.equal(preferencesKind.toDraft({ ...s.preferences, hoursPerCredit: undefined, normalCredits: undefined, fullLoadHours: undefined }).normalCredits, '30');
 });

@@ -398,3 +398,11 @@ test('no face reaches further right than the space beside him, so nothing runs o
     }
   }
 });
+
+test('he thinks while an estimate runs, unless trouble or news outranks it', () => {
+  const view = (over: any = {}) => ({ ...base, ...over });
+  assert.equal(faceFor(view({ estimating: true })), 'thinking');
+  assert.equal(faceFor(view({ estimating: true, status: 'offline' })), 'sleepy');
+  assert.equal(faceFor(view({ estimating: true, items: [item({ offer: null })] })), 'worried');
+  assert.equal(faceFor(view({ estimating: true, celebrate: true })), 'thinking');
+});

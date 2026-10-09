@@ -74,6 +74,7 @@ export function faceFor(view) {
     if (shortfalls.some((i) => !i.offer)) return 'worried';
     return shortfalls.length > 0 ? 'glance-left' : 'thinking';
   }
+  if (view.estimating) return 'thinking';
   if (view.notice) return 'resting';
   if (view.celebrate) return 'celebrating';
   if (view.glance) return `glance-${view.glance}`;

@@ -19,6 +19,14 @@ export function parseTime(text) {
   return hours > 23 ? null : hours * 60 + minutes;
 }
 
+// Plain decimals only ("2.5"), never exponents, signs, commas or full-width digits.
+export function parseDecimal(text, min, max) {
+  const t = String(text).trim();
+  if (!/^\d{1,6}(\.\d{1,4})?$/.test(t)) return null;
+  const n = Number(t);
+  return n >= min && n <= max ? n : null;
+}
+
 export function parseWhole(text, min, max) {
   const t = String(text).trim();
   if (!/^\d{1,9}$/.test(t)) return null;
@@ -89,12 +97,18 @@ const TITLE_ERROR = 'The title can be at most 200 characters.';
 
 export const taskKind = {
   blank() {
-    return { title: '', category: 'study', weekly: '', maxBlock: '90', onePerDay: false, priority: '3' };
+    return {
+      title: '', category: 'study', weekly: '', maxBlock: '90', onePerDay: false, priority: '3',
+      credits: '', difficulty: '3', examOnly: false, weeklyGraded: false, lab: false, syllabus: '',
+    };
   },
   toDraft(t) {
     return {
       title: t.title, category: t.category, weekly: t.weeklyMinutes === null ? '' : String(t.weeklyMinutes),
       maxBlock: String(t.maxBlock), onePerDay: t.onePerDay, priority: String(t.priority),
+      credits: t.course ? String(t.course.credits) : '', difficulty: t.course ? String(t.course.difficulty) : '3',
+      examOnly: t.course ? t.course.examOnly : false, weeklyGraded: t.course ? t.course.weeklyGraded : false,
+      lab: t.course ? t.course.lab : false, syllabus: t.course ? t.course.syllabus : '',
     };
   },
   fromDraft(d, id) {
@@ -108,7 +122,20 @@ export const taskKind = {
     if (maxBlock === null) return { error: 'Longest block must be a whole number of minutes, 5 to 1440.' };
     const priority = parseWhole(d.priority, 1, 5);
     if (priority === null) return { error: 'Priority must be 1 to 5.' };
-    return { item: { id, title, category: d.category, weeklyMinutes: weekly, maxBlock, onePerDay: Boolean(d.onePerDay), priority } };
+    let course;
+    if (d.category === 'study') {
+      if (String(d.credits).trim() === '') {
+        if (d.syllabus.trim() !== '') return { error: 'Add the credits to keep course details.' };
+      } else {
+        const credits = parseDecimal(d.credits, 0.5, 100);
+        if (credits === null) return { error: 'Credits must be a number from 0.5 to 100, like 3.' };
+        const difficulty = parseWhole(d.difficulty, 1, 5);
+        if (difficulty === null) return { error: 'Difficulty must be 1 to 5.' };
+        if (d.syllabus.length > 20000) return { error: 'Syllabus text can be at most 20000 characters.' };
+        course = { credits, difficulty, examOnly: Boolean(d.examOnly), weeklyGraded: Boolean(d.weeklyGraded), lab: Boolean(d.lab), syllabus: d.syllabus };
+      }
+    }
+    return { item: { id, title, category: d.category, weeklyMinutes: weekly, maxBlock, onePerDay: Boolean(d.onePerDay), priority, ...(course ? { course } : {}) } };
   },
   summary(t) {
     const weekly = t.weeklyMinutes === null ? 'no weekly target' : `${t.weeklyMinutes} min a week`;
@@ -147,6 +174,8 @@ export const preferencesKind = {
       weekdayStart: hhmm(p.weekdayWindow.start), weekdayEnd: hhmm(p.weekdayWindow.end),
       dayOffStart: hhmm(p.dayOffWindow.start), dayOffEnd: hhmm(p.dayOffWindow.end),
       daysOff: [...p.daysOff], minBlock: String(p.minBlock), minBreak: String(p.minBreak), travelAllowance: String(p.travelAllowanceMinutes ?? 30),
+      hoursPerCredit: p.hoursPerCredit == null ? '' : String(p.hoursPerCredit),
+      normalCredits: String(p.normalCredits ?? 30), fullLoadHours: String(p.fullLoadHours ?? 40),
       softWindows: p.softWindows.map((s) => ({ weekday: s.weekday, start: hhmm(s.start), end: hhmm(s.end) })),
     };
   },
@@ -169,6 +198,13 @@ export const preferencesKind = {
     if (minBreak === null) return { error: 'Break must be a whole number of minutes, 0 to 120.' };
     const travelAllowance = parseWhole(d.travelAllowance, 0, 600);
     if (travelAllowance === null) return { error: 'Travel allowance must be a whole number of minutes, 0 to 600.' };
+    const hoursText = String(d.hoursPerCredit).trim();
+    const hoursPerCredit = hoursText === '' ? null : parseDecimal(hoursText, 0.1, 20);
+    if (hoursText !== '' && hoursPerCredit === null) return { error: 'Hours a week per credit must be a number from 0.1 to 20, or empty.' };
+    const normalCredits = parseDecimal(d.normalCredits, 1, 200);
+    if (normalCredits === null) return { error: 'Credits in a normal semester must be a number from 1 to 200.' };
+    const fullLoadHours = parseDecimal(d.fullLoadHours, 1, 100);
+    if (fullLoadHours === null) return { error: 'Study hours at a full load must be a number from 1 to 100.' };
     const softWindows = [];
     for (const s of d.softWindows) {
       const start = parseTime(s.start);
@@ -192,6 +228,9 @@ export const preferencesKind = {
         minBlock,
         minBreak,
         travelAllowanceMinutes: travelAllowance,
+        hoursPerCredit,
+        normalCredits,
+        fullLoadHours,
         softWindows,
       },
     };

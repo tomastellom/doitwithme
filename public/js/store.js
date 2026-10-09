@@ -5,7 +5,7 @@ const STALE_NOTICE = 'That warning changed, so I refreshed the plan.';
 
 export function createStore(api, getClock) {
   let current = {
-    status: 'loading', state: null, warnings: [], approvedSoft: [], dismissed: [], travel: [], maps: 'unavailable',
+    status: 'loading', state: null, warnings: [], approvedSoft: [], dismissed: [], travel: [], maps: 'unavailable', estimating: false,
     isEmpty: false, error: null, busy: false, confirm: null, notice: null, formError: null,
   };
   const listeners = new Set();
@@ -114,6 +114,16 @@ export function createStore(api, getClock) {
         current = { ...current, state };
         set(merged(r, { isEmpty: false, confirm: null }));
       }),
+    // An estimate runs beside everything else: it never takes the busy flag, so the form stays usable.
+    estimate: async (body) => {
+      if (current.estimating) return null;
+      set({ estimating: true });
+      try {
+        return await api.estimate(body);
+      } finally {
+        set({ estimating: false });
+      }
+    },
     clearConfirm: () => set({ confirm: null, notice: null }),
     saveState: (next) =>
       guard(async () => {

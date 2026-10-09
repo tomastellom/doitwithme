@@ -68,7 +68,12 @@ export function faceFor(view) {
   if (view.confirm) return view.confirm.used ? 'happy' : 'resting';
   if (view.busy) return 'working';
   if (view.surprised) return 'surprised';
-  if (view.items.length > 0) return view.items.some((i) => !i.offer) ? 'worried' : 'glance-left';
+  if (view.items.length > 0) {
+    // A deadline that nothing can cover is a worry; a missing address or a tight trip is something to think over.
+    const shortfalls = view.items.filter((i) => i.category !== 'travel');
+    if (shortfalls.some((i) => !i.offer)) return 'worried';
+    return shortfalls.length > 0 ? 'glance-left' : 'thinking';
+  }
   if (view.notice) return 'resting';
   if (view.celebrate) return 'celebrating';
   if (view.glance) return `glance-${view.glance}`;
@@ -101,6 +106,8 @@ export function createNudge(dom, handlers, env = {}) {
   let prevKeys = null;
   let glanceTimer = null;
   let surpriseTimer = null;
+  let wasAttention = false;
+  let holding = false;
   // Timers are optional: without them Nudge simply keeps one face for each situation.
   const animated = typeof env.setTimer === 'function' && !env.reduceMotion;
   let askMessage = null;
@@ -189,13 +196,27 @@ export function createNudge(dom, handlers, env = {}) {
     el.setAttribute('data-state', attention ? 'alert' : 'resting');
     if (attention) body.removeAttribute('aria-hidden');
     else body.setAttribute('aria-hidden', 'true');
-    clear(body, bubble, createMascot(dom, { face: faceFor({ ...view, glance, surprised }), badge, width }));
     const spoken = spokenFor(view, item);
     if (spoken !== lastSpoken) {
       lastSpoken = spoken;
       live.textContent = spoken;
     }
+    // While he slides out of sight he keeps the face and words he had; the calm ones come after.
+    if (holding && !attention) return;
+    holding = false;
+    clear(body, bubble, createMascot(dom, { face: faceFor({ ...view, glance, surprised }), badge, width }));
   }
+
+  function release() {
+    if (!holding) return;
+    holding = false;
+    render();
+  }
+  body.addEventListener('transitionend', release);
+  // Pressing on him while he rests must not give the corner keyboard focus, or he would stay up until you click elsewhere.
+  el.addEventListener('mousedown', (e) => {
+    if (el.getAttribute('data-state') === 'resting') e.preventDefault();
+  });
 
   function stopGlance() {
     if (glanceTimer !== null) env.clearTimer(glanceTimer);
@@ -235,6 +256,12 @@ export function createNudge(dom, handlers, env = {}) {
     el,
     update(next) {
       view = { notice: null, ...next };
+      const attentionNow = view.status === 'offline' || view.status === 'error' || Boolean(view.confirm) || view.items.length > 0 || Boolean(view.notice);
+      if (animated && wasAttention && !attentionNow) {
+        holding = true;
+        env.setTimer(release, 400);
+      }
+      wasAttention = attentionNow;
       if (animated) {
         if (view.status === 'ready') startle(view.items.map((i) => i.key));
         else prevKeys = null;

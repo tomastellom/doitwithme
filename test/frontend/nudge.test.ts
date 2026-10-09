@@ -334,3 +334,54 @@ test('without timers he simply stays still', () => {
   nudge.update({ ...base });
   assert.equal(byClass(nudge.el, 'mascot')[0].getAttribute('data-face'), 'resting');
 });
+
+test('a missing address or a tight trip makes him think, a shortfall without an offer makes him worry', () => {
+  const trip = item({ key: 'address-missing|Anna', category: 'travel', offer: null });
+  const view = (items: any[]) => ({ ...base, items });
+  assert.equal(faceFor(view([trip])), 'thinking');
+  assert.equal(faceFor(view([item({ offer: null })])), 'worried');
+  assert.equal(faceFor(view([trip, item({ offer: null })])), 'worried');
+  assert.equal(faceFor(view([trip, item()])), 'glance-left');
+  assert.equal(faceFor(view([item()])), 'glance-left');
+});
+
+test('pressing the mouse on him while he rests does not give the corner focus, so he can drop away again', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base });
+  assert.equal(nudge.el.getAttribute('data-state'), 'resting');
+  assert.equal(nudge.el.dispatch('mousedown').defaultPrevented, true);
+  nudge.update({ ...base, items: [item()] });
+  assert.equal(nudge.el.getAttribute('data-state'), 'alert');
+  assert.equal(nudge.el.dispatch('mousedown').defaultPrevented, false);
+});
+
+test('when a warning is dismissed he slides away with the same face and words, then settles', () => {
+  const { nudge, face, fire } = timed();
+  nudge.update({ ...base, items: [item()] });
+  assert.equal(face(), 'glance-left');
+  nudge.update({ ...base, items: [] });
+  assert.equal(nudge.el.getAttribute('data-state'), 'resting');
+  assert.equal(face(), 'glance-left', 'still the same face while sliding out');
+  assert.match(textOf(nudge.el), /Chemistry exam/);
+  fire();
+  assert.equal(face(), 'resting');
+  assert.match(textOf(nudge.el), /All clear/);
+});
+
+test('the slide-out also settles when the browser says the transition ended', () => {
+  const { nudge, face } = timed();
+  nudge.update({ ...base, items: [item()] });
+  nudge.update({ ...base, items: [] });
+  assert.equal(face(), 'glance-left');
+  byClass(nudge.el, 'nudge-body')[0].dispatch('transitionend');
+  assert.equal(face(), 'resting');
+});
+
+test('a new warning during the slide-out brings him straight back with the new content', () => {
+  const { nudge, face } = timed();
+  nudge.update({ ...base, items: [item()] });
+  nudge.update({ ...base, items: [] });
+  nudge.update({ ...base, items: [item({ key: 'second', headline: 'Second one' })] });
+  assert.match(textOf(nudge.el), /Second one/);
+  assert.equal(nudge.el.getAttribute('data-state'), 'alert');
+});

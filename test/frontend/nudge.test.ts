@@ -385,3 +385,16 @@ test('a new warning during the slide-out brings him straight back with the new c
   assert.match(textOf(nudge.el), /Second one/);
   assert.equal(nudge.el.getAttribute('data-state'), 'alert');
 });
+
+test('no face reaches further right than the space beside him, so nothing runs off the page', () => {
+  // He sits 40px from the right edge and is drawn at up to 124px wide for 120 units, so props may reach 36 units past the body at most.
+  const LIMIT = 120 + 36;
+  for (const name of Object.keys(FACES)) {
+    const m: any = createMascot(dom, { face: name });
+    for (const shape of findAll(m, (e: any) => ['rect', 'circle', 'path'].includes(e.tag))) {
+      const x = Number(shape.getAttribute('x') ?? shape.getAttribute('cx') ?? 0);
+      const reach = shape.tag === 'circle' ? x + Number(shape.getAttribute('r')) : shape.tag === 'rect' ? x + Number(shape.getAttribute('width')) : 0;
+      assert.ok(reach <= LIMIT, `${name}: ${shape.getAttribute('class')} reaches ${reach}`);
+    }
+  }
+});

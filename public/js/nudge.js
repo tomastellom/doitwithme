@@ -12,7 +12,7 @@ const eyePair = (left, right, rotate = 0) => (svg) =>
 const arc = (svg, x1, x2) => svg('path', { class: 'mascot-arc', d: `M${x1} 92 Q${(x1 + x2) / 2} 68 ${x2} 92` });
 const happyEyes = (svg) => [arc(svg, 31, 53), arc(svg, 67, 89)];
 const RESTING = [[36.5, 66, 11, 32], [72.5, 66, 11, 32]];
-const CONFETTI = [[-14, 20, 'c1', 20], [2, -6, 'c2', -15], [112, -4, 'c3', 30], [132, 28, 'c1', -25], [-20, 70, 'c2', 40], [136, 78, 'c2', 10], [100, -18, 'c1', 55], [14, -22, 'c3', 5]];
+const CONFETTI = [[-14, 20, 'c1', 20], [2, -6, 'c2', -15], [104, -4, 'c3', 30], [128, 28, 'c1', -25], [-20, 70, 'c2', 40], [128, 78, 'c2', 10], [100, -18, 'c1', 55], [14, -22, 'c3', 5]];
 
 // The twelve faces on board R. Every face keeps the same arch; only the eyes and a few plain shapes change.
 export const FACES = {
@@ -25,12 +25,12 @@ export const FACES = {
   surprised: eyePair([32, 56, 11, 44], [77, 56, 11, 44]),
   thinking: (svg) => [
     ...eyePair([36.5, 66, 11, 32], [72.5, 80, 11, 14])(svg),
-    ...[[132, 44, 4], [146, 28, 5.5], [162, 8, 7.5]].map(([cx, cy, r]) => svg('circle', { class: 'mascot-dot', cx, cy, r })),
+    ...[[124, 50, 4], [135, 37, 5.5], [147, 22, 6.5]].map(([cx, cy, r]) => svg('circle', { class: 'mascot-dot', cx, cy, r })),
   ],
   worried: eyePair(...RESTING, 14),
   working: (svg) => [
     ...eyePair([36.5, 78, 11, 32], [72.5, 78, 11, 32])(svg),
-    svg('circle', { class: 'mascot-ring', cx: 152, cy: 40, r: 13 }),
+    svg('circle', { class: 'mascot-ring', cx: 140, cy: 40, r: 11 }),
   ],
   celebrating: (svg) => [
     ...happyEyes(svg),
@@ -38,8 +38,8 @@ export const FACES = {
   ],
   peeking: (svg) => [
     ...eyePair(...RESTING)(svg),
-    svg('rect', { class: 'mascot-mask', x: -30, y: 84, width: 190, height: 80 }),
-    svg('rect', { class: 'mascot-edge', x: -30, y: 84, width: 190, height: 4 }),
+    svg('rect', { class: 'mascot-mask', x: 0, y: 84, width: 120, height: 80 }),
+    svg('rect', { class: 'mascot-edge', x: 0, y: 84, width: 120, height: 4 }),
   ],
 };
 

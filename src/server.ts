@@ -1,4 +1,6 @@
 import { unavailableProvider } from './maps.ts';
+import { buildEstimate, unavailableProvider as unavailableWorkload } from './workload.ts';
+import type { WorkloadProvider } from './workload.ts';
 import type { TravelTimeProvider } from './maps.ts';
 import { readFileSync, realpathSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -12,6 +14,7 @@ import type { State } from './types.ts';
 import {
   ValidationError,
   validateDismissRequest,
+  validateEstimateRequest,
   validateReplanRequest,
   validateSoftRequest,
   validateState,
@@ -134,11 +137,12 @@ function serveStatic(publicDir: string, pathname: string, method: string, res: S
 
 export function createApp(
   statePath: string,
-  options: { publicDir?: string; exampleFile?: string; maps?: TravelTimeProvider } = {},
+  options: { publicDir?: string; exampleFile?: string; maps?: TravelTimeProvider; workload?: WorkloadProvider } = {},
 ): Server {
   const publicDir = options.publicDir ?? DEFAULT_PUBLIC;
   const exampleFile = options.exampleFile ?? DEFAULT_EXAMPLE;
   const maps = options.maps ?? unavailableProvider;
+  const workload = options.workload ?? unavailableWorkload;
   return createServer(async (req, res) => {
     try {
       if (!ALLOWED_HOSTS.test(req.headers.host ?? '')) throw new HttpError(403, 'Forbidden host');
@@ -189,6 +193,11 @@ export function createApp(
         }
         saveState(statePath, result.state);
         return send(res, 200, body);
+      }
+      if (req.method === 'POST' && pathname === '/api/estimate') {
+        const request = validateEstimateRequest(await readJson(req));
+        const { hoursPerCredit, normalCredits, fullLoadHours } = loadState(statePath).preferences;
+        return send(res, 200, await buildEstimate(request, { hoursPerCredit, normalCredits, fullLoadHours }, workload));
       }
       if (req.method === 'GET' && pathname === '/api/commute/status') {
         return send(res, 200, { maps: maps.status });

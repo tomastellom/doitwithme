@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyState } from '../src/store.ts';
-import { ValidationError, validateState } from '../src/validate.ts';
+import { ValidationError, validateEstimateRequest, validateState } from '../src/validate.ts';
 import { commitment, deadline, task } from './helpers.ts';
 
 function sample(): any {
@@ -233,4 +233,13 @@ test('a course is checked field by field in plain words', () => {
   const hostile = sample();
   hostile.tasks[0].course = course({ syllabus: '<img src=x onerror=alert(1)> ‮' });
   assert.equal(validateState(hostile).tasks[0].course!.syllabus, '<img src=x onerror=alert(1)> ‮');
+});
+
+test('an estimate request needs a title and a valid course', () => {
+  const ok = { title: 'Chemistry', credits: 3, difficulty: 4, examOnly: false, weeklyGraded: true, lab: false, syllabus: '' };
+  assert.deepEqual(validateEstimateRequest(ok), { title: 'Chemistry', course: { credits: 3, difficulty: 4, examOnly: false, weeklyGraded: true, lab: false, syllabus: '' } });
+  assert.throws(() => validateEstimateRequest({ ...ok, title: '' }), /title/);
+  assert.throws(() => validateEstimateRequest({ ...ok, credits: 0 }), /credits/);
+  assert.throws(() => validateEstimateRequest({ ...ok, syllabus: 'x'.repeat(20001) }), /syllabus/);
+  assert.throws(() => validateEstimateRequest(null), /request/);
 });

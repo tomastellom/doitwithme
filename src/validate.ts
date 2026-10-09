@@ -325,3 +325,8 @@ export function validateDismissRequest(x: unknown): {
   const o = obj(x, 'request');
   return { ...replanFields(o), key: str(o.key, 'key', 300) };
 }
+
+export function validateEstimateRequest(x: unknown): { title: string; course: Course } {
+  const o = obj(x, 'request');
+  return { title: str(o.title, 'title'), course: courseOf(o, 'request') };
+}

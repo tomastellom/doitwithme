@@ -1065,7 +1065,7 @@ export function planDays(input: PlanInput): Block[] {
       for (;;) {
         const room = slot.end - cursor;
         const pick = demandsFor(input, date, all, usableDays).find((d) => {
-          if (slot.soft && d.deadline === null) return false;
+          if (slot.soft && d.deadline === null && d.task.category !== 'study') return false;
           const wanted = Math.min(d.task.maxBlock, d.allowedLeft);
           return room >= Math.min(pref.minBlock, wanted);
         });
@@ -1234,9 +1234,14 @@ Then append at the end of the file:
 ```ts
 const minutesOf = (blocks: Block[]): number => blocks.reduce((t, b) => t + (b.end - b.start), 0);
 
-export function shortfallWarnings(input: PlanInput, all: Block[]): Warning[] {
+export interface Shortfall {
+  warning: Warning;
+  category: string;
+}
+
+export function shortfalls(input: PlanInput, all: Block[]): Shortfall[] {
   const last = addDays(input.today, input.horizonDays - 1);
-  const out: Warning[] = [];
+  const out: Shortfall[] = [];
 
   for (const dl of input.deadlines) {
     const task = input.tasks.find((t) => t.id === dl.taskId);
@@ -1244,8 +1249,11 @@ export function shortfallWarnings(input: PlanInput, all: Block[]): Warning[] {
     const rem = dl.effortMinutes - minutesOf(all.filter((b) => b.deadlineId === dl.id));
     if (rem > 0) {
       out.push({
-        kind: 'deadline-short',
-        message: `${task.title} ${dl.kind} due ${dl.dueDate} is short by ${rem} min`,
+        category: task.category,
+        warning: {
+          kind: 'deadline-short',
+          message: `${task.title} ${dl.kind} due ${dl.dueDate} is short by ${rem} min`,
+        },
       });
     }
   }
@@ -1258,13 +1266,20 @@ export function shortfallWarnings(input: PlanInput, all: Block[]): Warning[] {
       );
       if (done < task.weeklyMinutes) {
         out.push({
-          kind: 'weekly-short',
-          message: `${task.title} is short by ${task.weeklyMinutes - done} min in the week of ${ws}`,
+          category: task.category,
+          warning: {
+            kind: 'weekly-short',
+            message: `${task.title} is short by ${task.weeklyMinutes - done} min in the week of ${ws}`,
+          },
         });
       }
     }
   }
   return out;
+}
+
+export function shortfallWarnings(input: PlanInput, all: Block[]): Warning[] {
+  return shortfalls(input, all).map((s) => s.warning);
 }
 
 export function plan(input: PlanInput): PlanResult {
@@ -1289,7 +1304,7 @@ git commit -m "feat: report unmet deadlines and weekly targets" -m "Co-Authored-
 
 ### Task 6: Soft windows (Friday and Saturday evenings)
 
-Soft windows are avoided by default. They are opened one date at a time, earliest first, only while a deadline is still short, and an opened soft window only accepts deadline work.
+Soft windows are avoided by default. They are opened one date at a time, earliest first, only while a deadline is still short or a study task is short of its weekly target. An opened soft window only accepts deadline work and tasks with category `study`; chores, gym, errands and projects never use it.
 
 **Files:**
 - Modify: `src/planner.ts`
@@ -1297,7 +1312,7 @@ Soft windows are avoided by default. They are opened one date at a time, earlies
 
 **Interfaces:**
 - Consumes: everything from Tasks 4 and 5.
-- Produces: `daySlots(input, date, opened)` (soft windows removed from normal slots; if `opened` has the date, soft slots are added with `soft: true`); `planDays(input, opened?)`; `plan` now opens soft dates as needed and adds warnings of kind `soft-time-used` with the exact message `` `Used soft free time on ${date} for ${titles joined by ', '} to meet a deadline` ``.
+- Produces: `daySlots(input, date, opened)` (soft windows removed from normal slots; if `opened` has the date, soft slots are added with `soft: true`); `planDays(input, opened?)`; `plan` now opens soft dates as needed and adds warnings of kind `soft-time-used` with the exact message `` `Used soft free time on ${date} for ${titles joined by ', '}` ``.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1346,11 +1361,11 @@ test('soft time is used, and reported, when a deadline would otherwise be missed
   assert.equal(friday.length, 1);
   assert.equal(friday[0].end - friday[0].start, 120);
   assert.deepEqual(result.warnings, [
-    { kind: 'soft-time-used', message: `Used soft free time on ${FRI} for Study to meet a deadline` },
+    { kind: 'soft-time-used', message: `Used soft free time on ${FRI} for Study` },
   ]);
 });
 
-test('an opened soft window only takes deadline work', () => {
+test('an opened soft window takes study work but never chores', () => {
   const result = plan(
     input({
       preferences: evening(),
@@ -1360,11 +1375,22 @@ test('an opened soft window only takes deadline work', () => {
   );
   const friday = result.blocks.filter((b) => b.date === FRI);
   assert.ok(friday.length > 0);
-  assert.ok(friday.every((b) => b.deadlineId === 'd1'));
+  assert.ok(friday.every((b) => b.category === 'study'));
 });
 
-test('a weekly shortfall alone never opens a soft window', () => {
+test('a study task short of its weekly target may use soft time as a last resort', () => {
   const result = plan(input({ preferences: evening(), tasks: [task({ weeklyMinutes: 5000 })] }));
+  assert.equal(result.blocks.filter((b) => b.date === FRI).length, 1);
+  assert.ok(result.warnings.some((w) => w.kind === 'soft-time-used'));
+});
+
+test('a non-study weekly shortfall never opens a soft window', () => {
+  const result = plan(
+    input({
+      preferences: evening(),
+      tasks: [task({ id: 'chores', title: 'Chores', category: 'chores', weeklyMinutes: 5000 })],
+    }),
+  );
   assert.equal(result.blocks.filter((b) => b.date === FRI).length, 0);
   assert.ok(result.warnings.every((w) => w.kind !== 'soft-time-used'));
 });
@@ -1429,10 +1455,7 @@ function softUseWarnings(input: PlanInput, blocks: Block[], opened: ReadonlySet<
     );
     if (used.length > 0) {
       const titles = [...new Set(used.map((b) => b.title))].join(', ');
-      out.push({
-        kind: 'soft-time-used',
-        message: `Used soft free time on ${date} for ${titles} to meet a deadline`,
-      });
+      out.push({ kind: 'soft-time-used', message: `Used soft free time on ${date} for ${titles}` });
     }
   }
   return out;
@@ -1443,14 +1466,19 @@ export function plan(input: PlanInput): PlanResult {
     (d) => input.preferences.softWindows.some((s) => s.weekday === weekdayOf(d)),
   );
   const opened = new Set<DateStr>();
+  const needsSoftTime = (found: Shortfall[]): boolean =>
+    found.some((s) => s.warning.kind === 'deadline-short' || s.category === 'study');
   let blocks = planDays(input, opened);
-  let warnings = shortfallWarnings(input, [...input.pastBlocks, ...blocks]);
-  while (warnings.some((w) => w.kind === 'deadline-short') && opened.size < softDates.length) {
+  let found = shortfalls(input, [...input.pastBlocks, ...blocks]);
+  while (needsSoftTime(found) && opened.size < softDates.length) {
     opened.add(softDates[opened.size]);
     blocks = planDays(input, opened);
-    warnings = shortfallWarnings(input, [...input.pastBlocks, ...blocks]);
+    found = shortfalls(input, [...input.pastBlocks, ...blocks]);
   }
-  return { blocks, warnings: [...softUseWarnings(input, blocks, opened), ...warnings] };
+  return {
+    blocks,
+    warnings: [...softUseWarnings(input, blocks, opened), ...found.map((s) => s.warning)],
+  };
 }
 ```
 
@@ -2471,7 +2499,7 @@ Your real data lives in `data/db.json`, which git ignores. Edit it by hand or th
 - Fixed commitments (with optional buffer before, and cancelled dates) are never moved.
 - Each task asks for a weekly amount; each deadline asks for total effort by its date. The daily amount is the remaining work divided by the days that can still hold it, so it rises as the date nears.
 - Higher `priority` (1 is highest) wins when time is short.
-- Friday and Saturday evenings are "soft": avoided unless a deadline would otherwise be missed, and then the plan says so.
+- Friday and Saturday evenings are "soft": avoided, but study may use them as a last resort (a deadline would be missed, or a weekly study target would fall short), and then the plan says so. Chores, gym and errands never take them.
 - Past days are never rewritten when you re-plan.
 ````
 

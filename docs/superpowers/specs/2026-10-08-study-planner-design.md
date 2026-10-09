@@ -78,7 +78,7 @@ This is a default for the user to confirm or reorder. Whenever the planner drops
 ### Personal rules (initial preferences)
 
 - **Sunday 8pm mass** is a protected recurring block with a short travel buffer. Nothing is scheduled over it.
-- **Weekend outings:** Friday and Saturday evenings are soft-free. The planner avoids them unless a deadline would otherwise be missed, and then it names the deadline that forced it.
+- **Weekend outings:** Friday and Saturday evenings are soft-free. The planner avoids them. Study may use them as a last resort, when a deadline would otherwise be missed or a weekly study target would fall short, and then the plan says so. Other categories (chores, gym, errands, projects) never take them.
 - **Days off:** an earlier cutoff than on weekdays, set by the user.
 - **Private lessons** are fixed paid work. Other items move around them, and they are never the thing dropped when a deadline is tight. A cancelled or moved lesson frees its slot, travel included, and triggers a re-plan.
 

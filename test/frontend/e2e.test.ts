@@ -78,7 +78,7 @@ test('boots, draws the week, and walks the whole approve, undo and dismiss story
   assert.match(textOf(byClass(root, 'day')[0]), /18:00–20:00/);
   assert.match(textOf(fridayColumn(root)), /Nothing planned/);
   assert.equal(byTag(root, 'nav').length, 1);
-  assert.deepEqual(findAll(root, (e) => e.tag === 'a' && e.hasClass('tab')).map(textOf), ['Week', 'Setup']);
+  assert.deepEqual(findAll(root, (e) => e.tag === 'a' && e.hasClass('tab')).map(textOf), ['Day', 'Week', 'Deadlines', 'Setup']);
 
   // Nudge speaks and offers Friday evening
   const nudge = byClass(root, 'nudge')[0];

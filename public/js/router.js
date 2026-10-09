@@ -22,4 +22,6 @@ export function resolveRoute(hash, ids, fallback = 'week') {
 
 export const weekParam = (param, today) => (isValidDate(param) ? param : today);
 
+export const dateParam = weekParam;
+
 export const buildHash = (id, param) => (param ? `#/${id}/${encodeURIComponent(param)}` : `#/${id}`);

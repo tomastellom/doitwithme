@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildHash, parseHash, resolveRoute, weekParam } from '../../public/js/router.js';
+import { buildHash, dateParam, parseHash, resolveRoute, weekParam } from '../../public/js/router.js';
 
 const ids = ['week', 'day'];
 
@@ -33,4 +33,9 @@ test('buildHash encodes the parameter', () => {
   assert.equal(buildHash('week', '2026-10-12'), '#/week/2026-10-12');
   assert.equal(buildHash('week', null), '#/week');
   assert.equal(buildHash('setup', 'a b'), '#/setup/a%20b');
+});
+
+test('dateParam falls back to today for anything that is not a real date', () => {
+  assert.equal(dateParam('2026-10-14', '2026-10-09'), '2026-10-14');
+  for (const bad of [null, '', 'xyz', '2026-02-30', '2026-13-01', '../..']) assert.equal(dateParam(bad as any, '2026-10-09'), '2026-10-09');
 });

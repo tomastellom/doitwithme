@@ -1,15 +1,22 @@
 import { createApi } from './api.js';
+import { dayModel } from './day-model.js';
+import { renderDay } from './day.js';
+import { deadlinesModel } from './deadlines-model.js';
+import { renderDeadlines } from './deadlines.js';
 import { createDom } from './dom.js';
 import { replacingLink, startFavicon } from './favicon.js';
 import { createFocusKeeper } from './focus.js';
 import { createMenu } from './menu.js';
 import { GROUP_IDS, weekModel } from './model.js';
+import { createNotifier } from './notify.js';
 import { createNudge } from './nudge.js';
 import { buildNudge } from './nudge-model.js';
-import { buildHash, resolveRoute, weekParam } from './router.js';
+import { buildHash, dateParam, resolveRoute, weekParam } from './router.js';
 import { createRegistry } from './sections.js';
+import { createSettings } from './settings.js';
 import { createStore } from './store.js';
-import { addDays, currentClock, weekStart } from './time.js';
+import { createUiPrefs } from './ui-prefs.js';
+import { WEEKDAYS, addDays, currentClock, weekStart, weekdayOf } from './time.js';
 import { createSetup } from './setup.js';
 import { renderWeek } from './week.js';
 
@@ -68,6 +75,16 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   };
 
   const currentWeek = () => weekStart(weekParam(route.param, getClock().today));
+  const currentDay = () => dateParam(route.param, getClock().today);
+
+  const dayActions = {
+    go: (delta) => navigate(buildHash('day', addDays(currentDay(), delta))),
+    today: () => navigate(buildHash('day', null)),
+    loadExample: () => store.loadExample(),
+    get canAdd() {
+      return registry.find('setup') !== null;
+    },
+  };
 
   const weekActions = {
     toggleGroup(id) {
@@ -89,6 +106,19 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   };
 
   registry.register({
+    id: 'day', title: 'Day', group: 'views', description: 'One day, hour by hour.', primary: true,
+    render: (ctx) => {
+      const date = currentDay();
+      const model = dayModel(ctx.s.state, date, ctx.s.travel);
+      const { needsYou } = buildNudge(ctx.s.warnings);
+      return renderDay(dom, {
+        model, needsYou, isEmpty: ctx.s.isEmpty,
+        prevLabel: WEEKDAYS[weekdayOf(addDays(date, -1))], nextLabel: WEEKDAYS[weekdayOf(addDays(date, 1))],
+      }, dayActions);
+    },
+  });
+
+  registry.register({
     id: 'week', title: 'Week', group: 'views', description: 'Your plan for the week.', primary: true,
     render: (ctx) => {
       const s = ctx.s;
@@ -98,6 +128,11 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       const travelOff = places.length > 0 && !places.some((p) => p.kind === 'home');
       return renderWeek(dom, { model, visible, needsYou, isEmpty: s.isEmpty, travelOff }, weekActions);
     },
+  });
+
+  registry.register({
+    id: 'deadlines', title: 'Deadlines', group: 'views', description: 'What is due, and whether it is covered.', primary: true,
+    render: (ctx) => renderDeadlines(dom, { model: deadlinesModel(ctx.s.state, getClock()), isEmpty: ctx.s.isEmpty }),
   });
 
   const setup = createSetup(dom, { store, getClock, navigate, keepFocus });
@@ -112,6 +147,13 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   registry.register({ id: 'places', title: 'Places', group: 'setup', description: 'Home, campus and where your lessons are.', render: setupPage('places') });
   registry.register({ id: 'commutes', title: 'Commutes', group: 'setup', description: 'How long it takes to get around.', render: setupPage('commutes') });
   registry.register({ id: 'preferences', title: 'Preferences', group: 'setup', description: 'Windows, breaks and days off.', render: setupPage('preferences') });
+
+  const ui = createUiPrefs(win);
+  const settings = createSettings(dom, { store, ui, keepFocus });
+  registry.register({
+    id: 'settings', title: 'Settings', group: 'settings', description: 'Look, notifications and how I treat your evenings.',
+    render: (ctx) => settings.render(ctx),
+  });
 
   function renderBar() {
     const s = store.get();
@@ -190,6 +232,8 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   document.addEventListener('visibilitychange', refreshIfNewDay);
   win.addEventListener('focus', refreshIfNewDay);
   store.subscribe(render);
+  const notifier = createNotifier({ ui, win, doc: document });
+  store.subscribe((s) => notifier.observe(s, s.state ? buildNudge(s.warnings).items : []));
   render();
   store.load();
 

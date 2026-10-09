@@ -57,7 +57,7 @@ test('the Setup tab and Menu entries exist, and the tab is current on every setu
   const { app, root } = boot();
   await settled(app);
   const tabs = () => findAll(root, (e) => e.tag === 'a' && e.hasClass('tab'));
-  assert.deepEqual(tabs().map(textOf), ['Week', 'Setup']);
+  assert.deepEqual(tabs().map(textOf), ['Day', 'Week', 'Deadlines', 'Setup']);
   for (const id of ['setup', 'commitments', 'tasks', 'due-dates', 'places', 'commutes', 'preferences']) {
     app.navigate(`#/${id}`);
     assert.equal(tabs().find((t: any) => textOf(t) === 'Setup').getAttribute('aria-current'), 'page', id);
@@ -67,7 +67,7 @@ test('the Setup tab and Menu entries exist, and the tab is current on every setu
   assert.equal(tabs().find((t: any) => textOf(t) === 'Setup').getAttribute('aria-current'), null);
   app.menu.open(null);
   const menuLinks = byClass(app.menu.el, 'it').map((l: any) => l.getAttribute('href'));
-  assert.deepEqual(menuLinks, ['#/week', '#/commitments', '#/tasks', '#/due-dates', '#/places', '#/commutes', '#/preferences']);
+  assert.deepEqual(menuLinks, ['#/day', '#/week', '#/deadlines', '#/commitments', '#/tasks', '#/due-dates', '#/places', '#/commutes', '#/preferences', '#/settings']);
 });
 
 test('add a commitment through the form: it is saved on the server and shows on the week', async () => {

@@ -1,6 +1,7 @@
 import { defaultPreferences } from './defaults.ts';
 import type {
-  Block, Commitment, Deadline, Pattern, Preferences, SoftWindow, State, Task, Window,
+  Block, Commitment, Commute, Deadline, Pattern, Place, PlaceKind, Preferences, Repeats, SoftWindow, State, Task,
+  TravelMode, TravelSource, Window,
 } from './types.ts';
 
 export class ValidationError extends Error {}
@@ -82,6 +83,56 @@ function pattern(v: unknown, path: string): Pattern {
   return fail(`${path}.kind must be "once" or "weekly"`);
 }
 
+const PLACE_KINDS = ['home', 'campus', 'student', 'other'];
+const MODES = ['car', 'bike', 'transit', 'walk'];
+
+function place(v: unknown, path: string): Place {
+  const o = obj(v, path);
+  const name = str(o.name, `${path}.name`);
+  if (name.trim().length === 0) fail(`${path}.name must not be blank`);
+  if (typeof o.kind !== 'string' || !PLACE_KINDS.includes(o.kind)) fail(`${path}.kind must be home, campus, student or other`);
+  if (typeof o.address !== 'string' || o.address.length > 300) fail(`${path}.address must be text of at most 300 characters`);
+  return { id: str(o.id, `${path}.id`), name, kind: o.kind as PlaceKind, address: o.address as string };
+}
+
+function repeatsOf(v: unknown, path: string): Repeats | null {
+  if (v === null) return null;
+  const o = obj(v, path);
+  if (o.kind === 'weekly') {
+    const weekdays = arr(o.weekdays, `${path}.weekdays`).map((d, i) => int(d, `${path}.weekdays[${i}]`, 0, 6));
+    if (weekdays.length === 0) fail(`${path}.weekdays must not be empty`);
+    return { kind: 'weekly', weekdays };
+  }
+  if (o.kind === 'monthly') {
+    const monthDays = arr(o.monthDays, `${path}.monthDays`).map((d, i) => int(d, `${path}.monthDays[${i}]`, 1, 28));
+    if (monthDays.length === 0) fail(`${path}.monthDays must not be empty`);
+    return { kind: 'monthly', monthDays };
+  }
+  return fail(`${path}.kind must be "weekly" or "monthly"`);
+}
+
+function sourceOf(v: unknown, path: string): TravelSource {
+  const o = obj(v, path);
+  if (o.method === 'typed') return { method: 'typed', minutes: int(o.minutes, `${path}.minutes`, 0, 600) };
+  if (o.method === 'maps') {
+    if (typeof o.mode !== 'string' || !MODES.includes(o.mode)) fail(`${path}.mode must be car, bike, transit or walk`);
+    return { method: 'maps', mode: o.mode as TravelMode, fallbackMinutes: int(o.fallbackMinutes, `${path}.fallbackMinutes`, 0, 600) };
+  }
+  return fail(`${path}.method must be "typed" or "maps"`);
+}
+
+function commute(v: unknown, path: string): Commute {
+  const o = obj(v, path);
+  return {
+    id: str(o.id, `${path}.id`),
+    fromPlaceId: str(o.fromPlaceId, `${path}.fromPlaceId`),
+    toPlaceId: str(o.toPlaceId, `${path}.toPlaceId`),
+    repeats: repeatsOf(o.repeats, `${path}.repeats`),
+    source: sourceOf(o.source, `${path}.source`),
+    marginMinutes: int(o.marginMinutes, `${path}.marginMinutes`, 0, 120),
+  };
+}
+
 function commitment(v: unknown, path: string): Commitment {
   const o = obj(v, path);
   const w = windowOf({ start: o.start, end: o.end }, path);
@@ -94,6 +145,7 @@ function commitment(v: unknown, path: string): Commitment {
     pattern: pattern(o.pattern, `${path}.pattern`),
     exceptions: arr(o.exceptions, `${path}.exceptions`).map((d, i) => dateStr(d, `${path}.exceptions[${i}]`)),
     bufferBefore: int(o.bufferBefore, `${path}.bufferBefore`, 0, 240),
+    ...(o.placeId === undefined ? {} : { placeId: str(o.placeId, `${path}.placeId`) }),
   };
 }
 
@@ -149,6 +201,10 @@ function preferences(v: unknown, path: string): Preferences {
     minBlock: int(o.minBlock, `${path}.minBlock`, 5, 240),
     minBreak: int(o.minBreak, `${path}.minBreak`, 0, 120),
     softMode: o.softMode === undefined ? 'ask' : softMode(o.softMode, `${path}.softMode`),
+    travelAllowanceMinutes:
+      o.travelAllowanceMinutes === undefined
+        ? defaultPreferences.travelAllowanceMinutes
+        : int(o.travelAllowanceMinutes, `${path}.travelAllowanceMinutes`, 0, 600),
     softWindows: arr(o.softWindows, `${path}.softWindows`).map((s, i): SoftWindow => {
       const so = obj(s, `${path}.softWindows[${i}]`);
       const w = windowOf(so, `${path}.softWindows[${i}]`);
@@ -188,6 +244,23 @@ export function validateState(x: unknown): State {
   unique(tasks.map((t) => t.id), 'tasks');
   unique(deadlines.map((d) => d.id), 'deadlines');
   unique(commitments.map((c) => c.id), 'commitments');
+  const placeList = arr(o.places ?? [], 'places');
+  if (placeList.length > 200) fail('places must have at most 200 entries');
+  const places = placeList.map((p, i) => place(p, `places[${i}]`));
+  unique(places.map((p) => p.id), 'places');
+  if (places.filter((p) => p.kind === 'home').length > 1) fail('places can have only one home');
+  const commuteList = arr(o.commutes ?? [], 'commutes');
+  if (commuteList.length > 400) fail('commutes must have at most 400 entries');
+  const commutes = commuteList.map((c, i) => commute(c, `commutes[${i}]`));
+  unique(commutes.map((c) => c.id), 'commutes');
+  commutes.forEach((c, i) => {
+    if (!places.some((p) => p.id === c.fromPlaceId)) fail(`commutes[${i}].fromPlaceId does not match any place`);
+    if (!places.some((p) => p.id === c.toPlaceId)) fail(`commutes[${i}].toPlaceId does not match any place`);
+    if (c.fromPlaceId === c.toPlaceId) fail(`commutes[${i}] must join two different places`);
+  });
+  commitments.forEach((c, i) => {
+    if (c.placeId !== undefined && !places.some((p) => p.id === c.placeId)) fail(`commitments[${i}].placeId does not match any place`);
+  });
   deadlines.forEach((d, i) => {
     if (!tasks.some((t) => t.id === d.taskId)) fail(`deadlines[${i}].taskId does not match any task`);
   });
@@ -195,6 +268,8 @@ export function validateState(x: unknown): State {
     commitments,
     tasks,
     deadlines,
+    places,
+    commutes,
     preferences: preferences(o.preferences ?? defaultPreferences, 'preferences'),
     blocks: arr(o.blocks ?? [], 'blocks').map((b, i) => block(b, `blocks[${i}]`)),
     approvedSoft: approvedSoft(o.approvedSoft),

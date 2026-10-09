@@ -9,6 +9,8 @@ export function emptyState(): State {
     commitments: [],
     tasks: [],
     deadlines: [],
+    places: [],
+    commutes: [],
     preferences: structuredClone(defaultPreferences),
     blocks: [],
     approvedSoft: [],

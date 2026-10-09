@@ -119,3 +119,63 @@ test('dismissed entries must be text up to 300 characters and at most 400', () =
   rejects((s) => (s.dismissed = ['']), /dismissed\[0\]/);
   rejects((s) => (s.dismissed = Array.from({ length: 401 }, (_, i) => `k${i}`)), /dismissed/);
 });
+
+const homeP = { id: 'home', name: 'Home', kind: 'home', address: 'Calle 1' };
+const campusP = { id: 'campus', name: 'Campus', kind: 'campus', address: '' };
+const routeC = (over: any = {}) => ({
+  id: 'r1', fromPlaceId: 'home', toPlaceId: 'campus',
+  repeats: { kind: 'weekly', weekdays: [1, 2] }, source: { method: 'typed', minutes: 45 }, marginMinutes: 10, ...over,
+});
+const withPlaces = (s: any) => { s.places = structuredClone([homeP, campusP]); };
+
+test('places, commutes and a commitment place round-trip unchanged', () => {
+  const s = sample();
+  withPlaces(s);
+  s.commutes = [routeC(), routeC({ id: 'r2', repeats: null, source: { method: 'maps', mode: 'bike', fallbackMinutes: 20 } }), routeC({ id: 'r3', repeats: { kind: 'monthly', monthDays: [1, 15] } })];
+  s.commitments[0].placeId = 'campus';
+  assert.deepEqual(validateState(s), s);
+});
+
+test('a file from before commutes loads with no places, no commutes and a 30 minute allowance', () => {
+  const old = sample();
+  delete old.places;
+  delete old.commutes;
+  delete old.preferences.travelAllowanceMinutes;
+  const s = validateState(old);
+  assert.deepEqual(s.places, []);
+  assert.deepEqual(s.commutes, []);
+  assert.equal(s.preferences.travelAllowanceMinutes, 30);
+  assert.equal('placeId' in s.commitments[0], false);
+});
+
+test('bad places are rejected with plain sentences', () => {
+  rejects((s) => { withPlaces(s); s.places[1].id = 'home'; }, /places contains a duplicate id/);
+  rejects((s) => { withPlaces(s); s.places[1].kind = 'home'; }, /only one home/);
+  rejects((s) => { withPlaces(s); s.places[0].kind = 'castle'; }, /places\[0\]\.kind/);
+  rejects((s) => { withPlaces(s); s.places[0].name = '   '; }, /places\[0\]\.name must not be blank/);
+  rejects((s) => { withPlaces(s); s.places[0].name = ''; }, /places\[0\]\.name/);
+  rejects((s) => { withPlaces(s); s.places[0].address = 'x'.repeat(301); }, /places\[0\]\.address/);
+  rejects((s) => { withPlaces(s); s.places[0].address = 5; }, /places\[0\]\.address/);
+});
+
+test('bad commutes are rejected', () => {
+  rejects((s) => { withPlaces(s); s.commutes = [routeC({ toPlaceId: 'nowhere' })]; }, /commutes\[0\]\.toPlaceId does not match any place/);
+  rejects((s) => { withPlaces(s); s.commutes = [routeC({ fromPlaceId: 'nowhere' })]; }, /commutes\[0\]\.fromPlaceId does not match any place/);
+  rejects((s) => { withPlaces(s); s.commutes = [routeC({ toPlaceId: 'home' })]; }, /two different places/);
+  rejects((s) => { withPlaces(s); s.commutes = [routeC(), routeC()]; }, /commutes contains a duplicate id/);
+  rejects((s) => { withPlaces(s); s.commutes = [routeC({ repeats: { kind: 'weekly', weekdays: [] } })]; }, /weekdays must not be empty/);
+  rejects((s) => { withPlaces(s); s.commutes = [routeC({ repeats: { kind: 'weekly', weekdays: [7] } })]; }, /weekdays\[0\]/);
+  rejects((s) => { withPlaces(s); s.commutes = [routeC({ repeats: { kind: 'monthly', monthDays: [29] } })]; }, /monthDays\[0\]/);
+  rejects((s) => { withPlaces(s); s.commutes = [routeC({ repeats: { kind: 'monthly', monthDays: [] } })]; }, /monthDays must not be empty/);
+  rejects((s) => { withPlaces(s); s.commutes = [routeC({ repeats: { kind: 'daily' } })]; }, /repeats\.kind/);
+  rejects((s) => { withPlaces(s); s.commutes = [routeC({ source: { method: 'typed', minutes: 601 } })]; }, /minutes/);
+  rejects((s) => { withPlaces(s); s.commutes = [routeC({ source: { method: 'maps', mode: 'rocket', fallbackMinutes: 5 } })]; }, /mode/);
+  rejects((s) => { withPlaces(s); s.commutes = [routeC({ source: { method: 'magic' } })]; }, /method/);
+  rejects((s) => { withPlaces(s); s.commutes = [routeC({ marginMinutes: 121 })]; }, /marginMinutes/);
+});
+
+test('a commitment must point at a place that exists, and the allowance has limits', () => {
+  rejects((s) => { s.commitments[0].placeId = 'nowhere'; }, /commitments\[0\]\.placeId does not match any place/);
+  rejects((s) => { s.preferences.travelAllowanceMinutes = 601; }, /travelAllowanceMinutes/);
+  rejects((s) => { s.preferences.travelAllowanceMinutes = 1.5; }, /travelAllowanceMinutes/);
+});

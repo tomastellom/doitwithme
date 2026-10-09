@@ -11,4 +11,5 @@ export const defaultPreferences: Preferences = {
     { weekday: 6, start: 18 * 60, end: 24 * 60 },
   ],
   softMode: 'ask',
+  travelAllowanceMinutes: 30,
 };

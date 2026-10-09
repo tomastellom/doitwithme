@@ -8,6 +8,43 @@ export interface Window {
   end: Minutes;
 }
 
+export type PlaceKind = 'home' | 'campus' | 'student' | 'other';
+
+export interface Place {
+  id: string;
+  name: string;
+  kind: PlaceKind;
+  address: string;
+}
+
+export type TravelMode = 'car' | 'bike' | 'transit' | 'walk';
+
+export type Repeats =
+  | { kind: 'weekly'; weekdays: number[] }
+  | { kind: 'monthly'; monthDays: number[] };
+
+export type TravelSource =
+  | { method: 'typed'; minutes: Minutes }
+  | { method: 'maps'; mode: TravelMode; fallbackMinutes: Minutes };
+
+export interface Commute {
+  id: string;
+  fromPlaceId: string;
+  toPlaceId: string;
+  repeats: Repeats | null;
+  source: TravelSource;
+  marginMinutes: Minutes;
+}
+
+export interface Leg {
+  date: DateStr;
+  start: Minutes;
+  end: Minutes;
+  fromName: string;
+  toName: string;
+  estimated: boolean;
+}
+
 export type Pattern =
   | { kind: 'once'; date: DateStr }
   | { kind: 'weekly'; weekdays: number[]; from: DateStr; to: DateStr };
@@ -21,6 +58,7 @@ export interface Commitment {
   pattern: Pattern;
   exceptions: DateStr[];
   bufferBefore: Minutes;
+  placeId?: string;
 }
 
 export interface Task {
@@ -53,6 +91,7 @@ export interface Preferences {
   minBreak: Minutes;
   softWindows: SoftWindow[];
   softMode: 'ask' | 'auto';
+  travelAllowanceMinutes: Minutes;
 }
 
 export interface Block {
@@ -75,10 +114,11 @@ export interface WarningDetail {
   titles?: string[];
   minutes?: number;
   costMinutes?: number;
+  placeName?: string;
 }
 
 export interface Warning {
-  kind: 'deadline-short' | 'weekly-short' | 'soft-time-used' | 'soft-offer';
+  kind: 'deadline-short' | 'weekly-short' | 'soft-time-used' | 'soft-offer' | 'address-missing' | 'travel-tight';
   message: string;
   detail?: WarningDetail;
 }
@@ -93,17 +133,22 @@ export interface PlanInput {
   preferences: Preferences;
   pastBlocks: Block[];
   approvedSoft?: DateStr[];
+  places?: Place[];
+  commutes?: Commute[];
 }
 
 export interface PlanResult {
   blocks: Block[];
   warnings: Warning[];
+  travel: Leg[];
 }
 
 export interface State {
   commitments: Commitment[];
   tasks: Task[];
   deadlines: Deadline[];
+  places: Place[];
+  commutes: Commute[];
   preferences: Preferences;
   blocks: Block[];
   approvedSoft: DateStr[];

@@ -1,0 +1,11 @@
+{
+  "name": "doitwithme",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test \"test/**/*.test.ts\"",
+    "serve": "node src/server.ts",
+    "plan": "node src/cli.ts"
+  }
+}

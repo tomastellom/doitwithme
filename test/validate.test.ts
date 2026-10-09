@@ -179,3 +179,58 @@ test('a commitment must point at a place that exists, and the allowance has limi
   rejects((s) => { s.preferences.travelAllowanceMinutes = 601; }, /travelAllowanceMinutes/);
   rejects((s) => { s.preferences.travelAllowanceMinutes = 1.5; }, /travelAllowanceMinutes/);
 });
+
+const course = (over: any = {}) => ({ credits: 3, difficulty: 4, examOnly: false, weeklyGraded: true, lab: false, syllabus: 'Weekly problem sets.', ...over });
+
+test('a task with a course round-trips, and a task without one gains nothing', () => {
+  const s = sample();
+  s.tasks[0].course = course();
+  assert.deepEqual(validateState(s), s);
+  assert.equal('course' in validateState(sample()).tasks[0], false);
+});
+
+test('a file from before the estimate loads with the scale defaults', () => {
+  const old = sample();
+  delete old.preferences.hoursPerCredit;
+  delete old.preferences.normalCredits;
+  delete old.preferences.fullLoadHours;
+  const p = validateState(old).preferences;
+  assert.deepEqual([p.hoursPerCredit, p.normalCredits, p.fullLoadHours], [null, 30, 40]);
+});
+
+test('scale preferences accept their limits and refuse the rest', () => {
+  const ok = sample();
+  ok.preferences.hoursPerCredit = 0.1;
+  ok.preferences.normalCredits = 200;
+  ok.preferences.fullLoadHours = 100;
+  assert.doesNotThrow(() => validateState(ok));
+  ok.preferences.hoursPerCredit = null;
+  assert.doesNotThrow(() => validateState(ok));
+  rejects((s) => { s.preferences.hoursPerCredit = 0; }, /hoursPerCredit/);
+  rejects((s) => { s.preferences.hoursPerCredit = 20.5; }, /hoursPerCredit/);
+  rejects((s) => { s.preferences.hoursPerCredit = '1'; }, /hoursPerCredit/);
+  rejects((s) => { s.preferences.normalCredits = 0; }, /normalCredits/);
+  rejects((s) => { s.preferences.normalCredits = 201; }, /normalCredits/);
+  rejects((s) => { s.preferences.fullLoadHours = 0; }, /fullLoadHours/);
+  rejects((s) => { s.preferences.fullLoadHours = 101; }, /fullLoadHours/);
+});
+
+test('a course is checked field by field in plain words', () => {
+  rejects((s) => { s.tasks[0].course = course({ credits: 0.4 }); }, /course\.credits/);
+  rejects((s) => { s.tasks[0].course = course({ credits: 100.5 }); }, /course\.credits/);
+  rejects((s) => { s.tasks[0].course = course({ credits: '3' }); }, /course\.credits/);
+  rejects((s) => { s.tasks[0].course = course({ difficulty: 0 }); }, /course\.difficulty/);
+  rejects((s) => { s.tasks[0].course = course({ difficulty: 6 }); }, /course\.difficulty/);
+  rejects((s) => { s.tasks[0].course = course({ difficulty: 2.5 }); }, /course\.difficulty/);
+  rejects((s) => { s.tasks[0].course = course({ lab: 'yes' }); }, /course\.lab/);
+  rejects((s) => { s.tasks[0].course = course({ examOnly: 1 }); }, /course\.examOnly/);
+  rejects((s) => { s.tasks[0].course = course({ weeklyGraded: null }); }, /course\.weeklyGraded/);
+  rejects((s) => { s.tasks[0].course = course({ syllabus: 5 }); }, /course\.syllabus/);
+  rejects((s) => { s.tasks[0].course = course({ syllabus: 'x'.repeat(20001) }); }, /course\.syllabus/);
+  const edge = sample();
+  edge.tasks[0].course = course({ credits: 100, syllabus: 'x'.repeat(20000) });
+  assert.doesNotThrow(() => validateState(edge));
+  const hostile = sample();
+  hostile.tasks[0].course = course({ syllabus: '<img src=x onerror=alert(1)> ‮' });
+  assert.equal(validateState(hostile).tasks[0].course!.syllabus, '<img src=x onerror=alert(1)> ‮');
+});

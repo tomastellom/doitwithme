@@ -1,6 +1,6 @@
 import { defaultPreferences } from './defaults.ts';
 import type {
-  Block, Commitment, Commute, Deadline, Pattern, Place, PlaceKind, Preferences, Repeats, SoftWindow, State, Task,
+  Block, Commitment, Commute, Course, Deadline, Pattern, Place, PlaceKind, Preferences, Repeats, SoftWindow, State, Task,
   TravelMode, TravelSource, Window,
 } from './types.ts';
 
@@ -149,6 +149,19 @@ function commitment(v: unknown, path: string): Commitment {
   };
 }
 
+export function courseOf(v: unknown, path: string): Course {
+  const o = obj(v, path);
+  if (typeof o.syllabus !== 'string' || o.syllabus.length > 20000) fail(`${path}.syllabus must be text of at most 20000 characters`);
+  return {
+    credits: num(o.credits, `${path}.credits`, 0.5, 100),
+    difficulty: int(o.difficulty, `${path}.difficulty`, 1, 5),
+    examOnly: bool(o.examOnly, `${path}.examOnly`),
+    weeklyGraded: bool(o.weeklyGraded, `${path}.weeklyGraded`),
+    lab: bool(o.lab, `${path}.lab`),
+    syllabus: o.syllabus as string,
+  };
+}
+
 function task(v: unknown, path: string): Task {
   const o = obj(v, path);
   return {
@@ -159,6 +172,7 @@ function task(v: unknown, path: string): Task {
     maxBlock: int(o.maxBlock, `${path}.maxBlock`, 5, 1440),
     onePerDay: bool(o.onePerDay, `${path}.onePerDay`),
     priority: int(o.priority, `${path}.priority`, 1, 5),
+    ...(o.course === undefined ? {} : { course: courseOf(o.course, `${path}.course`) }),
   };
 }
 
@@ -205,6 +219,9 @@ function preferences(v: unknown, path: string): Preferences {
       o.travelAllowanceMinutes === undefined
         ? defaultPreferences.travelAllowanceMinutes
         : int(o.travelAllowanceMinutes, `${path}.travelAllowanceMinutes`, 0, 600),
+    hoursPerCredit: o.hoursPerCredit === undefined || o.hoursPerCredit === null ? null : num(o.hoursPerCredit, `${path}.hoursPerCredit`, 0.1, 20),
+    normalCredits: o.normalCredits === undefined ? defaultPreferences.normalCredits : num(o.normalCredits, `${path}.normalCredits`, 1, 200),
+    fullLoadHours: o.fullLoadHours === undefined ? defaultPreferences.fullLoadHours : num(o.fullLoadHours, `${path}.fullLoadHours`, 1, 100),
     softWindows: arr(o.softWindows, `${path}.softWindows`).map((s, i): SoftWindow => {
       const so = obj(s, `${path}.softWindows[${i}]`);
       const w = windowOf(so, `${path}.softWindows[${i}]`);

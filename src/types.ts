@@ -61,6 +61,15 @@ export interface Commitment {
   placeId?: string;
 }
 
+export interface Course {
+  credits: number;
+  difficulty: number;
+  examOnly: boolean;
+  weeklyGraded: boolean;
+  lab: boolean;
+  syllabus: string;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -69,6 +78,7 @@ export interface Task {
   maxBlock: Minutes;
   onePerDay: boolean;
   priority: number;
+  course?: Course;
 }
 
 export interface Deadline {
@@ -92,6 +102,9 @@ export interface Preferences {
   softWindows: SoftWindow[];
   softMode: 'ask' | 'auto';
   travelAllowanceMinutes: Minutes;
+  hoursPerCredit: number | null;
+  normalCredits: number;
+  fullLoadHours: number;
 }
 
 export interface Block {

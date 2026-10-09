@@ -12,4 +12,7 @@ export const defaultPreferences: Preferences = {
   ],
   softMode: 'ask',
   travelAllowanceMinutes: 30,
+  hoursPerCredit: null,
+  normalCredits: 30,
+  fullLoadHours: 40,
 };

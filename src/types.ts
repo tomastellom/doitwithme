@@ -52,6 +52,7 @@ export interface Preferences {
   minBlock: Minutes;
   minBreak: Minutes;
   softWindows: SoftWindow[];
+  softMode: 'ask' | 'auto';
 }
 
 export interface Block {
@@ -64,9 +65,20 @@ export interface Block {
   deadlineId?: string;
 }
 
+export interface WarningDetail {
+  taskTitle?: string;
+  kind?: string;
+  dueDate?: DateStr;
+  weekStart?: DateStr;
+  date?: DateStr;
+  titles?: string[];
+  minutes?: number;
+}
+
 export interface Warning {
-  kind: 'deadline-short' | 'weekly-short' | 'soft-time-used';
+  kind: 'deadline-short' | 'weekly-short' | 'soft-time-used' | 'soft-offer';
   message: string;
+  detail?: WarningDetail;
 }
 
 export interface PlanInput {
@@ -78,6 +90,7 @@ export interface PlanInput {
   deadlines: Deadline[];
   preferences: Preferences;
   pastBlocks: Block[];
+  approvedSoft?: DateStr[];
 }
 
 export interface PlanResult {
@@ -91,4 +104,6 @@ export interface State {
   deadlines: Deadline[];
   preferences: Preferences;
   blocks: Block[];
+  approvedSoft: DateStr[];
+  dismissed: string[];
 }

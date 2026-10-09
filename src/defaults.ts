@@ -10,4 +10,5 @@ export const defaultPreferences: Preferences = {
     { weekday: 5, start: 18 * 60, end: 24 * 60 },
     { weekday: 6, start: 18 * 60, end: 24 * 60 },
   ],
+  softMode: 'ask',
 };

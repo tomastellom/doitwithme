@@ -11,6 +11,8 @@ export function emptyState(): State {
     deadlines: [],
     preferences: structuredClone(defaultPreferences),
     blocks: [],
+    approvedSoft: [],
+    dismissed: [],
   };
 }
 

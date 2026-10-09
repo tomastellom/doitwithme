@@ -32,3 +32,16 @@ test('a file with valid JSON but an invalid state is also refused', () => {
   writeFileSync(path, JSON.stringify({ tasks: 'nope' }));
   assert.throws(() => loadState(path), (e: unknown) => e instanceof Error && e.message.includes(path));
 });
+
+test('a data file saved before the new fields existed still loads with defaults', () => {
+  const path = join(dir(), 'db.json');
+  const old: any = { ...emptyState() };
+  delete old.approvedSoft;
+  delete old.dismissed;
+  delete old.preferences.softMode;
+  writeFileSync(path, JSON.stringify(old));
+  const s = loadState(path);
+  assert.deepEqual(s.approvedSoft, []);
+  assert.deepEqual(s.dismissed, []);
+  assert.equal(s.preferences.softMode, 'ask');
+});

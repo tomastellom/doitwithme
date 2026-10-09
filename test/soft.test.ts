@@ -12,6 +12,7 @@ const evening = (): Preferences => ({
   dayOffWindow: { start: 1080, end: 1200 },
   daysOff: [],
   softWindows: [{ weekday: 5, start: 1080, end: 1440 }],
+  softMode: 'auto',
 });
 
 const FRI = '2026-10-09';

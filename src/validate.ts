@@ -36,8 +36,8 @@ export function dateStr(v: unknown, path: string): string {
   return text;
 }
 
-function str(v: unknown, path: string): string {
-  if (typeof v !== 'string' || v.length === 0 || v.length > 200) fail(`${path} must be text of 1 to 200 characters`);
+function str(v: unknown, path: string, max = 200): string {
+  if (typeof v !== 'string' || v.length === 0 || v.length > max) fail(`${path} must be text of 1 to ${max} characters`);
   return v as string;
 }
 
@@ -135,6 +135,11 @@ function block(v: unknown, path: string): Block {
   };
 }
 
+function softMode(v: unknown, path: string): 'ask' | 'auto' {
+  if (v !== 'ask' && v !== 'auto') fail(`${path} must be "ask" or "auto"`);
+  return v as 'ask' | 'auto';
+}
+
 function preferences(v: unknown, path: string): Preferences {
   const o = obj(v, path);
   const prefs: Preferences = {
@@ -143,6 +148,7 @@ function preferences(v: unknown, path: string): Preferences {
     daysOff: arr(o.daysOff, `${path}.daysOff`).map((d, i) => int(d, `${path}.daysOff[${i}]`, 0, 6)),
     minBlock: int(o.minBlock, `${path}.minBlock`, 5, 240),
     minBreak: int(o.minBreak, `${path}.minBreak`, 0, 120),
+    softMode: o.softMode === undefined ? 'ask' : softMode(o.softMode, `${path}.softMode`),
     softWindows: arr(o.softWindows, `${path}.softWindows`).map((s, i): SoftWindow => {
       const so = obj(s, `${path}.softWindows[${i}]`);
       const w = windowOf(so, `${path}.softWindows[${i}]`);
@@ -158,6 +164,20 @@ function preferences(v: unknown, path: string): Preferences {
     }
   }
   return prefs;
+}
+
+function approvedSoft(v: unknown): string[] {
+  const list = arr(v ?? [], 'approvedSoft');
+  if (list.length > 400) fail('approvedSoft must have at most 400 dates');
+  const dates = list.map((d, i) => dateStr(d, `approvedSoft[${i}]`));
+  if (new Set(dates).size !== dates.length) fail('approvedSoft contains a duplicate date');
+  return dates;
+}
+
+function dismissed(v: unknown): string[] {
+  const list = arr(v ?? [], 'dismissed');
+  if (list.length > 400) fail('dismissed must have at most 400 entries');
+  return list.map((k, i) => str(k, `dismissed[${i}]`, 300));
 }
 
 export function validateState(x: unknown): State {
@@ -177,6 +197,8 @@ export function validateState(x: unknown): State {
     deadlines,
     preferences: preferences(o.preferences ?? defaultPreferences, 'preferences'),
     blocks: arr(o.blocks ?? [], 'blocks').map((b, i) => block(b, `blocks[${i}]`)),
+    approvedSoft: approvedSoft(o.approvedSoft),
+    dismissed: dismissed(o.dismissed),
   };
 }
 

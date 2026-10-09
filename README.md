@@ -2,7 +2,7 @@
 
 A personal everyday planner. It fits flexible tasks (study, gym, chores, errands, projects) around your fixed commitments, ramps up work toward deadlines, and tells you plainly when something cannot fit.
 
-**Status:** Phase 1 (core planner) and the everyday UI are built: Day, Week and Deadlines screens, Nudge, Menu, Settings (soft time, opt-in browser notifications), and the Setup screens (commitments, tasks, due dates, places, commutes, preferences). Travel between places is planned around your events and shown in the Week; you type the travel times for now. Run `npm run serve` and open http://127.0.0.1:8787; you no longer need to edit JSON to enter your schedule. Compare the look with the design boards using `docs/ui-visual-check.md`. Still to come: the Google Maps lookup for commute times, the AI workload estimate, the daily check-in and class-attendance advice. Design: `docs/superpowers/specs/`. Plans: `docs/superpowers/plans/`.
+**Status:** Phase 1 (core planner) and the everyday UI are built: Day, Week and Deadlines screens, Nudge, Menu, Settings (soft time, opt-in browser notifications), and the Setup screens (commitments, tasks, due dates, places, commutes, preferences). Travel between places is planned around your events and shown in the Week; you type the travel times for now. Run `npm run serve` and open http://127.0.0.1:8787; you no longer need to edit JSON to enter your schedule. Compare the look with the design boards using `docs/ui-visual-check.md`. A study task can now suggest its weekly hours from credits, difficulty and a few answers, scaled to your school (the real AI answer plugs in once a key exists). Still to come: the Google Maps lookup for commute times, the real AI call, the daily check-in and class-attendance advice. Design: `docs/superpowers/specs/`. Plans: `docs/superpowers/plans/`.
 
 ## Requirements
 
@@ -25,6 +25,7 @@ Your real data lives in `data/db.json`, which git ignores. Edit it by hand or th
 - `POST /api/replan` with `{ "today": "2026-10-05", "nowMinutes": 780, "horizonDays": 14 }` re-plans from today and saves.
 - `POST /api/soft/approve` and `POST /api/soft/undo` (with a `date`) allow or take back Friday and Saturday evenings; `POST /api/warnings/dismiss` (with a `key`) dismisses a warning.
 - `GET /api/example` returns the example schedule without saving it.
+- `POST /api/estimate` suggests weekly minutes for a study task from credits, difficulty and a few answers (rule of thumb, plus an AI answer when one is connected); it saves nothing.
 - `GET /api/commute/status` says whether Google Maps can be used (`unavailable` until a key is connected). Plan responses also carry `travel`, the trip blocks for the plan.
 
 ## How planning works

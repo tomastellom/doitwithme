@@ -32,8 +32,8 @@ test('with no Home place there is no travel at all', () => {
 test('a located event gets an outbound leg before it and a return leg after the last one', () => {
   const r = legsOn(MON, [lecture()], ctx({ commutes: [route()] }));
   assert.deepEqual(r.legs, [
-    { date: MON, start: 545, end: 600, fromName: 'Home', toName: 'Campus', estimated: false },
-    { date: MON, start: 720, end: 775, fromName: 'Campus', toName: 'Home', estimated: false },
+    { date: MON, start: 545, end: 600, fromName: 'Home', toName: 'Campus', estimated: false, placeId: 'campus', commuteId: 'r' },
+    { date: MON, start: 720, end: 775, fromName: 'Campus', toName: 'Home', estimated: false, placeId: 'campus', commuteId: 'r' },
   ]);
   assert.deepEqual(r.warnings, []);
 });
@@ -146,7 +146,7 @@ test('a cancelled date has no travel', () => {
 test('travel is clipped at midnight and warns when the day cannot hold it', () => {
   const early = lecture({ start: 10, end: 60 });
   const r = legsOn(MON, [early], ctx({ commutes: [route()] }));
-  assert.deepEqual(r.legs[0], { date: MON, start: 0, end: 10, fromName: 'Home', toName: 'Campus', estimated: false });
+  assert.deepEqual(r.legs[0], { date: MON, start: 0, end: 10, fromName: 'Home', toName: 'Campus', estimated: false, placeId: 'campus', commuteId: 'r' });
   assert.deepEqual(r.warnings.map((w) => w.kind), ['travel-tight']);
   const atMidnight = legsOn(MON, [lecture({ start: 0, end: 30 })], ctx({ commutes: [route()] }));
   assert.deepEqual(atMidnight.legs.map((l) => [l.start, l.end]), [[30, 85]]);
@@ -174,4 +174,13 @@ test('many places and commitments stay fast over two months of days', () => {
   const t0 = performance.now();
   for (let d = 1; d <= 60; d++) legsOn(`2026-10-${String(((d - 1) % 28) + 1).padStart(2, '0')}`, events, ctx({ places }));
   assert.ok(performance.now() - t0 < 600, `took ${Math.round(performance.now() - t0)} ms`);
+});
+
+test('every trip says which place it concerns and which route set its time', () => {
+  const withRoute = legsOn(MON, [lecture()], ctx({ commutes: [route()] })).legs;
+  assert.deepEqual(withRoute.map((l) => [l.placeId, l.commuteId]), [['campus', 'r'], ['campus', 'r']]);
+  const allowance = legsOn(MON, [lesson()], ctx()).legs;
+  assert.deepEqual(allowance.map((l) => [l.placeId, l.commuteId, l.estimated]), [['anna', null, true], ['anna', null, true]]);
+  const chain = legsOn(MON, [lecture(), lesson({ start: 740, end: 800 })], ctx({ commutes: [route()] })).legs;
+  assert.deepEqual(chain.map((l) => l.placeId), ['campus', 'anna', 'anna']);
 });

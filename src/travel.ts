@@ -63,11 +63,11 @@ export function legsOn(date: DateStr, commitments: Commitment[], ctx: TravelCont
     })
     .sort((a, b) => a.o.start - b.o.start || a.o.end - b.o.end);
 
-  const cost = (from: Place, to: Place): { minutes: Minutes; estimated: boolean } => {
+  const cost = (from: Place, to: Place): { minutes: Minutes; estimated: boolean; commuteId: string | null } => {
     const route = routeFor(from, to, date, ctx.commutes);
     return route
-      ? { minutes: minutesFor(route) + route.marginMinutes, estimated: false }
-      : { minutes: ctx.allowance, estimated: true };
+      ? { minutes: minutesFor(route) + route.marginMinutes, estimated: false, commuteId: route.id }
+      : { minutes: ctx.allowance, estimated: true, commuteId: null };
   };
 
   const legs: Leg[] = [];
@@ -77,7 +77,7 @@ export function legsOn(date: DateStr, commitments: Commitment[], ctx: TravelCont
 
   for (const { o, place } of located) {
     if (place.id !== here.id) {
-      const { minutes, estimated } = cost(here, place);
+      const { minutes, estimated, commuteId } = cost(here, place);
       if (estimated && place.address.trim() === '') {
         warnings.push({
           kind: 'address-missing',
@@ -89,7 +89,7 @@ export function legsOn(date: DateStr, commitments: Commitment[], ctx: TravelCont
       const start = end - minutes;
       if (minutes > 0) {
         if (end > 0) {
-          legs.push({ date, start: Math.max(0, start), end, fromName: here.name, toName: place.name, estimated });
+          legs.push({ date, start: Math.max(0, start), end, fromName: here.name, toName: place.name, estimated, placeId: place.id, commuteId });
         }
         if (start < Math.max(lastEnd, 0)) {
           warnings.push({
@@ -105,9 +105,9 @@ export function legsOn(date: DateStr, commitments: Commitment[], ctx: TravelCont
   }
 
   if (here.id !== home.id && lastEnd < 1440) {
-    const { minutes, estimated } = cost(here, home);
+    const { minutes, estimated, commuteId } = cost(here, home);
     if (minutes > 0) {
-      legs.push({ date, start: lastEnd, end: Math.min(1440, lastEnd + minutes), fromName: here.name, toName: home.name, estimated });
+      legs.push({ date, start: lastEnd, end: Math.min(1440, lastEnd + minutes), fromName: here.name, toName: home.name, estimated, placeId: here.id, commuteId });
     }
   }
   return { legs, warnings };

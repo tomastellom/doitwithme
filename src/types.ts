@@ -43,6 +43,8 @@ export interface Leg {
   fromName: string;
   toName: string;
   estimated: boolean;
+  placeId: string;
+  commuteId: string | null;
 }
 
 export type Pattern =

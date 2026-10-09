@@ -303,3 +303,25 @@ a { color: inherit; }
 .ai { color: var(--muted); }
 
 .blk:focus-visible, .dv-blk:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+/* Click to edit */
+.drawer-root[hidden] { display: none; }
+.drawer-root .scrim { position: fixed; left: 0; top: 0; bottom: 0; right: 540px; background: rgba(17, 17, 17, .42); z-index: 30; }
+.drawer { position: fixed; top: 0; right: 0; bottom: 0; width: 540px; max-width: 100vw; overflow-y: auto; background: var(--paper); border-left: 4px solid var(--ink); padding: 22px 28px; z-index: 31; display: flex; flex-direction: column; gap: 12px; }
+.drawer .row1 { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.drawer .x { padding: 6px 12px; border: 2px solid var(--ink); background: transparent; }
+.drawer h2 { margin: 4px 0 0; font-size: 54px; font-weight: 800; letter-spacing: -.05em; line-height: .9; overflow-wrap: anywhere; }
+.drawer .sub2 { color: var(--muted); }
+.drawer .skip { border: 2px dashed var(--ink); padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; background: #FAF8F2; margin: 0; }
+.drawer .skip span { font-size: 14px; color: #3b3a35; }
+.drawer .skip button { padding: 8px 12px; border: 2px solid var(--ink); background: transparent; font-weight: 600; white-space: nowrap; }
+.drawer .dfg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
+.drawer .dfg .fld { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.drawer .dfg .span2, .drawer .dfg .span3 { grid-column: span 2; }
+.drawer .note2 { color: var(--muted); font-size: 13px; }
+.drawer .dbtns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; align-items: center; }
+.drawer .dbtns button { padding: 11px 18px; border: 2px solid var(--ink); background: transparent; font-weight: 600; }
+.drawer .dbtns button.y { background: var(--study); color: var(--on-study); }
+.drawer .dbtns .del, .drawer .dbtns .confirm { margin-left: auto; }
+.drawer button:disabled { opacity: .5; cursor: not-allowed; }
+@media (max-width: 700px) { .drawer { width: 100vw; } .drawer-root .scrim { right: 0; } }

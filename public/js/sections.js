@@ -18,6 +18,8 @@ export function searchSections(sections, query) {
   return sections.filter((s) => score(s) < 3).sort((a, b) => score(a) - score(b));
 }
 
+const inMenu = (list) => list.filter((s) => s.inMenu !== false);
+
 export function createRegistry() {
   const list = [];
   return {
@@ -26,15 +28,15 @@ export function createRegistry() {
       if (typeof section.title !== 'string' || !section.title) throw new Error('section.title is required');
       if (!GROUPS.some((g) => g.id === section.group)) throw new Error(`unknown group ${section.group}`);
       if (list.some((s) => s.id === section.id)) throw new Error(`duplicate section ${section.id}`);
-      list.push({ description: '', primary: false, ...section });
+      list.push({ description: '', primary: false, inMenu: true, activeFor: [], ...section });
     },
     all: () => [...list],
     ids: () => list.map((s) => s.id),
     find: (id) => list.find((s) => s.id === id) ?? null,
     primary: () => list.filter((s) => s.primary),
-    search: (query) => searchSections(list, query),
+    search: (query) => searchSections(inMenu(list), query),
     byGroup(query = '') {
-      const hits = searchSections(list, query);
+      const hits = searchSections(inMenu(list), query);
       return GROUPS.map((g) => ({ ...g, items: hits.filter((s) => s.group === g.id) })).filter((g) => g.items.length > 0);
     },
   };

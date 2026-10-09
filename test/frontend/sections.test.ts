@@ -53,3 +53,18 @@ test('search ranks title prefix, then title contains, then description, and drop
   assert.deepEqual(r.byGroup('day').map((g) => g.id), ['views']);
   assert.deepEqual(searchSections([{ title: 'Alpha', description: 'x' }, { title: 'Beta', description: 'alpha' }] as any, 'alpha').map((s: any) => s.title), ['Alpha', 'Beta']);
 });
+
+test('sections can be hidden from the menu and search but are still routable', () => {
+  const r = createRegistry();
+  r.register({ id: 'week', title: 'Week', group: 'views', primary: true });
+  r.register({ id: 'setup', title: 'Setup', group: 'setup', primary: true, inMenu: false, activeFor: ['commitments'] });
+  r.register({ id: 'commitments', title: 'Commitments', group: 'setup', description: 'What is fixed.' });
+  assert.deepEqual(r.byGroup().map((g) => [g.id, g.items.map((s) => s.id)]), [['views', ['week']], ['setup', ['commitments']]]);
+  assert.deepEqual(r.search('setup').map((s) => s.id), []);
+  assert.deepEqual(r.ids(), ['week', 'setup', 'commitments']);
+  assert.equal(r.find('setup')?.title, 'Setup');
+  assert.deepEqual(r.primary().map((s) => s.id), ['week', 'setup']);
+  assert.deepEqual(r.find('setup')?.activeFor, ['commitments']);
+  assert.deepEqual(r.find('week')?.activeFor, []);
+  assert.equal(r.find('week')?.inMenu, true);
+});

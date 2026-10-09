@@ -1,5 +1,6 @@
 import { createApi } from './api.js';
 import { createDom } from './dom.js';
+import { createFocusKeeper } from './focus.js';
 import { createMenu } from './menu.js';
 import { GROUP_IDS, weekModel } from './model.js';
 import { createNudge } from './nudge.js';
@@ -11,6 +12,7 @@ import { addDays, currentClock, weekStart } from './time.js';
 import { renderWeek } from './week.js';
 
 const STORE_KEY = 'doitwithme.visible';
+const RENDER_FAILED = 'Something unexpected happened. Reload the page.';
 
 function loadVisible(win) {
   try {
@@ -30,18 +32,6 @@ function saveVisible(win, visible) {
   }
 }
 
-const RENDER_FAILED = 'Something unexpected happened. Reload the page.';
-
-function findByKey(node, key) {
-  if (!node || !node.children) return null;
-  if (node.getAttribute && node.getAttribute('data-fk') === key) return node;
-  for (const child of node.children) {
-    const found = findByKey(child, key);
-    if (found) return found;
-  }
-  return null;
-}
-
 export function startApp({ root, document, fetch, win, now = () => new Date() }) {
   const dom = createDom(document);
   const { h, clear } = dom;
@@ -50,10 +40,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   const registry = createRegistry();
   let visible = loadVisible(win);
   let route = { id: 'week', param: null };
-  let pendingKey = null;
   let lastDay = getClock().today;
-
-  registry.register({ id: 'week', title: 'Week', group: 'views', description: 'Your plan for the week.', primary: true });
 
   const nudge = createNudge(dom, {
     approve: (date) => store.approve(date),
@@ -71,9 +58,16 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   const menuButton = h('button', { type: 'button', class: 'btn dark mono', 'data-fk': 'menu', onclick: () => menu.open(menuButton) }, 'Menu');
   root.append(h('div', { class: 'app' }, bar, main), nudge.el, menu.el);
 
+  const focus = createFocusKeeper({ document, getRoot: () => root, fallback: () => nudge.focus() });
+  const keepFocus = (fn) => {
+    const key = focus.capture();
+    fn();
+    focus.restore(key);
+  };
+
   const currentWeek = () => weekStart(weekParam(route.param, getClock().today));
 
-  const actions = {
+  const weekActions = {
     toggleGroup(id) {
       const next = new Set(visible);
       if (next.has(id)) next.delete(id);
@@ -92,13 +86,24 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     },
   };
 
+  registry.register({
+    id: 'week', title: 'Week', group: 'views', description: 'Your plan for the week.', primary: true,
+    render: (ctx) => {
+      const model = weekModel(ctx.s.state, currentWeek(), visible, getClock().today);
+      const { needsYou } = buildNudge(ctx.s.warnings);
+      return renderWeek(dom, { model, visible, needsYou, isEmpty: ctx.s.isEmpty }, weekActions);
+    },
+  });
+
   function renderBar() {
     const s = store.get();
     clear(bar,
       h('a', { class: 'brand mono', href: '#/week', 'data-fk': 'brand' }, 'doitwithme'),
       h('nav', { class: 'tabs mono', 'aria-label': 'Main' },
-        registry.primary().map((section) =>
-          h('a', { class: 'tab', href: `#/${section.id}`, 'data-fk': `tab-${section.id}`, 'aria-current': section.id === route.id ? 'page' : null }, section.title))),
+        registry.primary().map((section) => {
+          const current = section.id === route.id || section.activeFor.includes(route.id);
+          return h('a', { class: 'tab', href: `#/${section.id}`, 'data-fk': `tab-${section.id}`, 'aria-current': current ? 'page' : null }, section.title);
+        })),
       h('div', { class: 'actions' },
         menuButton,
         h('button', { type: 'button', class: 'btn go mono', 'data-fk': 'replan', disabled: s.busy || s.status !== 'ready', onclick: () => store.replan() }, 'Replan')));
@@ -112,29 +117,8 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
         h('h2', {}, offline ? "I can't reach the planner." : 'Something went wrong.'),
         h('p', {}, offline ? 'The local server is not running. Start it with npm run serve, then press Retry.' : s.error));
     }
-    const model = weekModel(s.state, currentWeek(), visible, getClock().today);
-    const { needsYou } = buildNudge(s.warnings);
-    return renderWeek(dom, { model, visible, needsYou, isEmpty: s.isEmpty }, actions);
-  }
-
-  // Everything is rebuilt on each render, so remember which control had the keyboard
-  // focus and put it back. A disabled control cannot take focus; the key is kept for the next render.
-  function focusKey() {
-    const active = document.activeElement;
-    if (active && active.getAttribute) return active.getAttribute('data-fk');
-    return !active || active.tagName === 'BODY' ? pendingKey : null;
-  }
-
-  function restoreFocus(key) {
-    pendingKey = null;
-    if (!key) return;
-    const target = findByKey(root, key);
-    if (target) {
-      target.focus();
-      if (document.activeElement !== target) pendingKey = key;
-    } else if (key.startsWith('nudge-')) {
-      nudge.focus();
-    }
+    const section = registry.find(route.id);
+    return section.render({ dom, store, s, route, getClock, navigate, keepFocus, registry });
   }
 
   function draw() {
@@ -153,14 +137,14 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   }
 
   function render() {
-    const key = focusKey();
+    const key = focus.capture();
     try {
       draw();
     } catch {
       // A bug while drawing must never leave a blank page.
       clear(main, h('div', { class: 'state' }, h('h2', {}, 'Something went wrong.'), h('p', {}, RENDER_FAILED)));
     }
-    restoreFocus(key);
+    focus.restore(key);
   }
 
   function navigate(hash) {

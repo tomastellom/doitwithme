@@ -41,6 +41,9 @@ export class FakeElement {
   hasClass(c: string): boolean {
     return this.className.split(/\s+/).includes(c);
   }
+  get tagName(): string {
+    return this.tag.toUpperCase();
+  }
   append(...nodes: Array<FakeElement | FakeText>): void {
     for (const n of nodes) {
       if (n instanceof FakeElement) n.parent = this;

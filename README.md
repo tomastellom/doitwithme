@@ -2,7 +2,7 @@
 
 A personal everyday planner. It fits flexible tasks (study, gym, chores, errands, projects) around your fixed commitments, ramps up work toward deadlines, and tells you plainly when something cannot fit.
 
-**Status:** Phase 1 (core planner). There is no graphical UI yet; it is waiting on design references. Design: `docs/superpowers/specs/`. Plan: `docs/superpowers/plans/`.
+**Status:** Phase 1 (core planner) and the first part of the UI (Week screen, Nudge, Menu) are built. Run `npm run serve` and open http://127.0.0.1:8787. Compare the look with the design boards using `docs/ui-visual-check.md`. Day, Deadlines, Setup and Settings screens come next. Design: `docs/superpowers/specs/`. Plans: `docs/superpowers/plans/`.
 
 ## Requirements
 

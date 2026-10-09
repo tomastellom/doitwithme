@@ -1,17 +1,19 @@
-import { GROUPS } from './model.js';
+import { GROUPS, itemKey } from './model.js';
 import { duration, hhmm } from './time.js';
 
 export function renderWeek(dom, view, actions) {
   const { h } = dom;
   const { model, visible, needsYou, isEmpty, travelOff } = view;
 
+  const label = (item) => `${item.kind === 'travel' ? `Commute ${item.end - item.start}` : item.title}, ${hhmm(item.start)}–${hhmm(item.end)}, ${item.label}. Opens the editor.`;
+  const open = (item) => ({ type: 'button', 'data-fk': `blk-${itemKey(item)}`, 'aria-label': label(item), onclick: () => actions.open(item) });
   const block = (item) =>
     item.kind === 'travel'
-      ? h('div', { class: 'blk travel', title: item.title },
-          h('div', { class: 'top' }, h('span', { class: 't' }, `${hhmm(item.start)}–${hhmm(item.end)}`), h('span', { class: 'k' }, item.label)),
+      ? h('button', { ...open(item), class: 'blk travel', title: item.title },
+          h('span', { class: 'top' }, h('span', { class: 't' }, `${hhmm(item.start)}–${hhmm(item.end)}`), h('span', { class: 'k' }, item.label)),
           h('span', { class: 'n' }, `Commute ${item.end - item.start}`))
-      : h('div', { class: `blk g-${item.group}` },
-          h('div', { class: 'top' }, h('span', { class: 't' }, `${hhmm(item.start)}–${hhmm(item.end)}`), h('span', { class: 'k' }, item.label)),
+      : h('button', { ...open(item), class: `blk g-${item.group}` },
+          h('span', { class: 'top' }, h('span', { class: 't' }, `${hhmm(item.start)}–${hhmm(item.end)}`), h('span', { class: 'k' }, item.label)),
           h('span', { class: 'n' }, item.title));
 
   const day = (d) =>

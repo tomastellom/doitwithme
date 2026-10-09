@@ -149,3 +149,25 @@ test('a commute is a hatched entry with its length, and the week says when trave
   const off: any = renderWeek(dom, { model, visible: all, needsYou: 0, isEmpty: false, travelOff: true }, { canAdd: false } as any);
   assert.match(textOf(byClass(off, 'travel-off')[0]), /Travel is off\. Add a Home place\./);
 });
+
+test('every item in the week is a button that opens the editor, with a name for screen readers', () => {
+  const calls: any[] = [];
+  const st = state({ commitments: [{ id: 'm', title: '<img src=x onerror=alert(1)>', category: 'mass', start: 1200, end: 1260, pattern: { kind: 'once', date: '2026-10-12' }, exceptions: [], bufferBefore: 0 }] });
+  const travel = [{ date: '2026-10-12', start: 1100, end: 1130, fromName: 'Home', toName: 'Parish', estimated: true, placeId: 'p', commuteId: null }];
+  const model = weekModel(st, '2026-10-12', all, '2026-10-12', travel);
+  const el: any = renderWeek(dom, { model, visible: all, needsYou: 0, isEmpty: false, travelOff: false }, { open: (item: any) => calls.push([item.kind, item.title]), canAdd: false } as any);
+  const items = findAll(el, (e: any) => e.tag === 'button' && (e.getAttribute('data-fk') ?? '').startsWith('blk-'));
+  assert.ok(items.length >= 6);
+  for (const b of items) {
+    assert.equal(b.getAttribute('type'), 'button');
+    assert.match(b.getAttribute('aria-label'), /Opens the editor\.$/);
+  }
+  const mass = items.find((b: any) => b.getAttribute('aria-label').includes('<img'));
+  mass.click();
+  assert.deepEqual(calls, [['commitment', '<img src=x onerror=alert(1)>']]);
+  assert.equal(findAll(el, (e: any) => e.tag === 'img').length, 0);
+  const trip = items.find((b: any) => b.hasClass('travel'));
+  trip.click();
+  assert.equal(calls[1][0], 'travel');
+  assert.equal(new Set(items.map((b: any) => b.getAttribute('data-fk'))).size, items.length, 'keys are unique');
+});

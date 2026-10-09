@@ -80,7 +80,9 @@ a { color: inherit; }
 .day.today .dh { border-top-color: var(--study); }
 .dd { font-size: 40px; font-weight: 800; letter-spacing: -.04em; line-height: 1; }
 .booked { margin: 0 0 10px; color: var(--muted); }
-.blk { padding: 8px 10px 9px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 3px; }
+/* Calendar items are buttons: reset them before the group colours and borders below are applied. */
+.blk, .dv-blk { border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }
+.blk { padding: 8px 10px 9px; margin-bottom: 6px; display: flex; flex-direction: column; gap: 3px; width: 100%; }
 .blk .top { display: flex; justify-content: space-between; align-items: baseline; }
 .blk .t { font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; }
 .blk .k { font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; text-transform: uppercase; opacity: .85; }
@@ -299,3 +301,5 @@ a { color: inherit; }
 .estbtns button { padding: 9px 14px; border: 2px solid var(--ink); background: transparent; font-weight: 600; }
 .estbtns button.y { background: var(--study); color: var(--on-study); }
 .ai { color: var(--muted); }
+
+.blk:focus-visible, .dv-blk:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }

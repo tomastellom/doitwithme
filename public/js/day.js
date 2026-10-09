@@ -1,4 +1,4 @@
-import { GROUPS } from './model.js';
+import { GROUPS, itemKey } from './model.js';
 import { duration, hhmm } from './time.js';
 
 export function renderDay(dom, view, actions) {
@@ -18,15 +18,23 @@ export function renderDay(dom, view, actions) {
         h('div', { class: 'dv-blk dv-buf' }, h('span', { class: 'k' }, r.title), h('span', { class: 'k' }, 'Travel and setup')),
         h('span', { class: 'dv-dur' }, length));
     }
+    // Day rows call commitments and blocks "item"; the editor wants to know which is which.
+    const item = { ...r, kind: r.kind === 'travel' ? 'travel' : r.commitmentId ? 'commitment' : 'block' };
+    const name = item.kind === 'travel' ? `Commute ${r.end - r.start}` : r.title;
+    const button = (cls, ...kids) =>
+      h('button', {
+        type: 'button', class: cls, 'data-fk': `blk-${itemKey(item)}`,
+        'aria-label': `${name}, ${range(r)}, ${r.label}. Opens the editor.`, onclick: () => actions.open(item),
+      }, ...kids);
     if (r.kind === 'travel') {
       return h('div', { class: 'dv-row' },
         h('span', { class: 'dv-rt' }, range(r)),
-        h('div', { class: 'dv-blk travel' }, h('span', { class: 'k' }, r.label), h('span', { class: 'n' }, r.title)),
+        button('dv-blk travel', h('span', { class: 'k' }, r.label), h('span', { class: 'n' }, r.title)),
         h('span', { class: 'dv-dur' }, length));
     }
     return h('div', { class: 'dv-row' },
       h('span', { class: 'dv-rt' }, range(r)),
-      h('div', { class: `dv-blk g-${r.group}` }, h('span', { class: 'k' }, r.label), h('span', { class: 'n' }, r.title)),
+      button(`dv-blk g-${r.group}`, h('span', { class: 'k' }, r.label), h('span', { class: 'n' }, r.title)),
       h('span', { class: 'dv-dur' }, length));
   };
 

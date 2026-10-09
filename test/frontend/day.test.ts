@@ -92,3 +92,15 @@ test('other days say Day by group, and the step buttons keep their visible words
   assert.equal(key(el, 'prev').getAttribute('aria-label'), 'Previous day, Tue');
   assert.equal(key(el, 'next').getAttribute('aria-label'), 'Next day, Thu');
 });
+
+test('item rows in the day are buttons that open the editor; buffers and gaps are not', () => {
+  const opened: any[] = [];
+  const { el } = draw({}, { open: (item: any) => opened.push([item.kind, item.title]) });
+  const buttons = findAll(el, (e: any) => e.tag === 'button' && (e.getAttribute('data-fk') ?? '').startsWith('blk-'));
+  assert.ok(buttons.length >= 3);
+  buttons.find((b: any) => textOf(b).includes('Private lesson'))!.click();
+  assert.deepEqual(opened, [['commitment', 'Private lesson, Anna']]);
+  assert.equal(byClass(el, 'dv-buf').length, 1);
+  assert.equal(byClass(el, 'dv-buf')[0].tag === 'button', false);
+  assert.equal(byClass(el, 'dv-gap').every((g: any) => g.tag !== 'button'), true);
+});

@@ -162,31 +162,50 @@ function softUseWarnings(input: PlanInput, blocks: Block[], opened: ReadonlySet<
   return out;
 }
 
+const studyDeficit = (found: Shortfall[]): number =>
+  found.filter((f) => f.category === 'study').reduce((t, f) => t + f.minutes, 0);
+
 export function plan(input: PlanInput): PlanResult {
   const softDates = Array.from({ length: input.horizonDays }, (_, i) => addDays(input.today, i)).filter(
     (d) => input.preferences.softWindows.some((s) => s.weekday === weekdayOf(d)),
   );
-  const opened = new Set<DateStr>();
-  const studyDeficit = (found: Shortfall[]): number =>
-    found.filter((f) => f.category === 'study').reduce((t, f) => t + f.minutes, 0);
-  let blocks = planDays(input, opened);
-  let found = shortfalls(input, [...input.pastBlocks, ...blocks]);
+  const opened = new Set<DateStr>(input.approvedSoft ?? []);
+  const candidates = softDates.filter((d) => !opened.has(d));
+  const run = (open: ReadonlySet<DateStr>) => {
+    const blocks = planDays(input, open);
+    return { blocks, found: shortfalls(input, [...input.pastBlocks, ...blocks]) };
+  };
+
+  let { blocks, found } = run(opened);
   let deficit = studyDeficit(found);
-  for (const date of softDates) {
-    if (deficit === 0) break;
-    const trial = new Set(opened).add(date);
-    const trialBlocks = planDays(input, trial);
-    const trialFound = shortfalls(input, [...input.pastBlocks, ...trialBlocks]);
-    const trialDeficit = studyDeficit(trialFound);
-    if (trialDeficit < deficit) {
-      opened.add(date);
-      blocks = trialBlocks;
-      found = trialFound;
-      deficit = trialDeficit;
+  let offer: { date: DateStr; minutes: number } | null = null;
+
+  if (input.preferences.softMode === 'auto') {
+    for (const date of candidates) {
+      if (deficit === 0) break;
+      const trial = run(new Set(opened).add(date));
+      const trialDeficit = studyDeficit(trial.found);
+      if (trialDeficit < deficit) {
+        opened.add(date);
+        blocks = trial.blocks;
+        found = trial.found;
+        deficit = trialDeficit;
+      }
+    }
+  } else if (deficit > 0) {
+    for (const date of candidates) {
+      const gain = deficit - studyDeficit(run(new Set(opened).add(date)).found);
+      if (gain > 0 && (offer === null || gain > offer.minutes)) offer = { date, minutes: gain };
     }
   }
-  return {
-    blocks,
-    warnings: [...softUseWarnings(input, blocks, opened), ...found.map((s) => s.warning)],
-  };
+
+  const warnings: Warning[] = [...softUseWarnings(input, blocks, opened), ...found.map((s) => s.warning)];
+  if (offer) {
+    warnings.push({
+      kind: 'soft-offer',
+      message: `Soft time on ${offer.date} could cover ${offer.minutes} min of study`,
+      detail: { date: offer.date, minutes: offer.minutes },
+    });
+  }
+  return { blocks, warnings };
 }

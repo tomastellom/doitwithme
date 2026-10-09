@@ -55,3 +55,22 @@ test('stop cancels the pending timer', () => {
   stop();
   assert.equal(timers.length, 0);
 });
+
+test('replacingLink swaps in a fresh icon element each time the href changes', async () => {
+  const { replacingLink } = await import('../../public/js/favicon.js');
+  const made: any[] = [];
+  const head: any[] = [];
+  const mk = (): any => {
+    const el: any = { attrs: {}, setAttribute(k: string, v: string) { this.attrs[k] = v; }, getAttribute(k: string) { return this.attrs[k]; }, remove() { const i = head.indexOf(this); if (i >= 0) head.splice(i, 1); } };
+    made.push(el);
+    return el;
+  };
+  const first = mk(); first.attrs.href = '/a.svg'; head.push(first);
+  const doc: any = { createElement: mk, head: { appendChild: (e: any) => head.push(e) } };
+  const link = replacingLink(doc, first);
+  link.href = '/b.svg';
+  assert.equal(head.length, 1);
+  assert.notEqual(head[0], first);
+  assert.equal(link.href, '/b.svg');
+  assert.equal(head[0].attrs.rel, 'icon');
+});

@@ -1,6 +1,6 @@
 import { createApi } from './api.js';
 import { createDom } from './dom.js';
-import { startFavicon } from './favicon.js';
+import { replacingLink, startFavicon } from './favicon.js';
 import { createFocusKeeper } from './focus.js';
 import { createMenu } from './menu.js';
 import { GROUP_IDS, weekModel } from './model.js';
@@ -198,7 +198,7 @@ if (typeof document !== 'undefined' && document.getElementById('app')) {
   const link = document.querySelector('link[rel="icon"]');
   if (link) {
     startFavicon({
-      link,
+      link: replacingLink(document, link),
       random: Math.random,
       setTimer: (fn, ms) => window.setTimeout(fn, ms),
       clearTimer: (id) => window.clearTimeout(id),

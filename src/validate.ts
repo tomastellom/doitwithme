@@ -170,3 +170,12 @@ export function validateState(x: unknown): State {
     blocks: arr(o.blocks ?? [], 'blocks').map((b, i) => block(b, `blocks[${i}]`)),
   };
 }
+
+export function validateReplanRequest(x: unknown): { today: string; nowMinutes?: number; horizonDays: number } {
+  const o = obj(x, 'request');
+  return {
+    today: dateStr(o.today, 'today'),
+    ...(o.nowMinutes === undefined ? {} : { nowMinutes: int(o.nowMinutes, 'nowMinutes', 0, 1440) }),
+    horizonDays: o.horizonDays === undefined ? 14 : int(o.horizonDays, 'horizonDays', 1, 60),
+  };
+}

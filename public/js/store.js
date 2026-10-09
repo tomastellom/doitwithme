@@ -6,7 +6,7 @@ const STALE_NOTICE = 'That warning changed, so I refreshed the plan.';
 export function createStore(api, getClock) {
   let current = {
     status: 'loading', state: null, warnings: [], approvedSoft: [], dismissed: [],
-    isEmpty: false, error: null, busy: false, confirm: null, notice: null,
+    isEmpty: false, error: null, busy: false, confirm: null, notice: null, formError: null,
   };
   const listeners = new Set();
 
@@ -108,5 +108,26 @@ export function createStore(api, getClock) {
         set(merged(r, { isEmpty: false, confirm: null }));
       }),
     clearConfirm: () => set({ confirm: null, notice: null }),
+    saveState: (next) =>
+      guard(async () => {
+        try {
+          await api.putState(next);
+        } catch (e) {
+          if (e && e.status === 400) {
+            set({ formError: e.message });
+            return;
+          }
+          throw e;
+        }
+        const state = await api.getState();
+        const r = await api.replan(getClock());
+        current = { ...current, state };
+        set(merged(r, {
+          isEmpty: state.tasks.length === 0 && state.commitments.length === 0,
+          confirm: null,
+          formError: null,
+        }));
+      }),
+    clearFormError: () => set({ formError: null }),
   };
 }

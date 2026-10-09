@@ -174,3 +174,63 @@ test('when every dismissed key is stale the plan is refreshed and the user is to
   await store.replan();
   assert.equal(store.get().notice, null);
 });
+
+test('saveState puts the new state, reloads it and replans', async () => {
+  const saved = full({ tasks: [{ id: 't' }, { id: 'u' }] });
+  const { store, calls } = make({ getState: () => saved });
+  await store.load();
+  calls.length = 0;
+  await store.saveState(saved);
+  assert.deepEqual(calls, ['putState', 'getState', 'replan']);
+  assert.equal(store.get().formError, null);
+  assert.equal(store.get().state.tasks.length, 2);
+  assert.equal(store.get().busy, false);
+});
+
+test('a rejected save keeps the page, shows the server message and changes nothing else', async () => {
+  const { store, calls } = make({ putState: () => { throw new ApiError(400, 'tasks[0].maxBlock must be a number between 5 and 1440'); } });
+  await store.load();
+  const before = store.get().state;
+  calls.length = 0;
+  await store.saveState(full());
+  assert.equal(store.get().status, 'ready');
+  assert.equal(store.get().formError, 'tasks[0].maxBlock must be a number between 5 and 1440');
+  assert.equal(store.get().state, before);
+  assert.deepEqual(calls, ['putState']);
+  assert.equal(store.get().busy, false);
+  store.clearFormError();
+  assert.equal(store.get().formError, null);
+});
+
+test('saving the first item leaves first-run mode', async () => {
+  let saved = false;
+  const { store } = make({
+    getState: () => (saved ? full() : full({ tasks: [], commitments: [] })),
+    putState: () => { saved = true; return { ok: true }; },
+  });
+  await store.load();
+  assert.equal(store.get().isEmpty, true);
+  await store.saveState(full());
+  assert.equal(store.get().isEmpty, false);
+});
+
+test('other save failures are real errors', async () => {
+  const { store } = make({ putState: () => { throw new ApiError(500, 'boom'); } });
+  await store.load();
+  await store.saveState(full());
+  assert.equal(store.get().status, 'error');
+  assert.equal(store.get().formError, null);
+});
+
+test('a second save while one runs is ignored', async () => {
+  let release: Function = () => {};
+  const gate = new Promise<void>((r) => (release = r));
+  const { store, calls } = make({ putState: async () => { await gate; return { ok: true }; } });
+  await store.load();
+  calls.length = 0;
+  const first = store.saveState(full());
+  const second = store.saveState(full());
+  release();
+  await Promise.all([first, second]);
+  assert.equal(calls.filter((c) => c === 'putState').length, 1);
+});

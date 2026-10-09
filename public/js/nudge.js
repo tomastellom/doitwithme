@@ -11,7 +11,7 @@ export function createMascot(dom, { eyes = 'center', badge = null, width = 96 } 
       : eyes === 'side'
         ? [eye(30, 66, 11, 32, 5.5), eye(66, 66, 11, 32, 5.5)]
         : [eye(36.5, 66, 11, 32, 5.5), eye(72.5, 66, 11, 32, 5.5)];
-  return svg(
+  const root = svg(
     'svg',
     { class: 'mascot', width, height: Math.round((width * 4) / 3), viewBox: '0 0 120 160', role: 'img', 'aria-label': 'Nudge, the planner assistant' },
     svg('path', { class: 'mascot-body', d: 'M6 160V62C6 28 32 4 60 4s54 24 54 58v98Z' }),
@@ -19,6 +19,10 @@ export function createMascot(dom, { eyes = 'center', badge = null, width = 96 } 
     badge !== null && svg('circle', { class: 'mascot-badge', cx: 100, cy: 22, r: 15 }),
     badge !== null && svg('text', { class: 'mascot-badge-text', x: 100, y: 28, 'text-anchor': 'middle' }, badge),
   );
+  // A click makes it blink once; the animation clears the class when it ends.
+  root.addEventListener('click', () => root.setAttribute('class', 'mascot blinking'));
+  root.addEventListener('animationend', () => root.setAttribute('class', 'mascot'));
+  return root;
 }
 
 function spokenFor(view, item) {

@@ -223,3 +223,19 @@ test('a notice with nothing else to say can be dismissed with Okay', () => {
   labelled(nudge.el, 'Okay')!.click();
   assert.deepEqual(calls, [['okay']]);
 });
+
+test('clicking the mascot makes it blink once, and the blink clears itself', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base, items: [item()] });
+  const mascot = byClass(nudge.el, 'mascot')[0];
+  assert.equal(mascot.hasClass('blinking'), false);
+  mascot.click();
+  assert.equal(mascot.hasClass('blinking'), true);
+  mascot.dispatch('animationend');
+  assert.equal(mascot.hasClass('blinking'), false);
+  mascot.click();
+  mascot.click();
+  assert.equal(mascot.hasClass('blinking'), true);
+  mascot.dispatch('animationend');
+  assert.equal(mascot.hasClass('blinking'), false);
+});

@@ -134,3 +134,16 @@ test('the dashed outline of a short bar is not clipped by the drawing area', () 
   const css = readFileSync('public/css/app.css', 'utf8');
   assert.match(css, /^\.dl-bar \{[^}]*overflow: visible/m);
 });
+
+test('the corner where Nudge waits is a generous hover area, and the hero buttons stay put', () => {
+  const css = readFileSync('public/css/app.css', 'utf8');
+  assert.match(css, /^\.nudge\[data-state="resting"\] \{ min-width: 200px; min-height: 180px; \}/m);
+  assert.match(css, /^\.hero \.meta \{[^}]*width: 230px/m);
+});
+
+test('the mascot blinks with a short eye animation that respects reduced motion', () => {
+  const css = readFileSync('public/css/app.css', 'utf8');
+  assert.match(css, /^\.mascot\.blinking \.mascot-eye \{[^}]*animation: blink/m);
+  assert.match(css, /@keyframes blink/);
+  assert.match(css, /prefers-reduced-motion: reduce[\s\S]*animation: none !important/);
+});

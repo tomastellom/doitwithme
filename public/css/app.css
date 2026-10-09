@@ -30,7 +30,7 @@ a { color: inherit; }
 .nudge { position: fixed; right: 40px; bottom: 24px; z-index: 20; }
 .nudge-body { display: flex; align-items: flex-end; gap: 14px; transition: transform .22s ease; }
 /* Resting: the mascot waits below the screen edge. The corner stays hoverable and brings it up. */
-.nudge[data-state="resting"] { min-width: 96px; min-height: 128px; }
+.nudge[data-state="resting"] { min-width: 200px; min-height: 180px; }
 .nudge[data-state="resting"] .nudge-body { transform: translateY(calc(100% + 40px)); }
 .nudge[data-state="resting"]:hover .nudge-body, .nudge[data-state="resting"]:focus-within .nudge-body { transform: none; }
 .nudge[data-state="resting"] .quiet { display: none; }
@@ -58,6 +58,9 @@ a { color: inherit; }
 .quiet { display: flex; flex-direction: column; gap: 4px; padding: 12px 16px; background: var(--ink); color: var(--paper); }
 .quiet b { font-size: 20px; font-weight: 800; letter-spacing: -.02em; line-height: 1; }
 .quiet span { color: var(--ghost); }
+.mascot { cursor: pointer; }
+.mascot.blinking .mascot-eye { transform-box: fill-box; transform-origin: center; animation: blink .2s ease-in-out 1; }
+@keyframes blink { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(.08); } }
 .mascot-body { fill: var(--study); }
 .mascot-eye { fill: var(--ink); }
 .mascot-badge { fill: var(--ink); }
@@ -67,6 +70,7 @@ a { color: inherit; }
 .hero { padding: 0 40px; display: flex; align-items: flex-end; justify-content: space-between; gap: 28px; }
 .hero h1 { margin: 0; font-size: clamp(88px, 11vw, 160px); line-height: .8; font-weight: 800; letter-spacing: -.06em; }
 .hero .right { display: flex; align-items: flex-end; gap: 28px; }
+.hero .meta { flex: none; width: 230px; }
 .meta { display: flex; flex-direction: column; gap: 6px; text-align: right; padding-bottom: 6px; }
 .needs { border: 0; background: transparent; padding: 0; text-align: right; text-decoration: underline; text-underline-offset: 3px; }
 .step { display: flex; gap: 8px; padding-bottom: 4px; }

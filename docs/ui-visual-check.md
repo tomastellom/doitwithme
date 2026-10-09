@@ -37,3 +37,12 @@ Anything that differs from the boards: spacing, sizes, colors, wrapping, fonts n
 - The Week screen shows a "Booked" line per day (from the spec); board D does not.
 - Prev, Today and Next buttons sit in the header (the Day board shows the same pattern).
 - The tabs show only sections that exist; Day, Deadlines and Setup arrive in the next plan.
+
+## Places and Commutes (boards P, Q)
+- The Setup sub-navigation now has six tabs: Commitments, Tasks, Due dates, Places, Commutes, Preferences.
+- **Places:** list rows show the name, the kind and the address, or "Address missing". The form has Name, Kind, Address, and a hint about the travel allowance.
+- **Commutes:** the form has From, To, Repeats (Every week, Every month, Per lesson), the day toggles, then "I type it" selected and "Google Maps finds it" dashed and dimmed, minutes, safety margin, the travel-mode segments (Car, Bike, Bus, Walk), a grey note that Maps is not connected, and "How a day looks": hatched grey commute blocks around a vermilion event.
+- **Commitments** now have a Place select, and **Preferences** a Travel allowance field.
+- **Week:** load the example. Tuesday and Thursday show hatched grey "Commute 55" entries around the chemistry lecture; Sunday shows the parish trip marked "estimated"; Wednesday shows the trip to Anna marked "estimated". The Nudge shows "Anna has no address and no commute, so I used 30 minutes of travel."
+- Delete the Home place: the Week shows "Travel is off. Add a Home place." and the hatched entries disappear.
+- Delete the Campus place: the confirmation says its commute goes too and how many commitments lose their place.

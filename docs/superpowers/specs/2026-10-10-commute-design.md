@@ -1,6 +1,6 @@
 # Commute: Design
 
-Date: 2026-10-10. Status: draft for review. Builds on `2026-10-08-study-planner-design.md` (Commute section) and `2026-10-09-ui-design.md`. Approved boards: **P. Places screen** and **Q. Commutes screen** on the design canvas.
+Date: 2026-10-10. Status: core built (typed times); the Google Maps lookup is the next plan. Builds on `2026-10-08-study-planner-design.md` (Commute section) and `2026-10-09-ui-design.md`. Approved boards: **P. Places screen** and **Q. Commutes screen** on the design canvas.
 
 ## Purpose
 
@@ -68,6 +68,9 @@ Follows boards P and Q exactly.
 - **Commutes:** list plus form (From, To, Repeats, Days or month days, "I type it" or "Google Maps finds it", minutes, safety margin, and the travel mode shown only for Maps). The "How Monday looks" strip previews the first matching day. Hatched grey marks travel everywhere (Week included); travel has no category colour.
 - **Week:** each day shows its legs as hatched grey entries labelled "Commute 55" (minutes including margin).
 - **Additions to approved boards (small, same styles; please confirm):** a **Place** select on the Commitments form, and a **Travel allowance, min** field on Preferences. Board P's example names read "Anna" and "Pedro" (the kind is shown separately), so name matching works on a student's first name.
+- **Mode buttons:** the travel-mode segments stay visible as on the board, and the mode is saved only when "Google Maps finds it" is chosen.
+- **Preview strip:** it is illustrative. It shows the typed minutes plus margin around a placeholder event, and updates when the screen is redrawn, not while typing.
+- **Past days:** travel is computed from today forward, so past days in the Week show none.
 - **Dropped from board Q:** "Leave for class by". Travel is anchored to the events, so a fixed leave time would contradict it. Say if you want it back and what it should mean.
 
 ## Errors and edge inputs

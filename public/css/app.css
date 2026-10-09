@@ -277,3 +277,8 @@ a { color: inherit; }
 .mascot-confetti.c3 { fill: var(--ink); }
 .mascot-mask { fill: var(--paper); }
 .mascot-edge { fill: var(--ink); }
+
+/* Each field spans a label row and a control row shared with its neighbours, so a label that wraps never pushes one box lower than the rest. */
+@supports (grid-template-rows: subgrid) {
+  .fg > .fld { display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 5px; }
+}

@@ -152,3 +152,8 @@ test('the Week title is smaller than the other screens', () => {
   const css = readFileSync('public/css/app.css', 'utf8');
   assert.match(css, /^\.week \.hero h1 \{[^}]*font-size: clamp\(56px, 7\.2vw, 104px\)/m);
 });
+
+test('form rows line up their labels and input boxes even when a label wraps', () => {
+  const css = readFileSync('public/css/app.css', 'utf8');
+  assert.match(css, /@supports \(grid-template-rows: subgrid\) \{\s*\.fg > \.fld \{[^}]*grid-row: span 2;[^}]*grid-template-rows: subgrid;[^}]*row-gap: 5px;/);
+});

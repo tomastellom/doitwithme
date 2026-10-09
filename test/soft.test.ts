@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { plan } from '../src/planner.ts';
 import { defaultPreferences } from '../src/defaults.ts';
 import type { Preferences } from '../src/types.ts';
-import { deadline, input, task } from './helpers.ts';
+import { commitment, deadline, input, task } from './helpers.ts';
 
 // Weekdays offer 18:00-20:00 only. Friday evening is a soft window.
 const evening = (): Preferences => ({
@@ -72,4 +72,38 @@ test('a non-study weekly shortfall never opens a soft window', () => {
   );
   assert.equal(result.blocks.filter((b) => b.date === FRI).length, 0);
   assert.ok(result.warnings.every((w) => w.kind !== 'soft-time-used'));
+});
+
+test('an errand with a deadline never takes soft time, and its shortfall is reported', () => {
+  const blockWeekdayEvenings = commitment({
+    start: 1080,
+    end: 1200,
+    pattern: { kind: 'weekly', weekdays: [1, 2, 3, 4], from: '2026-01-01', to: '2026-12-31' },
+  });
+  const errand = task({ id: 'taxes', title: 'Taxes', category: 'errands' });
+  const result = plan(
+    input({
+      preferences: evening(),
+      commitments: [blockWeekdayEvenings],
+      tasks: [errand],
+      deadlines: [deadline({ id: 'dt', taskId: 'taxes', kind: 'task', dueDate: FRI, effortMinutes: 120 })],
+    }),
+  );
+  assert.equal(result.blocks.filter((b) => b.date === FRI).length, 0);
+  assert.deepEqual(result.warnings, [
+    { kind: 'deadline-short', message: `Taxes task due ${FRI} is short by 120 min` },
+  ]);
+});
+
+test('a shortfall that soft time cannot fix does not open soft time', () => {
+  const result = plan(
+    input({
+      preferences: evening(),
+      tasks: [task({ weeklyMinutes: 300 }), task({ id: 'old', title: 'Old exam prep', category: 'study' })],
+      deadlines: [deadline({ id: 'dold', taskId: 'old', dueDate: '2026-10-01', effortMinutes: 60 })],
+    }),
+  );
+  assert.equal(result.blocks.filter((b) => b.date === FRI).length, 0);
+  assert.ok(result.warnings.every((w) => w.kind !== 'soft-time-used'));
+  assert.equal(result.warnings.filter((w) => w.kind === 'deadline-short').length, 1);
 });

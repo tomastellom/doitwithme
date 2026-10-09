@@ -77,3 +77,14 @@ test('preference windows must end after they start', () => {
   rejects((s) => (s.preferences.weekdayWindow = { start: 600, end: 600 }), /weekdayWindow/);
   rejects((s) => (s.preferences.daysOff = [9]), /daysOff/);
 });
+
+test('soft windows on the same weekday must not overlap', () => {
+  rejects(
+    (s) =>
+      (s.preferences.softWindows = [
+        { weekday: 5, start: 1080, end: 1440 },
+        { weekday: 5, start: 1140, end: 1380 },
+      ]),
+    /softWindows/,
+  );
+});

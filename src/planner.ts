@@ -1,4 +1,4 @@
-import { addDays, weekdayOf, weekStart } from './dates.ts';
+import { addDays, daysBetween, weekdayOf, weekStart } from './dates.ts';
 import { busyOn } from './busy.ts';
 import { demandsFor } from './demand.ts';
 import { freeSlots } from './slots.ts';
@@ -29,20 +29,20 @@ export function planDays(input: PlanInput, opened: ReadonlySet<DateStr> = new Se
   const all: Block[] = [...input.pastBlocks];
   const placed: Block[] = [];
 
-  const usable = new Map<DateStr, boolean>();
-  const isUsable = (date: DateStr): boolean => {
-    let v = usable.get(date);
-    if (v === undefined) {
-      v = daySlots(input, date, opened).some((s) => s.end - s.start >= pref.minBlock);
-      usable.set(date, v);
+  // usedThrough[i] = number of usable days among today .. today + i.
+  const usedThrough: number[] = [];
+  const countThrough = (index: number): number => {
+    while (usedThrough.length <= index) {
+      const date = addDays(input.today, usedThrough.length);
+      const usable = daySlots(input, date, opened).some((s) => s.end - s.start >= pref.minBlock);
+      usedThrough.push((usedThrough[usedThrough.length - 1] ?? 0) + (usable ? 1 : 0));
     }
-    return v;
+    return usedThrough[index];
   };
   const usableDays = (date: DateStr, end: DateStr): number => {
-    const limit = end < addDays(date, 400) ? end : addDays(date, 400);
-    let n = 0;
-    for (let d = addDays(date, 1); d <= limit; d = addDays(d, 1)) if (isUsable(d)) n++;
-    return n;
+    const from = daysBetween(input.today, date);
+    const to = Math.min(daysBetween(input.today, end), from + 400);
+    return to <= from ? 0 : countThrough(to) - countThrough(from);
   };
 
   for (let i = 0; i < input.horizonDays; i++) {
@@ -60,9 +60,10 @@ export function planDays(input: PlanInput, opened: ReadonlySet<DateStr> = new Se
       for (;;) {
         const room = slot.end - cursor;
         const pick = demandsFor(input, date, all, usableDays).find((d) => {
-          if (slot.soft && d.deadline === null && d.task.category !== 'study') return false;
+          if (slot.soft && d.task.category !== 'study') return false;
           const wanted = Math.min(d.task.maxBlock, d.allowedLeft);
-          return room >= Math.min(pref.minBlock, wanted);
+          const needed = d.task.onePerDay ? wanted : Math.min(pref.minBlock, wanted);
+          return room >= needed;
         });
         if (!pick) break;
         const length = Math.min(pick.task.maxBlock, pick.allowedLeft, room);
@@ -90,6 +91,7 @@ const minutesOf = (blocks: Block[]): number => blocks.reduce((t, b) => t + (b.en
 export interface Shortfall {
   warning: Warning;
   category: string;
+  minutes: number;
 }
 
 export function shortfalls(input: PlanInput, all: Block[]): Shortfall[] {
@@ -103,6 +105,7 @@ export function shortfalls(input: PlanInput, all: Block[]): Shortfall[] {
     if (rem > 0) {
       out.push({
         category: task.category,
+        minutes: rem,
         warning: {
           kind: 'deadline-short',
           message: `${task.title} ${dl.kind} due ${dl.dueDate} is short by ${rem} min`,
@@ -120,6 +123,7 @@ export function shortfalls(input: PlanInput, all: Block[]): Shortfall[] {
       if (done < task.weeklyMinutes) {
         out.push({
           category: task.category,
+          minutes: task.weeklyMinutes - done,
           warning: {
             kind: 'weekly-short',
             message: `${task.title} is short by ${task.weeklyMinutes - done} min in the week of ${ws}`,
@@ -157,14 +161,23 @@ export function plan(input: PlanInput): PlanResult {
     (d) => input.preferences.softWindows.some((s) => s.weekday === weekdayOf(d)),
   );
   const opened = new Set<DateStr>();
-  const needsSoftTime = (found: Shortfall[]): boolean =>
-    found.some((s) => s.warning.kind === 'deadline-short' || s.category === 'study');
+  const studyDeficit = (found: Shortfall[]): number =>
+    found.filter((f) => f.category === 'study').reduce((t, f) => t + f.minutes, 0);
   let blocks = planDays(input, opened);
   let found = shortfalls(input, [...input.pastBlocks, ...blocks]);
-  while (needsSoftTime(found) && opened.size < softDates.length) {
-    opened.add(softDates[opened.size]);
-    blocks = planDays(input, opened);
-    found = shortfalls(input, [...input.pastBlocks, ...blocks]);
+  let deficit = studyDeficit(found);
+  for (const date of softDates) {
+    if (deficit === 0) break;
+    const trial = new Set(opened).add(date);
+    const trialBlocks = planDays(input, trial);
+    const trialFound = shortfalls(input, [...input.pastBlocks, ...trialBlocks]);
+    const trialDeficit = studyDeficit(trialFound);
+    if (trialDeficit < deficit) {
+      opened.add(date);
+      blocks = trialBlocks;
+      found = trialFound;
+      deficit = trialDeficit;
+    }
   }
   return {
     blocks,

@@ -2526,3 +2526,15 @@ git push
 - **Spec coverage:** own schedule entry with recurring patterns and exceptions (Tasks 2, 7); tasks, deadlines and ramp (3); preferences, days-off cutoff, break and block rules (4); Sunday mass buffer, cancelled lessons, protected fixed lessons (4); weekend soft time (6); never-silent shortfalls (5); replan keeps the past (7); local storage (7); local API (8); text view (9). Deferred items are listed at the top.
 - **Types:** `PlanInput`, `Block.deadlineId`, `Slot`, `Demand`, and `UsableDays` are defined once and used with the same names in every later task. `daySlots` gains its third parameter only in Task 6, and Task 6 lists every call site to change.
 - **Known limits, stated plainly:** the code in this plan has not been run yet; the first red-to-green cycle in each task is the check. Weekly-shortfall warnings cover only whole weeks inside the horizon. The 413 guard has no automated test. There is no type checker because of the disk constraint; the tests are the safety net.
+
+---
+
+## Execution notes (added after the final review)
+
+Where the shipped code differs from the plan text above, the code and tests are right:
+
+- **Soft time is study-only.** An opened soft window accepts only tasks with category `study` (not "deadline work", which let an errand with a deadline take Friday evening). Soft dates are kept only if opening them reduces the study shortfall, so an unfixable overdue deadline no longer opens every evening.
+- **One session per day for `onePerDay` tasks.** The planner requires a slot that fits the whole session instead of splitting it across two slots.
+- **Replan keeps the finished part of a running block** (clipped to `nowMinutes`) and hands the planner only this week's history plus deadline-tagged blocks, so replans stay fast as history grows.
+- **Soft windows may not overlap** on the same weekday (validation error).
+- The replan test "work done earlier counts" uses `horizonDays` 5, because the default horizon correctly plans next week's fresh target.

@@ -137,7 +137,7 @@ function block(v: unknown, path: string): Block {
 
 function preferences(v: unknown, path: string): Preferences {
   const o = obj(v, path);
-  return {
+  const prefs: Preferences = {
     weekdayWindow: windowOf(o.weekdayWindow, `${path}.weekdayWindow`),
     dayOffWindow: windowOf(o.dayOffWindow, `${path}.dayOffWindow`),
     daysOff: arr(o.daysOff, `${path}.daysOff`).map((d, i) => int(d, `${path}.daysOff[${i}]`, 0, 6)),
@@ -149,6 +149,15 @@ function preferences(v: unknown, path: string): Preferences {
       return { weekday: int(so.weekday, `${path}.softWindows[${i}].weekday`, 0, 6), ...w };
     }),
   };
+  const soft = prefs.softWindows;
+  for (let i = 0; i < soft.length; i++) {
+    for (let j = i + 1; j < soft.length; j++) {
+      if (soft[i].weekday === soft[j].weekday && soft[i].start < soft[j].end && soft[j].start < soft[i].end) {
+        fail(`${path}.softWindows[${i}] and [${j}] overlap on the same weekday`);
+      }
+    }
+  }
+  return prefs;
 }
 
 export function validateState(x: unknown): State {

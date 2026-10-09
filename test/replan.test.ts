@@ -52,3 +52,14 @@ test('work done earlier counts, so a finished week plans nothing more', () => {
   const { state } = replan(stateWith(done), '2026-10-07', undefined, 5);
   assert.equal(state.blocks.length, 2);
 });
+
+test('replanning in the middle of a block keeps the part already done', () => {
+  const { state } = replan(stateWith([old('2026-10-05', 480, 525)]), '2026-10-05', 500);
+  assert.deepEqual(state.blocks[0], old('2026-10-05', 480, 500));
+  const mondayMinutes = state.blocks
+    .filter((b) => b.date === '2026-10-05')
+    .reduce((t, b) => t + b.end - b.start, 0);
+  assert.ok(mondayMinutes <= 90, `Monday has ${mondayMinutes} min`);
+  const again = replan(state, '2026-10-05', 520).state;
+  assert.deepEqual(again.blocks[0], old('2026-10-05', 480, 500));
+});

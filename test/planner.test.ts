@@ -175,3 +175,14 @@ test('blocks already done earlier this week count toward the weekly target', () 
   );
   assert.equal(minutes(blocks), 300);
 });
+
+test('a onePerDay task never splits one day into two sessions', () => {
+  const busy = commitment({
+    start: 520,
+    end: 1260,
+    pattern: { kind: 'once', date: '2026-10-05' },
+  });
+  const gym = task({ id: 'gym', title: 'Gym', category: 'gym', weeklyMinutes: 60, maxBlock: 60, onePerDay: true });
+  const blocks = planDays(input({ preferences: prefs(), commitments: [busy], tasks: [gym] }));
+  assert.deepEqual(on(blocks, '2026-10-05').map((b) => [b.start, b.end]), [[1260, 1320]]);
+});

@@ -1,0 +1,37 @@
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  src: url('/fonts/bricolage-grotesque.woff2') format('woff2');
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'DM Mono';
+  src: url('/fonts/dm-mono-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'DM Mono';
+  src: url('/fonts/dm-mono-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  --paper: #F1EEE6;
+  --ink: #111111;
+  --study: #FF4B1F;
+  --gym: #1746F0;
+  --admin: #F5B400;
+  --muted: #6F6B61;
+  --line: #B9B4A6;
+  --ghost: #8C887D;
+  --on-study: #111111;
+  --on-gym: #FFFFFF;
+  --on-admin: #111111;
+  --font-sans: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'DM Mono', ui-monospace, Menlo, monospace;
+}

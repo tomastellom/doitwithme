@@ -1,0 +1,82 @@
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { AddressInfo } from 'node:net';
+import type { Server } from 'node:http';
+import { createApp } from '../../src/server.ts';
+
+let server: Server;
+let base: string;
+
+before(async () => {
+  server = createApp(join(mkdtempSync(join(tmpdir(), 'doitwithme-assets-')), 'db.json'));
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+});
+
+after(() => {
+  server.close();
+});
+
+const index = () => readFileSync('public/index.html', 'utf8');
+
+test('index.html is a CSP-friendly shell with the app root and one module script', () => {
+  const html = index();
+  assert.match(html, /<html lang="en">/);
+  assert.match(html, /<title>doitwithme<\/title>/);
+  assert.match(html, /<div id="app">/);
+  assert.match(html, /<script type="module" src="\/js\/main\.js"><\/script>/);
+  assert.doesNotMatch(html, /<style/i);
+  assert.doesNotMatch(html, /\sstyle=/i);
+  assert.equal((html.match(/<script/gi) ?? []).length, 1);
+});
+
+test('the stylesheets the page references are served', async () => {
+  const urls = [...index().matchAll(/(?:href|src)="(\/[^"]+)"/g)].map((m) => m[1]);
+  assert.ok(urls.includes('/css/tokens.css') && urls.includes('/css/app.css') && urls.includes('/js/main.js'));
+  // The script itself is created in Task 12, which tests it through the real server.
+  for (const url of urls.filter((u) => u.startsWith('/css/'))) {
+    const res = await fetch(`${base}${url}`);
+    assert.equal(res.status, 200, url);
+  }
+});
+
+test('tokens.css defines the design tokens and both self-hosted fonts', () => {
+  const css = readFileSync('public/css/tokens.css', 'utf8');
+  for (const token of ['--paper: #F1EEE6', '--ink: #111111', '--study: #FF4B1F', '--gym: #1746F0', '--admin: #F5B400', '--muted: #6F6B61']) {
+    assert.ok(css.includes(token), token);
+  }
+  for (const name of ['--line', '--ghost', '--font-sans', '--font-mono']) assert.ok(css.includes(name), name);
+  assert.match(css, /font-family: 'Bricolage Grotesque'/);
+  assert.match(css, /font-family: 'DM Mono'/);
+  assert.doesNotMatch(css, /https?:\/\//);
+});
+
+test('app.css never loads anything from another origin and uses no gradients', () => {
+  const css = readFileSync('public/css/app.css', 'utf8');
+  assert.doesNotMatch(css, /https?:\/\//);
+  assert.doesNotMatch(css, /gradient/i);
+});
+
+test('the three font files are real woff2 files', () => {
+  for (const name of ['bricolage-grotesque.woff2', 'dm-mono-400.woff2', 'dm-mono-500.woff2']) {
+    const path = join('public/fonts', name);
+    assert.ok(existsSync(path), name);
+    assert.equal(readFileSync(path).subarray(0, 4).toString('latin1'), 'wOF2', name);
+    assert.ok(statSync(path).size > 5000, name);
+  }
+});
+
+test('every JavaScript file in public/js is syntactically valid and avoids banned APIs', () => {
+  const dir = 'public/js';
+  const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.js')) : [];
+  for (const f of files) {
+    execFileSync(process.execPath, ['--check', join(dir, f)]);
+    const src = readFileSync(join(dir, f), 'utf8');
+    assert.doesNotMatch(src, /innerHTML|outerHTML|insertAdjacentHTML|\beval\(|new Function/, f);
+    assert.doesNotMatch(src, /setAttribute\(\s*['"]style['"]/, f);
+  }
+});

@@ -23,6 +23,13 @@ Nothing in this project can see a rendered page, so the look is checked by a per
 ## Menu (board K)
 - Press `/` or the Menu button: a black full-screen overlay, big "Jump to" field, columns by group, current section in vermilion. Esc closes. Only sections that exist are listed (just Week for now).
 
+## Setup (boards H, M, N, O)
+- Click **Setup** in the top bar. A "Setup" title with a mono sub-navigation (Commitments, Tasks, Due dates, Preferences), the current one underlined in vermilion.
+- Left: the list. The selected item is a black block. Right: the form with labeled fields, Starts / Ends / Buffer in a row, the Once and Weekly choice, seven weekday toggles (M T W T F S S), cancelled-date chips with Add date.
+- Make a mistake on purpose (an end time before the start): a vermilion "Nothing was saved." block with the reason, and what you typed is still there.
+- Try Add a commitment, Save, then look at the Week screen. Try Delete on a task: it asks first and tells you how many due dates go with it.
+- Tasks, Due dates and Preferences were drawn as boards M, N and O: they should match those.
+
 ## Things to report back
 Anything that differs from the boards: spacing, sizes, colors, wrapping, fonts not loading (text in a plain system font), overlaps at your window width.
 

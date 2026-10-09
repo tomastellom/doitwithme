@@ -44,3 +44,10 @@ test('an error response carries the server message, or a generic one when the bo
   await assert.rejects(api.approve('2026-10-01', clock), (e: any) => e.status === 400 && e.message === 'date must not be in the past');
   await assert.rejects(api.getState(), (e: any) => e.status === 500 && /500/.test(e.message));
 });
+
+test('commuteStatus asks the server whether Google Maps can be used', async () => {
+  const f = fakeFetch([{ status: 200, body: { maps: 'unavailable' } }]);
+  const api = createApi(f.fn as any);
+  assert.deepEqual(await api.commuteStatus(), { maps: 'unavailable' });
+  assert.deepEqual([f.calls[0].init.method, f.calls[0].path], ['GET', '/api/commute/status']);
+});

@@ -185,3 +185,7 @@ a { color: inherit; }
   .fg { grid-template-columns: 1fr; }
   .span2, .span3 { grid-column: auto; }
 }
+
+.travel { border: 2px solid var(--ink); color: var(--ink); background: repeating-linear-gradient(135deg, var(--paper) 0 6px, #DAD5C8 6px 12px); }
+.travel-off { color: var(--muted); margin: 8px 0 0; }
+.seg button:disabled { color: var(--muted); border-style: dashed; cursor: not-allowed; }

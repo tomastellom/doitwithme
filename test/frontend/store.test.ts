@@ -257,3 +257,26 @@ test('a new save clears the previous save error before it runs', async () => {
   await store.saveState(full());
   assert.equal(seen[0], null);
 });
+
+test('plan responses bring the travel legs into the store, and a missing list becomes empty', async () => {
+  const legs = [{ date: '2026-10-05', start: 545, end: 600, fromName: 'Home', toName: 'Campus', estimated: false }];
+  const a = make({ replan: () => ({ blocks: [], warnings: [], approvedSoft: [], dismissed: [], travel: legs }) });
+  await a.store.load();
+  assert.deepEqual(a.store.get().travel, legs);
+  const b = make({ replan: () => ({ blocks: [], warnings: [], approvedSoft: [], dismissed: [] }) });
+  await b.store.load();
+  assert.deepEqual(b.store.get().travel, []);
+});
+
+test('the store learns whether Google Maps is ready, and treats any trouble as unavailable', async () => {
+  const ready = make({ commuteStatus: () => ({ maps: 'ready' }) });
+  await ready.store.load();
+  assert.equal(ready.store.get().maps, 'ready');
+  const broken = make({ commuteStatus: () => { throw new ApiError(500, 'nope'); } });
+  await broken.store.load();
+  assert.equal(broken.store.get().maps, 'unavailable');
+  assert.equal(broken.store.get().status, 'ready');
+  const none = make({});
+  await none.store.load();
+  assert.equal(none.store.get().maps, 'unavailable');
+});

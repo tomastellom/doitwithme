@@ -39,7 +39,7 @@ export function occurrencesOn(date, commitments) {
   return out;
 }
 
-export function dayItems(state, date) {
+export function dayItems(state, date, travel = []) {
   const items = [];
   for (const o of occurrencesOn(date, state.commitments)) {
     items.push({ kind: 'commitment', group: 'fixed', start: o.start, end: o.end, title: o.title, label: labelOf(o.category) });
@@ -49,25 +49,30 @@ export function dayItems(state, date) {
       items.push({ kind: 'block', group: groupOfBlock(b.category), start: b.start, end: b.end, title: b.title, label: labelOf(b.category) });
     }
   }
+  for (const leg of travel) {
+    if (leg.date === date) {
+      items.push({ kind: 'travel', group: 'travel', start: leg.start, end: leg.end, title: `${leg.fromName} to ${leg.toName}`, label: leg.estimated ? 'estimated' : 'commute' });
+    }
+  }
   return items.sort((a, b) => a.start - b.start || a.end - b.end);
 }
 
 const minutesOf = (items) => items.reduce((t, i) => t + (i.end - i.start), 0);
 
-export function weekModel(state, start, visible, today) {
+export function weekModel(state, start, visible, today, travel = []) {
   const counts = Object.fromEntries(GROUP_IDS.map((id) => [id, 0]));
   const days = [];
   for (let i = 0; i < 7; i++) {
     const date = addDays(start, i);
-    const items = dayItems(state, date);
-    for (const item of items) counts[item.group]++;
+    const items = dayItems(state, date, travel);
+    for (const item of items) if (item.group in counts) counts[item.group]++;
     days.push({
       date,
       weekday: WEEKDAYS[weekdayOf(date)],
       num: Number(date.slice(8)),
       isToday: date === today,
-      booked: minutesOf(items),
-      items: items.filter((item) => visible.has(item.group)),
+      booked: minutesOf(items.filter((item) => item.kind !== 'travel')),
+      items: items.filter((item) => item.kind === 'travel' || visible.has(item.group)),
     });
   }
   const { week, year } = isoWeek(start);

@@ -3,12 +3,16 @@ import { duration, hhmm } from './time.js';
 
 export function renderWeek(dom, view, actions) {
   const { h } = dom;
-  const { model, visible, needsYou, isEmpty } = view;
+  const { model, visible, needsYou, isEmpty, travelOff } = view;
 
   const block = (item) =>
-    h('div', { class: `blk g-${item.group}` },
-      h('div', { class: 'top' }, h('span', { class: 't' }, `${hhmm(item.start)}–${hhmm(item.end)}`), h('span', { class: 'k' }, item.label)),
-      h('span', { class: 'n' }, item.title));
+    item.kind === 'travel'
+      ? h('div', { class: 'blk travel', title: item.title },
+          h('div', { class: 'top' }, h('span', { class: 't' }, `${hhmm(item.start)}–${hhmm(item.end)}`), h('span', { class: 'k' }, item.label)),
+          h('span', { class: 'n' }, `Commute ${item.end - item.start}`))
+      : h('div', { class: `blk g-${item.group}` },
+          h('div', { class: 'top' }, h('span', { class: 't' }, `${hhmm(item.start)}–${hhmm(item.end)}`), h('span', { class: 'k' }, item.label)),
+          h('span', { class: 'n' }, item.title));
 
   const day = (d) =>
     h('div', { class: d.isToday ? 'day today' : 'day', role: 'group', 'aria-label': `${d.weekday} ${d.num}` },
@@ -56,5 +60,5 @@ export function renderWeek(dom, view, actions) {
       h('button', { type: 'button', class: 'fl', 'data-fk': `fl-${g.id}`, 'aria-pressed': String(visible.has(g.id)), onclick: () => actions.toggleGroup(g.id) },
         h('i', { class: `sw g-${g.id}` }), h('span', { class: 'nm' }, g.label), h('span', { class: 'ct' }, model.counts[g.id]))));
 
-  return h('section', { class: 'week' }, hero, grid, h('div', { class: 'foot' }, filters));
+  return h('section', { class: 'week' }, hero, travelOff && h('p', { class: 'travel-off mono' }, 'Travel is off. Add a Home place.'), grid, h('div', { class: 'foot' }, filters));
 }

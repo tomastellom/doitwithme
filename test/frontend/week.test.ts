@@ -136,3 +136,16 @@ test('controls carry stable focus keys', () => {
   const keys = byTag(el, 'button').map((b) => b.getAttribute('data-fk'));
   for (const k of ['prev', 'today', 'next', 'needs', 'fl-study', 'fl-gym']) assert.ok(keys.includes(k), k);
 });
+
+test('a commute is a hatched entry with its length, and the week says when travel is off', () => {
+  const travel = [{ date: '2026-10-13', start: 545, end: 600, fromName: 'Home', toName: 'Campus', estimated: true }];
+  const model = weekModel(state(), '2026-10-12', all, '2026-10-12', travel);
+  const el: any = renderWeek(dom, { model, visible: all, needsYou: 0, isEmpty: false, travelOff: false }, { canAdd: false } as any);
+  const entry = byClass(el, 'travel')[0];
+  assert.match(textOf(entry), /Commute 55/);
+  assert.match(textOf(entry), /09:05–10:00/);
+  assert.match(textOf(entry), /estimated/);
+  assert.equal(byClass(el, 'travel-off').length, 0);
+  const off: any = renderWeek(dom, { model, visible: all, needsYou: 0, isEmpty: false, travelOff: true }, { canAdd: false } as any);
+  assert.match(textOf(byClass(off, 'travel-off')[0]), /Travel is off\. Add a Home place\./);
+});

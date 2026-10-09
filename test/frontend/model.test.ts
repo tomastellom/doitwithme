@@ -88,3 +88,22 @@ test('hostile text passes through the model untouched, escaping is the view\'s j
   const s = state({ blocks: [block('2026-10-12', 480, 540, '<img src=x onerror=alert(1)>', 'study')] });
   assert.equal(dayItems(s, '2026-10-12')[0].title, '<img src=x onerror=alert(1)>');
 });
+
+test('travel legs appear in the day, ignore the filters and do not count as booked time', () => {
+  const travel = [
+    { date: '2026-10-13', start: 545, end: 600, fromName: 'Home', toName: 'Campus', estimated: false },
+    { date: '2026-10-13', start: 720, end: 750, fromName: 'Campus', toName: 'Home', estimated: true },
+  ];
+  const st = state({ commitments: [commitment()] });
+  const items = dayItems(st, '2026-10-13', travel);
+  assert.deepEqual(items.filter((i: any) => i.kind === 'travel').map((i: any) => [i.start, i.end, i.title, i.label]), [
+    [545, 600, 'Home to Campus', 'commute'],
+    [720, 750, 'Campus to Home', 'estimated'],
+  ]);
+  const model = weekModel(st, '2026-10-12', new Set(), '2026-10-12', travel);
+  const day = model.days.find((d: any) => d.date === '2026-10-13');
+  assert.equal(day.items.length, 2);
+  assert.equal(day.booked, 120);
+  assert.equal(model.total, 1);
+  assert.equal(model.counts.fixed, 1);
+});

@@ -5,7 +5,7 @@ const STALE_NOTICE = 'That warning changed, so I refreshed the plan.';
 
 export function createStore(api, getClock) {
   let current = {
-    status: 'loading', state: null, warnings: [], approvedSoft: [], dismissed: [],
+    status: 'loading', state: null, warnings: [], approvedSoft: [], dismissed: [], travel: [], maps: 'unavailable',
     isEmpty: false, error: null, busy: false, confirm: null, notice: null, formError: null,
   };
   const listeners = new Set();
@@ -26,6 +26,7 @@ export function createStore(api, getClock) {
     notice: null,
     state: { ...current.state, blocks: r.blocks, approvedSoft: r.approvedSoft, dismissed: r.dismissed },
     warnings: r.warnings,
+    travel: r.travel ?? [],
     approvedSoft: r.approvedSoft,
     dismissed: r.dismissed,
     ...extra,
@@ -47,12 +48,18 @@ export function createStore(api, getClock) {
     set({ status: 'loading', error: null, busy: false });
     try {
       const state = await api.getState();
+      let maps = 'unavailable';
+      try {
+        maps = (await api.commuteStatus()).maps === 'ready' ? 'ready' : 'unavailable';
+      } catch {
+        // Not knowing about Google Maps is never a reason to fail the page.
+      }
       if (state.tasks.length === 0 && state.commitments.length === 0) {
-        set({ status: 'ready', state, warnings: [], approvedSoft: state.approvedSoft, dismissed: state.dismissed, isEmpty: true, confirm: null });
+        set({ status: 'ready', state, maps, travel: [], warnings: [], approvedSoft: state.approvedSoft, dismissed: state.dismissed, isEmpty: true, confirm: null });
         return;
       }
       const r = await api.replan(getClock());
-      current = { ...current, state };
+      current = { ...current, state, maps };
       set(merged(r, { isEmpty: false, confirm: null }));
     } catch (e) {
       fail(e);

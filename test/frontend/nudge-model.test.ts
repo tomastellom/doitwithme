@@ -73,3 +73,15 @@ test('buildConfirm reports what moved in, or says nothing needed the evening', (
   });
   assert.deepEqual(buildConfirm([], '2026-10-09'), { date: '2026-10-09', weekday: 'Friday', minutes: 0, titles: [], used: false });
 });
+
+test('a missing address and a trip that does not fit become plain items that need you', () => {
+  const missing = { kind: 'address-missing', key: 'address-missing|Anna', dismissed: false, message: '', detail: { placeName: 'Anna', minutes: 30 } };
+  const tight = { kind: 'travel-tight', key: 'travel-tight|Anna|2026-10-13', dismissed: false, message: '', detail: { placeName: 'Anna', date: '2026-10-13', titles: ['Lesson Anna'] } };
+  const { items, needsYou } = buildNudge([missing, tight] as any);
+  assert.equal(items[0].headline, 'Anna has no address and no commute, so I used 30 minutes of travel.');
+  assert.match(items[1].headline, /^Not enough time to get to Lesson Anna on /);
+  assert.equal(needsYou, 2);
+  assert.deepEqual(items.map((i: any) => i.key), ['address-missing|Anna', 'travel-tight|Anna|2026-10-13']);
+  const gone = buildNudge([{ ...missing, dismissed: true }] as any);
+  assert.equal(gone.items.length, 0);
+});

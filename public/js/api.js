@@ -31,6 +31,7 @@ export function createApi(fetchFn) {
     getState: () => call('GET', '/api/state'),
     putState: (state) => call('PUT', '/api/state', state),
     example: () => call('GET', '/api/example'),
+    commuteStatus: () => call('GET', '/api/commute/status'),
     replan: (clock) => call('POST', '/api/replan', clock),
     approve: (date, clock) => call('POST', '/api/soft/approve', { ...clock, date }),
     undo: (date, clock) => call('POST', '/api/soft/undo', { ...clock, date }),

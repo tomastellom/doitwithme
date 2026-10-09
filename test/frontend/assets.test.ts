@@ -55,10 +55,11 @@ test('tokens.css defines the design tokens and both self-hosted fonts', () => {
   assert.doesNotMatch(css, /https?:\/\//);
 });
 
-test('app.css never loads anything from another origin and uses no gradients', () => {
+test('app.css never loads anything from another origin and uses no gradients except the grey travel hatch', () => {
   const css = readFileSync('public/css/app.css', 'utf8');
   assert.doesNotMatch(css, /https?:\/\//);
-  assert.doesNotMatch(css, /gradient/i);
+  const hatch = 'repeating-linear-gradient(135deg, var(--paper) 0 6px, #DAD5C8 6px 12px)';
+  assert.doesNotMatch(css.split(hatch).join(''), /gradient/i);
 });
 
 test('the three font files are real woff2 files', () => {
@@ -120,4 +121,11 @@ test('the title is a little smaller, Nudge rests until hovered, and the calm bub
   assert.match(css, /\.nudge\[data-state="resting"\]:focus-within \.nudge-body/);
   const quiet = css.match(/^\.quiet \{[^}]*\}/m)![0];
   assert.match(quiet, /background: var\(--ink\)/);
+});
+
+test('the stylesheet has hatched travel entries, a travel-off line and dimmed segments', () => {
+  const css = readFileSync('public/css/app.css', 'utf8');
+  assert.match(css, /^\.travel \{[^}]*repeating-linear-gradient[^}]*#DAD5C8/m);
+  assert.match(css, /^\.travel-off \{/m);
+  assert.match(css, /^\.seg button:disabled \{/m);
 });

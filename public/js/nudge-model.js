@@ -1,6 +1,14 @@
 import { FULL_WEEKDAYS, longDate, shortDate, weekdayOf } from './time.js';
 
 const SHORTFALLS = ['deadline-short', 'weekly-short'];
+const TRAVEL = ['address-missing', 'travel-tight'];
+
+function travelHeadline(w) {
+  const d = w.detail;
+  return w.kind === 'address-missing'
+    ? `${d.placeName} has no address and no commute, so I used ${d.minutes} minutes of travel.`
+    : `Not enough time to get to ${d.titles[0]} on ${longDate(d.date)}.`;
+}
 
 function order(a, b) {
   if (a.kind !== b.kind) return a.kind === 'deadline-short' ? -1 : 1;
@@ -43,6 +51,8 @@ export function buildNudge(warnings) {
     category: w.detail.category,
     offer: null,
   }));
+  const trips = open.filter((w) => TRAVEL.includes(w.kind));
+  items.push(...trips.map((w) => ({ key: w.key, headline: travelHeadline(w), minutes: 0, category: 'travel', offer: null })));
   if (offerWarning) {
     const offer = offerOf(offerWarning);
     const target = items.find((item) => item.category === 'study');
@@ -58,7 +68,7 @@ export function buildNudge(warnings) {
       });
     }
   }
-  return { items, needsYou: shortfalls.length };
+  return { items, needsYou: shortfalls.length + trips.length };
 }
 
 export function keysOf(item) {

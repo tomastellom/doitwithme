@@ -116,7 +116,7 @@ test('first run offers Add a commitment only when the setup section exists', () 
   const { el } = setup({ isEmpty: true, state: state({ blocks: [], commitments: [] }) }, { canAdd: true });
   const link = byTag(el, 'a')[0];
   assert.equal(textOf(link).trim(), 'Add a commitment');
-  assert.equal(link.getAttribute('href'), '#/setup');
+  assert.equal(link.getAttribute('href'), '#/commitments/new');
 });
 
 test('the week header takes focus and the arrow keys change week', () => {

@@ -9,6 +9,7 @@ import { buildHash, resolveRoute, weekParam } from './router.js';
 import { createRegistry } from './sections.js';
 import { createStore } from './store.js';
 import { addDays, currentClock, weekStart } from './time.js';
+import { createSetup } from './setup.js';
 import { renderWeek } from './week.js';
 
 const STORE_KEY = 'doitwithme.visible';
@@ -94,6 +95,17 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       return renderWeek(dom, { model, visible, needsYou, isEmpty: ctx.s.isEmpty }, weekActions);
     },
   });
+
+  const setup = createSetup(dom, { store, getClock, navigate, keepFocus });
+  const setupPage = (kindId) => (ctx) => setup.render(kindId, ctx);
+  registry.register({
+    id: 'setup', title: 'Setup', group: 'setup', primary: true, inMenu: false,
+    activeFor: ['commitments', 'tasks', 'due-dates', 'preferences'], render: setupPage('commitments'),
+  });
+  registry.register({ id: 'commitments', title: 'Commitments', group: 'setup', description: 'What is fixed.', render: setupPage('commitments') });
+  registry.register({ id: 'tasks', title: 'Tasks', group: 'setup', description: 'What needs time but no fixed slot.', render: setupPage('tasks') });
+  registry.register({ id: 'due-dates', title: 'Due dates', group: 'setup', description: 'When things are due and how much effort they need.', render: setupPage('due-dates') });
+  registry.register({ id: 'preferences', title: 'Preferences', group: 'setup', description: 'Windows, breaks and days off.', render: setupPage('preferences') });
 
   function renderBar() {
     const s = store.get();

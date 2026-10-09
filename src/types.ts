@@ -67,6 +67,7 @@ export interface Block {
 
 export interface WarningDetail {
   taskTitle?: string;
+  category?: string;
   kind?: string;
   dueDate?: DateStr;
   weekStart?: DateStr;

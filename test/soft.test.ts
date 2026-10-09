@@ -99,7 +99,7 @@ test('an errand with a deadline never takes soft time, and its shortfall is repo
     {
       kind: 'deadline-short',
       message: `Taxes task due ${FRI} is short by 120 min`,
-      detail: { taskTitle: 'Taxes', kind: 'task', dueDate: FRI, minutes: 120 },
+      detail: { taskTitle: 'Taxes', category: 'errands', kind: 'task', dueDate: FRI, minutes: 120 },
     },
   ]);
 });

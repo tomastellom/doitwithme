@@ -29,7 +29,7 @@ test('ask mode never opens soft time by itself and offers the best date', () => 
     {
       kind: 'weekly-short',
       message: 'Study is short by 4280 min in the week of 2026-10-05',
-      detail: { taskTitle: 'Study', weekStart: '2026-10-05', minutes: 4280 },
+      detail: { taskTitle: 'Study', category: 'study', weekStart: '2026-10-05', minutes: 4280 },
     },
     {
       kind: 'soft-offer',
@@ -55,7 +55,7 @@ test('an approved date is used and reported, and no further offer is made', () =
     {
       kind: 'weekly-short',
       message: 'Study is short by 4160 min in the week of 2026-10-05',
-      detail: { taskTitle: 'Study', weekStart: '2026-10-05', minutes: 4160 },
+      detail: { taskTitle: 'Study', category: 'study', weekStart: '2026-10-05', minutes: 4160 },
     },
   ]);
 });
@@ -72,7 +72,7 @@ test('a deadline shortfall also gets an offer', () => {
     {
       kind: 'deadline-short',
       message: `Study exam due ${FRI} is short by 120 min`,
-      detail: { taskTitle: 'Study', kind: 'exam', dueDate: FRI, minutes: 120 },
+      detail: { taskTitle: 'Study', category: 'study', kind: 'exam', dueDate: FRI, minutes: 120 },
     },
     {
       kind: 'soft-offer',

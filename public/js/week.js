@@ -34,13 +34,13 @@ export function renderWeek(dom, view, actions) {
           actions.go(e.key === 'ArrowRight' ? 1 : -1);
         }
       },
-    }, `Week ${model.week}`),
+    }, model.title),
     h('div', { class: 'right' },
       h('div', { class: 'step mono' },
         h('button', { type: 'button', 'data-fk': 'prev', 'aria-label': 'Previous week', onclick: () => actions.go(-1) }, 'Prev'),
         h('button', { type: 'button', 'data-fk': 'today', onclick: () => actions.today() }, 'Today'),
         h('button', { type: 'button', 'data-fk': 'next', 'aria-label': 'Next week', onclick: () => actions.go(1) }, 'Next')),
-      h('div', { class: 'meta mono' }, h('span', {}, model.range), h('span', {}, '7 days'), status)));
+      h('div', { class: 'meta mono' }, h('span', {}, `Week ${model.week} / ${model.year}`), h('span', {}, '7 days'), status)));
 
   const grid = h('div', { class: 'grid' }, model.days.map(day));
 

@@ -1,4 +1,4 @@
-import { WEEKDAYS, addDays, isoWeek, rangeLabel, weekdayOf } from './time.js';
+import { WEEKDAYS, addDays, compactRange, isoWeek, rangeLabel, weekdayOf } from './time.js';
 
 export const GROUPS = [
   { id: 'fixed', label: 'Fixed' },
@@ -76,5 +76,5 @@ export function weekModel(state, start, visible, today, travel = []) {
     });
   }
   const { week, year } = isoWeek(start);
-  return { start, week, year, range: rangeLabel(start), days, counts, total: Object.values(counts).reduce((a, b) => a + b, 0) };
+  return { start, week, year, range: rangeLabel(start), title: compactRange(start), days, counts, total: Object.values(counts).reduce((a, b) => a + b, 0) };
 }

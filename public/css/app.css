@@ -30,7 +30,7 @@ a { color: inherit; }
 .nudge { position: fixed; right: 40px; bottom: 24px; z-index: 20; }
 .nudge-body { display: flex; align-items: flex-end; gap: 14px; transition: transform .22s ease; }
 /* Resting: the mascot waits below the screen edge. The corner stays hoverable and brings it up. */
-.nudge[data-state="resting"] { min-width: 200px; min-height: 180px; }
+.nudge[data-state="resting"] { min-width: 200px; min-height: 180px; display: flex; align-items: flex-end; justify-content: flex-end; }
 .nudge[data-state="resting"] .nudge-body { transform: translateY(calc(100% + 40px)); }
 .nudge[data-state="resting"]:hover .nudge-body, .nudge[data-state="resting"]:focus-within .nudge-body { transform: none; }
 .nudge[data-state="resting"] .quiet { display: none; }
@@ -265,3 +265,5 @@ a { color: inherit; }
 .st .hint { margin: 8px 0 0; color: var(--muted); }
 .tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid #B9B4A6; padding: 2px 5px; }
 @media (max-width: 1100px) { .st-groups { grid-template-columns: 1fr; } }
+
+.week .hero h1 { font-size: clamp(56px, 7.2vw, 104px); }

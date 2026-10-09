@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  addDays, currentClock, daysBetween, duration, hhmm, isoWeek, isValidDate, longDate, rangeLabel, shortDate,
+  addDays, currentClock, daysBetween, duration, hhmm, compactRange, isoWeek, isValidDate, longDate, rangeLabel, shortDate,
   weekdayOf, weekStart,
 } from '../../public/js/time.js';
 
@@ -54,4 +54,11 @@ test('currentClock uses local date and time components', () => {
   assert.deepEqual(currentClock(new Date(2026, 9, 9, 14, 5)), { today: '2026-10-09', nowMinutes: 845, horizonDays: 14 });
   assert.equal(currentClock(new Date(2026, 0, 2, 0, 0), 7).horizonDays, 7);
   assert.equal(currentClock(new Date(2026, 0, 2, 0, 0)).today, '2026-01-02');
+});
+
+test('compactRange is the short title of a week: days and month, both months when it crosses', () => {
+  assert.equal(compactRange('2026-10-12'), '12–18 Oct');
+  assert.equal(compactRange('2026-10-26'), '26 Oct – 1 Nov');
+  assert.equal(compactRange('2026-12-28'), '28 Dec – 3 Jan');
+  assert.equal(compactRange('2026-09-28'), '28 Sep – 4 Oct');
 });

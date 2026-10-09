@@ -72,8 +72,8 @@ test('boots, draws the week, and walks the whole approve, undo and dismiss story
   await settled(app);
 
   // the shell and the week
-  assert.equal(textOf(byTag(root, 'h1')[0]), 'Week 41');
-  assert.match(textOf(root), /5 – 11 Oct 2026/);
+  assert.equal(textOf(byTag(root, 'h1')[0]), '5–11 Oct');
+  assert.match(textOf(root), /Week 41 \/ 2026/);
   assert.equal(byClass(root, 'day').length, 7);
   assert.match(textOf(byClass(root, 'day')[0]), /18:00–20:00/);
   assert.match(textOf(fridayColumn(root)), /Nothing planned/);
@@ -111,11 +111,11 @@ test('week navigation and the Menu work through the router', async () => {
   const { app, root, document } = boot();
   await settled(app);
   click(root, 'Next');
-  assert.equal(textOf(byTag(root, 'h1')[0]), 'Week 42');
+  assert.equal(textOf(byTag(root, 'h1')[0]), '12–18 Oct');
   app.navigate('#/__proto__');
-  assert.equal(textOf(byTag(root, 'h1')[0]), 'Week 41');
+  assert.equal(textOf(byTag(root, 'h1')[0]), '5–11 Oct');
   app.navigate('#/week/2026-02-31');
-  assert.equal(textOf(byTag(root, 'h1')[0]), 'Week 41');
+  assert.equal(textOf(byTag(root, 'h1')[0]), '5–11 Oct');
   document.dispatch('keydown', { key: '/', target: { tag: 'body' } });
   assert.equal(app.menu.isOpen(), true);
   const typing = document.dispatch('keydown', { key: '/', target: { tag: 'input' } });

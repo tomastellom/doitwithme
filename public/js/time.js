@@ -44,6 +44,13 @@ export function rangeLabel(start) {
   return `${dayNumber(start)} – ${shortDate(end)} ${y2}`;
 }
 
+// The short title of a week: days and month, both months when the week crosses one.
+export function compactRange(start) {
+  const end = addDays(start, 6);
+  if (monthIndex(start) === monthIndex(end)) return `${dayNumber(start)}–${dayNumber(end)} ${MONTHS[monthIndex(end)]}`;
+  return `${shortDate(start)} – ${shortDate(end)}`;
+}
+
 export function currentClock(now = new Date(), horizonDays = 14) {
   const pad = (n) => String(n).padStart(2, '0');
   return {

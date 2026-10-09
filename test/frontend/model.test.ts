@@ -61,6 +61,7 @@ test('weekModel counts and totals are unfiltered, items are filtered, today is f
   const m = weekModel(s, '2026-10-12', new Set(['study']), '2026-10-13');
   assert.equal(m.week, 42);
   assert.equal(m.range, '12 – 18 Oct 2026');
+  assert.equal(m.title, '12–18 Oct');
   assert.deepEqual(m.counts, { fixed: 1, study: 2, gym: 1, admin: 0, outline: 0 });
   assert.equal(m.total, 4);
   assert.equal(m.days.length, 7);

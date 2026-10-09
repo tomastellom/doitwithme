@@ -37,8 +37,8 @@ function setup(over: any = {}, actionOver: any = {}) {
 
 test('the hero shows the ISO week, the range and the weekly status', () => {
   const { el } = setup({ needsYou: 2 });
-  assert.equal(textOf(byTag(el, 'h1')[0]), 'Week 42');
-  assert.match(textOf(el), /12 – 18 Oct 2026/);
+  assert.equal(textOf(byTag(el, 'h1')[0]), '12–18 Oct');
+  assert.match(textOf(byClass(el, 'meta')[0]), /Week 42 \/ 2026/);
   assert.match(textOf(el), /7 days/);
   assert.match(textOf(el), /2 need you/);
   assert.equal(setup({ needsYou: 1 }).el.textContent.includes('1 needs you'), true);

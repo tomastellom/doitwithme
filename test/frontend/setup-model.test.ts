@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { CATEGORIES, WEEK_ORDER, commitmentKind, newId, parseTime, parseWhole } from '../../public/js/setup-model.js';
-import { KINDS, KIND_IDS, applyItem, deadlineKind, itemsOf, preferencesKind, removeItem, taskKind } from '../../public/js/setup-model.js';
+import { KINDS, KIND_IDS, PLACE_KINDS, TRAVEL_MODES, applyItem, commuteKind, deadlineKind, itemsOf, placeKind, preferencesKind, removeItem, taskKind } from '../../public/js/setup-model.js';
 
 const example = JSON.parse(readFileSync('examples/sample-state.json', 'utf8'));
 const lesson = () => example.commitments.find((c: any) => c.id === 'lesson-1');
@@ -131,7 +131,7 @@ test('due dates round-trip and need a real task', () => {
 });
 
 test('preferences round-trip, keep softMode, and validate windows', () => {
-  const prefs = { ...example.preferences, softMode: 'auto' };
+  const prefs = { ...example.preferences, softMode: 'auto', travelAllowanceMinutes: 30 };
   const state = { ...example, preferences: prefs };
   const draft = preferencesKind.toDraft(prefs);
   const result = preferencesKind.fromDraft(draft, '-', state);
@@ -151,8 +151,8 @@ test('preferences round-trip, keep softMode, and validate windows', () => {
   assert.equal(preferencesKind.fromDraft({ ...draft, softWindows: [{ weekday: 5, start: '18:00', end: '24:00' }, { weekday: 6, start: '18:00', end: '24:00' }] }, '-', state).item.softWindows.length, 2);
 });
 
-test('KINDS describes the four setup screens', () => {
-  assert.deepEqual(KIND_IDS, ['commitments', 'tasks', 'due-dates', 'preferences']);
+test('KINDS describes the six setup screens', () => {
+  assert.deepEqual(KIND_IDS, ['commitments', 'tasks', 'due-dates', 'places', 'commutes', 'preferences']);
   assert.equal(KINDS['due-dates'].list, 'deadlines');
   assert.equal(KINDS.preferences.single, true);
   assert.equal(KINDS.commitments.add, 'Add a commitment');
@@ -195,4 +195,124 @@ test('removeItem removes by id, and removing a task removes its due dates', () =
   assert.deepEqual(removeItem(state, 'tasks', 'nope'), state);
   assert.deepEqual(itemsOf(state, 'due-dates'), state.deadlines);
   assert.deepEqual(itemsOf(state, 'preferences'), []);
+});
+
+const st = () => structuredClone(example);
+
+test('places: blank, round trip, summaries and checks', () => {
+  assert.deepEqual(placeKind.blank(), { name: '', kind: 'other', address: '' });
+  const p = st().places[1];
+  assert.deepEqual(placeKind.fromDraft(placeKind.toDraft(p), p.id, st()).item, p);
+  assert.equal(placeKind.summary(p), p.address);
+  assert.equal(placeKind.summary({ ...p, address: '' }), 'Address missing');
+  assert.deepEqual(placeKind.fromDraft({ name: '  Gym ', kind: 'other', address: ' Av 1 ' }, 'p1', st()).item, { id: 'p1', name: 'Gym', kind: 'other', address: 'Av 1' });
+  assert.match(placeKind.fromDraft({ name: ' ', kind: 'other', address: '' }, 'p1', st()).error, /name/);
+  assert.match(placeKind.fromDraft({ name: 'x'.repeat(201), kind: 'other', address: '' }, 'p1', st()).error, /200/);
+  assert.match(placeKind.fromDraft({ name: 'x', kind: 'other', address: 'y'.repeat(301) }, 'p1', st()).error, /300/);
+  assert.match(placeKind.fromDraft({ name: 'x', kind: 'castle', address: '' }, 'p1', st()).error, /kind/);
+  assert.match(placeKind.fromDraft({ name: 'Second', kind: 'home', address: '' }, 'p2', st()).error, /already a Home/);
+  assert.equal(placeKind.fromDraft({ name: 'Home again', kind: 'home', address: '' }, 'home', st()).item.kind, 'home');
+  assert.deepEqual(PLACE_KINDS, ['home', 'campus', 'student', 'other']);
+});
+
+test('commutes: blank starts at Home, drafts round trip for every shape of route', () => {
+  const s = st();
+  const blank = commuteKind.blank('2026-10-05', s);
+  assert.equal(blank.fromPlaceId, 'home');
+  assert.notEqual(blank.toPlaceId, 'home');
+  assert.deepEqual([blank.repeats, blank.method, blank.minutes, blank.margin], ['weekly', 'typed', '30', '10']);
+  const shapes = [
+    { id: 'a', fromPlaceId: 'home', toPlaceId: 'campus', repeats: { kind: 'weekly', weekdays: [1, 3] }, source: { method: 'typed', minutes: 45 }, marginMinutes: 10 },
+    { id: 'b', fromPlaceId: 'home', toPlaceId: 'anna', repeats: null, source: { method: 'maps', mode: 'bike', fallbackMinutes: 25 }, marginMinutes: 5 },
+    { id: 'c', fromPlaceId: 'campus', toPlaceId: 'parish', repeats: { kind: 'monthly', monthDays: [1, 15] }, source: { method: 'typed', minutes: 0 }, marginMinutes: 0 },
+  ];
+  for (const c of shapes) assert.deepEqual(commuteKind.fromDraft(commuteKind.toDraft(c), c.id, s).item, c, c.id);
+  assert.equal(commuteKind.toDraft(shapes[1]).repeats, 'per-lesson');
+  assert.equal(commuteKind.toDraft(shapes[2]).monthDays, '1, 15');
+});
+
+test('commutes: plain sentences for every mistake', () => {
+  const s = st();
+  const good = commuteKind.toDraft({ id: 'a', fromPlaceId: 'home', toPlaceId: 'campus', repeats: { kind: 'weekly', weekdays: [1] }, source: { method: 'typed', minutes: 45 }, marginMinutes: 10 });
+  const bad = (over: any) => commuteKind.fromDraft({ ...good, ...over }, 'a', s).error;
+  assert.match(bad({ fromPlaceId: '' }), /where it starts/);
+  assert.match(bad({ toPlaceId: 'nowhere' }), /where it ends/);
+  assert.match(bad({ toPlaceId: 'home' }), /two different places/);
+  assert.match(bad({ weekdays: [] }), /at least one day/);
+  assert.match(bad({ repeats: 'monthly', monthDays: '' }), /Month days/);
+  assert.match(bad({ repeats: 'monthly', monthDays: '1, 29' }), /Month days/);
+  assert.match(bad({ repeats: 'monthly', monthDays: '1, x' }), /Month days/);
+  assert.match(bad({ minutes: '-1' }), /Minutes/);
+  assert.match(bad({ minutes: '601' }), /Minutes/);
+  assert.match(bad({ margin: '121' }), /margin/);
+  assert.match(bad({ method: 'magic' }), /how long/);
+  assert.match(bad({ method: 'maps', mode: 'rocket' }), /travel/);
+  assert.deepEqual(commuteKind.fromDraft({ ...good, repeats: 'monthly', monthDays: '15, 1, 15' }, 'a', s).item.repeats, { kind: 'monthly', monthDays: [1, 15] });
+  assert.deepEqual(TRAVEL_MODES, ['car', 'bike', 'transit', 'walk']);
+});
+
+test('commutes: summaries and list titles read as sentences', () => {
+  const s = st();
+  const c = { id: 'a', fromPlaceId: 'home', toPlaceId: 'campus', repeats: { kind: 'weekly', weekdays: [4, 2] }, source: { method: 'typed', minutes: 45 }, marginMinutes: 10 };
+  assert.equal(KINDS.commutes.itemTitle(c, s), 'Home to Campus');
+  assert.equal(KINDS.commutes.itemLabel(c), 'weekly');
+  assert.equal(commuteKind.summary(c, s), 'Tue, Thu / 45 min + 10 margin / typed');
+  assert.equal(commuteKind.summary({ ...c, repeats: null, source: { method: 'maps', mode: 'transit', fallbackMinutes: 30 } }, s), 'every lesson / 30 min + 10 margin / Google Maps by transit');
+  assert.equal(KINDS.commutes.itemLabel({ ...c, repeats: null }), 'per lesson');
+  assert.equal(KINDS.commutes.itemLabel({ ...c, repeats: { kind: 'monthly', monthDays: [3] } }), 'monthly');
+  assert.equal(commuteKind.summary({ ...c, repeats: { kind: 'monthly', monthDays: [1, 15] } }, s), 'day 1, 15 / 45 min + 10 margin / typed');
+});
+
+test('a commitment can name its place, and an unknown place is refused', () => {
+  const s = st();
+  const c = s.commitments.find((x: any) => x.id === 'chem-lecture');
+  const draft = commitmentKind.toDraft(c);
+  assert.equal(draft.placeId, 'campus');
+  assert.equal(commitmentKind.fromDraft(draft, c.id, s).item.placeId, 'campus');
+  assert.equal('placeId' in commitmentKind.fromDraft({ ...draft, placeId: '' }, c.id, s).item, false);
+  assert.match(commitmentKind.fromDraft({ ...draft, placeId: 'nowhere' }, c.id, s).error, /place/);
+  assert.equal(commitmentKind.blank('2026-10-05').placeId, '');
+});
+
+test('the travel allowance is a preference with limits, and nothing else about preferences changes', () => {
+  const s = st();
+  const d = preferencesKind.toDraft(s.preferences);
+  assert.equal(d.travelAllowance, '30');
+  assert.equal(preferencesKind.fromDraft({ ...d, travelAllowance: '45' }, '-', s).item.travelAllowanceMinutes, 45);
+  assert.match(preferencesKind.fromDraft({ ...d, travelAllowance: '601' }, '-', s).error, /Travel allowance/);
+  assert.match(preferencesKind.fromDraft({ ...d, travelAllowance: 'x' }, '-', s).error, /Travel allowance/);
+  assert.deepEqual(preferencesKind.fromDraft(d, '-', s).item, { ...s.preferences, travelAllowanceMinutes: 30 });
+});
+
+test('deleting a place removes its commutes and clears it from commitments, and nothing else changes', () => {
+  const s = st();
+  const next = removeItem(s, 'places', 'campus');
+  assert.equal(next.places.some((p: any) => p.id === 'campus'), false);
+  assert.deepEqual(next.commutes, []);
+  const lecture = next.commitments.find((c: any) => c.id === 'chem-lecture');
+  assert.equal('placeId' in lecture, false);
+  assert.equal(next.commitments.find((c: any) => c.id === 'mass').placeId, 'parish');
+  assert.deepEqual(next.tasks, s.tasks);
+  assert.deepEqual(next.blocks, s.blocks);
+  assert.deepEqual(next.preferences, s.preferences);
+  assert.equal(KINDS.places.confirmNote(s, 'campus'), ' Its 1 commute goes too. 1 commitment loses its place.');
+  assert.equal(KINDS.places.confirmNote(s, 'anna'), '');
+  assert.equal(KINDS.tasks.confirmNote(s, 'chem'), ' Its 1 due date goes too.');
+  assert.equal(KINDS.tasks.confirmNote(s, 'gym'), '');
+});
+
+test('a state without places or commutes still lists and deletes safely', () => {
+  const old = { ...st(), places: undefined, commutes: undefined };
+  assert.deepEqual(itemsOf(old, 'places'), []);
+  assert.deepEqual(itemsOf(old, 'commutes'), []);
+  assert.doesNotThrow(() => removeItem(old, 'places', 'x'));
+  assert.deepEqual(KIND_IDS, ['commitments', 'tasks', 'due-dates', 'places', 'commutes', 'preferences']);
+});
+
+test('adding and editing a commute only touches the commutes list', () => {
+  const s = st();
+  const item = { id: 'r-new', fromPlaceId: 'home', toPlaceId: 'anna', repeats: null, source: { method: 'typed', minutes: 20 }, marginMinutes: 5 };
+  const next = applyItem(s, 'commutes', item);
+  assert.equal(next.commutes.length, s.commutes.length + 1);
+  assert.deepEqual({ ...next, commutes: null }, { ...s, commutes: null });
 });

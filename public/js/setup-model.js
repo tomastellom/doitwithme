@@ -5,6 +5,8 @@ export const CATEGORIES = {
   tasks: ['study', 'gym', 'chores', 'errands', 'personal project', 'social', 'other'],
 };
 export const DEADLINE_KINDS = ['exam', 'assignment', 'task', 'other'];
+export const PLACE_KINDS = ['home', 'campus', 'student', 'other'];
+export const TRAVEL_MODES = ['car', 'bike', 'transit', 'walk'];
 export const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 export function parseTime(text) {
@@ -144,7 +146,7 @@ export const preferencesKind = {
     return {
       weekdayStart: hhmm(p.weekdayWindow.start), weekdayEnd: hhmm(p.weekdayWindow.end),
       dayOffStart: hhmm(p.dayOffWindow.start), dayOffEnd: hhmm(p.dayOffWindow.end),
-      daysOff: [...p.daysOff], minBlock: String(p.minBlock), minBreak: String(p.minBreak),
+      daysOff: [...p.daysOff], minBlock: String(p.minBlock), minBreak: String(p.minBreak), travelAllowance: String(p.travelAllowanceMinutes ?? 30),
       softWindows: p.softWindows.map((s) => ({ weekday: s.weekday, start: hhmm(s.start), end: hhmm(s.end) })),
     };
   },
@@ -165,6 +167,8 @@ export const preferencesKind = {
     if (minBlock === null) return { error: 'Shortest block must be a whole number of minutes, 5 to 240.' };
     const minBreak = parseWhole(d.minBreak, 0, 120);
     if (minBreak === null) return { error: 'Break must be a whole number of minutes, 0 to 120.' };
+    const travelAllowance = parseWhole(d.travelAllowance, 0, 600);
+    if (travelAllowance === null) return { error: 'Travel allowance must be a whole number of minutes, 0 to 600.' };
     const softWindows = [];
     for (const s of d.softWindows) {
       const start = parseTime(s.start);
@@ -187,9 +191,100 @@ export const preferencesKind = {
         daysOff: [...d.daysOff].sort(byNumber),
         minBlock,
         minBreak,
+        travelAllowanceMinutes: travelAllowance,
         softWindows,
       },
     };
+  },
+};
+
+export const placeKind = {
+  blank() {
+    return { name: '', kind: 'other', address: '' };
+  },
+  toDraft(p) {
+    return { name: p.name, kind: p.kind, address: p.address };
+  },
+  fromDraft(d, id, state) {
+    const name = d.name.trim();
+    if (!name) return { error: 'Give the place a name.' };
+    if (name.length > 200) return { error: 'The name can be at most 200 characters.' };
+    const address = d.address.trim();
+    if (address.length > 300) return { error: 'The address can be at most 300 characters.' };
+    if (!PLACE_KINDS.includes(d.kind)) return { error: 'Pick a kind.' };
+    if (d.kind === 'home' && (state.places ?? []).some((p) => p.kind === 'home' && p.id !== id)) {
+      return { error: 'There is already a Home place. Edit that one, or change its kind first.' };
+    }
+    return { item: { id, name, kind: d.kind, address } };
+  },
+  summary: (p) => (p.address ? p.address : 'Address missing'),
+};
+
+const placeName = (state, id) => ((state.places ?? []).find((p) => p.id === id) || { name: 'Unknown place' }).name;
+const repeatsLabel = (c) => (c.repeats === null ? 'per lesson' : c.repeats.kind);
+
+export const commuteKind = {
+  blank(today, state) {
+    const places = state.places ?? [];
+    const home = places.find((p) => p.kind === 'home') ?? places[0];
+    const other = places.find((p) => home && p.id !== home.id);
+    return {
+      fromPlaceId: home ? home.id : '', toPlaceId: other ? other.id : '', repeats: 'weekly',
+      weekdays: [1, 2, 3, 4], monthDays: '1', method: 'typed', minutes: '30', margin: '10', mode: 'transit',
+    };
+  },
+  toDraft(c) {
+    const maps = c.source.method === 'maps';
+    return {
+      fromPlaceId: c.fromPlaceId, toPlaceId: c.toPlaceId,
+      repeats: c.repeats === null ? 'per-lesson' : c.repeats.kind,
+      weekdays: c.repeats && c.repeats.kind === 'weekly' ? [...c.repeats.weekdays] : [1],
+      monthDays: c.repeats && c.repeats.kind === 'monthly' ? c.repeats.monthDays.join(', ') : '1',
+      method: c.source.method,
+      minutes: String(maps ? c.source.fallbackMinutes : c.source.minutes),
+      margin: String(c.marginMinutes),
+      mode: maps ? c.source.mode : 'transit',
+    };
+  },
+  fromDraft(d, id, state) {
+    const places = state.places ?? [];
+    if (!places.some((p) => p.id === d.fromPlaceId)) return { error: 'Pick where it starts.' };
+    if (!places.some((p) => p.id === d.toPlaceId)) return { error: 'Pick where it ends.' };
+    if (d.fromPlaceId === d.toPlaceId) return { error: 'Pick two different places.' };
+    let repeats = null;
+    if (d.repeats === 'weekly') {
+      if (d.weekdays.length === 0) return { error: 'Pick at least one day.' };
+      repeats = { kind: 'weekly', weekdays: [...d.weekdays].sort(byNumber) };
+    } else if (d.repeats === 'monthly') {
+      const days = String(d.monthDays).split(',').map((t) => t.trim()).filter((t) => t !== '').map((t) => parseWhole(t, 1, 28));
+      if (days.length === 0 || days.includes(null)) return { error: 'Month days must be whole numbers from 1 to 28, like 1, 15.' };
+      repeats = { kind: 'monthly', monthDays: [...new Set(days)].sort(byNumber) };
+    } else if (d.repeats !== 'per-lesson') {
+      return { error: 'Pick how often it repeats.' };
+    }
+    const minutes = parseWhole(d.minutes, 0, 600);
+    if (minutes === null) return { error: 'Minutes must be a whole number from 0 to 600.' };
+    const margin = parseWhole(d.margin, 0, 120);
+    if (margin === null) return { error: 'The safety margin must be a whole number of minutes, 0 to 120.' };
+    let source;
+    if (d.method === 'typed') {
+      source = { method: 'typed', minutes };
+    } else if (d.method === 'maps') {
+      if (!TRAVEL_MODES.includes(d.mode)) return { error: 'Pick how you travel.' };
+      source = { method: 'maps', mode: d.mode, fallbackMinutes: minutes };
+    } else {
+      return { error: 'Pick how long it takes: type it, or let Google Maps find it.' };
+    }
+    return { item: { id, fromPlaceId: d.fromPlaceId, toPlaceId: d.toPlaceId, repeats, source, marginMinutes: margin } };
+  },
+  summary(c, state) {
+    const when =
+      c.repeats === null ? 'every lesson'
+        : c.repeats.kind === 'weekly' ? WEEK_ORDER.filter((w) => c.repeats.weekdays.includes(w)).map((w) => WEEKDAYS[w]).join(', ')
+          : `day ${c.repeats.monthDays.join(', ')}`;
+    const minutes = c.source.method === 'typed' ? c.source.minutes : c.source.fallbackMinutes;
+    const how = c.source.method === 'typed' ? 'typed' : `Google Maps by ${c.source.mode}`;
+    return `${when} / ${minutes} min + ${c.marginMinutes} margin / ${how}`;
   },
 };
 
@@ -201,6 +296,10 @@ export const KINDS = {
   tasks: {
     id: 'tasks', title: 'Tasks', list: 'tasks', add: 'Add a task', prefix: 't', kind: taskKind,
     itemTitle: (t) => t.title, itemLabel: (t) => t.category,
+    confirmNote(state, id) {
+      const n = state.deadlines.filter((d) => d.taskId === id).length;
+      return n > 0 ? ` Its ${n} due date${n === 1 ? ' goes' : 's go'} too.` : '';
+    },
   },
   'due-dates': {
     id: 'due-dates', title: 'Due dates', list: 'deadlines', add: 'Add a due date', prefix: 'd', kind: deadlineKind,
@@ -210,23 +309,49 @@ export const KINDS = {
     },
     itemLabel: (d) => d.kind,
   },
+  places: {
+    id: 'places', title: 'Places', list: 'places', add: 'Add a place', prefix: 'p', kind: placeKind,
+    itemTitle: (p) => p.name, itemLabel: (p) => p.kind,
+    confirmNote(state, id) {
+      const routes = (state.commutes ?? []).filter((c) => c.fromPlaceId === id || c.toPlaceId === id).length;
+      const events = state.commitments.filter((c) => c.placeId === id).length;
+      const parts = [];
+      if (routes > 0) parts.push(`Its ${routes} commute${routes === 1 ? ' goes' : 's go'} too.`);
+      if (events > 0) parts.push(`${events} commitment${events === 1 ? ' loses its' : 's lose their'} place.`);
+      return parts.length > 0 ? ` ${parts.join(' ')}` : '';
+    },
+  },
+  commutes: {
+    id: 'commutes', title: 'Commutes', list: 'commutes', add: 'Add a commute', prefix: 'r', kind: commuteKind,
+    itemTitle: (c, state) => `${placeName(state, c.fromPlaceId)} to ${placeName(state, c.toPlaceId)}`,
+    itemLabel: repeatsLabel,
+  },
   preferences: { id: 'preferences', title: 'Preferences', single: true, kind: preferencesKind },
 };
-export const KIND_IDS = ['commitments', 'tasks', 'due-dates', 'preferences'];
+export const KIND_IDS = ['commitments', 'tasks', 'due-dates', 'places', 'commutes', 'preferences'];
 
-export const itemsOf = (state, kindId) => (KINDS[kindId].list ? state[KINDS[kindId].list] : []);
+export const itemsOf = (state, kindId) => (KINDS[kindId].list ? state[KINDS[kindId].list] ?? [] : []);
 
 export function applyItem(state, kindId, item) {
   const spec = KINDS[kindId];
   if (spec.single) return { ...state, preferences: item };
-  const list = state[spec.list];
+  const list = state[spec.list] ?? [];
   const exists = list.some((x) => x.id === item.id);
   return { ...state, [spec.list]: exists ? list.map((x) => (x.id === item.id ? item : x)) : [...list, item] };
 }
 
 export function removeItem(state, kindId, id) {
   const spec = KINDS[kindId];
-  const next = { ...state, [spec.list]: state[spec.list].filter((x) => x.id !== id) };
+  const next = { ...state, [spec.list]: (state[spec.list] ?? []).filter((x) => x.id !== id) };
   if (kindId === 'tasks') next.deadlines = next.deadlines.filter((d) => d.taskId !== id);
+
+  if (kindId === 'places') {
+    next.commutes = (state.commutes ?? []).filter((c) => c.fromPlaceId !== id && c.toPlaceId !== id);
+    next.commitments = state.commitments.map((c) => {
+      if (c.placeId !== id) return c;
+      const { placeId, ...rest } = c;
+      return rest;
+    });
+  }
   return next;
 }

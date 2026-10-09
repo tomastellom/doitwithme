@@ -33,14 +33,14 @@ function setup(state: any = stateWith(), opts: any = {}) {
 const type = (root: any, key: string, value: string) => { const el = byKey(root, key); el.value = value; el.dispatch('input'); };
 const submit = async (root: any) => { byTag(root, 'form')[0].dispatch('submit'); await tick(); };
 
-test('the hero and the sub-navigation point at the four setup screens', () => {
+test('the hero and the sub-navigation point at the six setup screens', () => {
   const { render } = setup();
   const el: any = render('tasks');
   assert.equal(textOf(byTag(el, 'h1')[0]), 'Setup');
   const links = byClass(el, 'sub')[0].children.filter((c: any) => c.tag === 'a');
-  assert.deepEqual(links.map((l: any) => textOf(l)), ['Commitments', 'Tasks', 'Due dates', 'Preferences']);
-  assert.deepEqual(links.map((l: any) => l.getAttribute('href')), ['#/commitments', '#/tasks', '#/due-dates', '#/preferences']);
-  assert.deepEqual(links.map((l: any) => l.getAttribute('aria-current')), [null, 'page', null, null]);
+  assert.deepEqual(links.map((l: any) => textOf(l)), ['Commitments', 'Tasks', 'Due dates', 'Places', 'Commutes', 'Preferences']);
+  assert.deepEqual(links.map((l: any) => l.getAttribute('href')), ['#/commitments', '#/tasks', '#/due-dates', '#/places', '#/commutes', '#/preferences']);
+  assert.deepEqual(links.map((l: any) => l.getAttribute('aria-current')), [null, 'page', null, null, null, null]);
 });
 
 test('the list shows title, label and summary like board H, and marks the selected item', () => {

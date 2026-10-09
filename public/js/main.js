@@ -1,5 +1,6 @@
 import { createApi } from './api.js';
 import { createDom } from './dom.js';
+import { startFavicon } from './favicon.js';
 import { createFocusKeeper } from './focus.js';
 import { createMenu } from './menu.js';
 import { GROUP_IDS, weekModel } from './model.js';
@@ -194,4 +195,14 @@ if (typeof document !== 'undefined' && document.getElementById('app')) {
   const root = document.getElementById('app');
   root.replaceChildren(); // drop the "Loading" placeholder from index.html
   startApp({ root, document, fetch: window.fetch.bind(window), win: window });
+  const link = document.querySelector('link[rel="icon"]');
+  if (link) {
+    startFavicon({
+      link,
+      random: Math.random,
+      setTimer: (fn, ms) => window.setTimeout(fn, ms),
+      clearTimer: (id) => window.clearTimeout(id),
+      reduceMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    });
+  }
 }

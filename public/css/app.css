@@ -25,3 +25,32 @@ a { color: inherit; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* Nudge */
+.nudge { position: fixed; right: 40px; bottom: 24px; display: flex; align-items: flex-end; gap: 14px; z-index: 20; }
+.nudge:focus { outline: none; }
+.say { width: 430px; max-width: calc(100vw - 200px); background: var(--ink); color: var(--paper); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
+.say b { font-size: 20px; line-height: 1.1; font-weight: 800; letter-spacing: -.02em; }
+.say p { margin: 0; font-size: 14px; line-height: 1.35; color: #CFCBC0; }
+.say .k { color: var(--study); }
+.say .reply { color: var(--paper); }
+.say .reply:empty { display: none; }
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.pg { display: flex; gap: 6px; }
+.pg button { width: 30px; height: 26px; border: 2px solid var(--paper); background: transparent; color: var(--paper); font-family: var(--font-mono); }
+.acts { display: flex; gap: 8px; }
+.acts button { font-size: 13px; padding: 8px 12px; border: 2px solid var(--paper); background: transparent; color: var(--paper); }
+.acts button.y { background: var(--study); border-color: var(--study); color: var(--on-study); font-weight: 600; }
+.acts button:disabled { opacity: .5; cursor: not-allowed; }
+.ask { display: flex; border-top: 1px solid #444; padding-top: 10px; }
+.ask input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: var(--paper); font-size: 14px; }
+.ask input::placeholder { color: var(--ghost); }
+.ask input:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }
+.say :focus-visible { outline-color: var(--paper); }
+.quiet { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; padding-bottom: 10px; }
+.quiet b { font-size: 24px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+.quiet span { color: var(--muted); }
+.mascot-body { fill: var(--study); }
+.mascot-eye { fill: var(--ink); }
+.mascot-badge { fill: var(--ink); }
+.mascot-badge-text { fill: var(--paper); font-family: var(--font-mono); font-size: 17px; }

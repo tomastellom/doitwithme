@@ -1,0 +1,55 @@
+{
+  "commitments": [
+    {
+      "id": "mass",
+      "title": "Mass",
+      "category": "mass",
+      "start": 1200,
+      "end": 1260,
+      "pattern": { "kind": "weekly", "weekdays": [0], "from": "2026-09-01", "to": "2026-12-31" },
+      "exceptions": [],
+      "bufferBefore": 30
+    },
+    {
+      "id": "chem-lecture",
+      "title": "Chemistry lecture",
+      "category": "class",
+      "start": 600,
+      "end": 720,
+      "pattern": { "kind": "weekly", "weekdays": [2, 4], "from": "2026-09-01", "to": "2026-12-18" },
+      "exceptions": [],
+      "bufferBefore": 30
+    },
+    {
+      "id": "lesson-1",
+      "title": "Private lesson",
+      "category": "lesson",
+      "start": 960,
+      "end": 1020,
+      "pattern": { "kind": "weekly", "weekdays": [3], "from": "2026-09-01", "to": "2026-12-18" },
+      "exceptions": [],
+      "bufferBefore": 30
+    }
+  ],
+  "tasks": [
+    { "id": "chem", "title": "Chemistry", "category": "study", "weeklyMinutes": 360, "maxBlock": 90, "onePerDay": false, "priority": 2 },
+    { "id": "gym", "title": "Gym", "category": "gym", "weeklyMinutes": 180, "maxBlock": 60, "onePerDay": true, "priority": 3 },
+    { "id": "laundry", "title": "Laundry", "category": "chores", "weeklyMinutes": 60, "maxBlock": 60, "onePerDay": false, "priority": 4 },
+    { "id": "side", "title": "Side project", "category": "personal project", "weeklyMinutes": 240, "maxBlock": 120, "onePerDay": false, "priority": 5 }
+  ],
+  "deadlines": [
+    { "id": "chem-exam", "taskId": "chem", "kind": "exam", "dueDate": "2026-10-23", "effortMinutes": 480 }
+  ],
+  "preferences": {
+    "weekdayWindow": { "start": 480, "end": 1320 },
+    "dayOffWindow": { "start": 600, "end": 1200 },
+    "daysOff": [0, 6],
+    "minBlock": 30,
+    "minBreak": 10,
+    "softWindows": [
+      { "weekday": 5, "start": 1080, "end": 1440 },
+      { "weekday": 6, "start": 1080, "end": 1440 }
+    ]
+  },
+  "blocks": []
+}

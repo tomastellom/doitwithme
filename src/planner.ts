@@ -8,13 +8,23 @@ export interface Slot extends Window {
   soft: boolean;
 }
 
-export function daySlots(input: PlanInput, date: DateStr): Slot[] {
+export function daySlots(input: PlanInput, date: DateStr, opened: ReadonlySet<DateStr>): Slot[] {
   const pref = input.preferences;
   const window = pref.daysOff.includes(weekdayOf(date)) ? pref.dayOffWindow : pref.weekdayWindow;
-  return freeSlots(window, busyOn(date, input.commitments)).map((s) => ({ ...s, soft: false }));
+  const busy = busyOn(date, input.commitments);
+  const softs = pref.softWindows.filter((s) => s.weekday === weekdayOf(date));
+  const normal = freeSlots(window, [...busy, ...softs]).map((s) => ({ ...s, soft: false }));
+  const soft = opened.has(date)
+    ? softs
+        .flatMap((s) =>
+          freeSlots({ start: Math.max(s.start, window.start), end: Math.min(s.end, window.end) }, busy),
+        )
+        .map((s) => ({ ...s, soft: true }))
+    : [];
+  return [...normal, ...soft].sort((a, b) => a.start - b.start);
 }
 
-export function planDays(input: PlanInput): Block[] {
+export function planDays(input: PlanInput, opened: ReadonlySet<DateStr> = new Set()): Block[] {
   const pref = input.preferences;
   const all: Block[] = [...input.pastBlocks];
   const placed: Block[] = [];
@@ -23,7 +33,7 @@ export function planDays(input: PlanInput): Block[] {
   const isUsable = (date: DateStr): boolean => {
     let v = usable.get(date);
     if (v === undefined) {
-      v = daySlots(input, date).some((s) => s.end - s.start >= pref.minBlock);
+      v = daySlots(input, date, opened).some((s) => s.end - s.start >= pref.minBlock);
       usable.set(date, v);
     }
     return v;
@@ -37,7 +47,7 @@ export function planDays(input: PlanInput): Block[] {
 
   for (let i = 0; i < input.horizonDays; i++) {
     const date = addDays(input.today, i);
-    let slots = daySlots(input, date);
+    let slots = daySlots(input, date, opened);
     if (i === 0 && input.nowMinutes !== undefined) {
       const now = input.nowMinutes;
       slots = slots
@@ -125,7 +135,39 @@ export function shortfallWarnings(input: PlanInput, all: Block[]): Warning[] {
   return shortfalls(input, all).map((s) => s.warning);
 }
 
+function softUseWarnings(input: PlanInput, blocks: Block[], opened: ReadonlySet<DateStr>): Warning[] {
+  const out: Warning[] = [];
+  for (const date of opened) {
+    const wd = weekdayOf(date);
+    const used = blocks.filter(
+      (b) =>
+        b.date === date &&
+        input.preferences.softWindows.some((s) => s.weekday === wd && b.start >= s.start && b.start < s.end),
+    );
+    if (used.length > 0) {
+      const titles = [...new Set(used.map((b) => b.title))].join(', ');
+      out.push({ kind: 'soft-time-used', message: `Used soft free time on ${date} for ${titles}` });
+    }
+  }
+  return out;
+}
+
 export function plan(input: PlanInput): PlanResult {
-  const blocks = planDays(input);
-  return { blocks, warnings: shortfallWarnings(input, [...input.pastBlocks, ...blocks]) };
+  const softDates = Array.from({ length: input.horizonDays }, (_, i) => addDays(input.today, i)).filter(
+    (d) => input.preferences.softWindows.some((s) => s.weekday === weekdayOf(d)),
+  );
+  const opened = new Set<DateStr>();
+  const needsSoftTime = (found: Shortfall[]): boolean =>
+    found.some((s) => s.warning.kind === 'deadline-short' || s.category === 'study');
+  let blocks = planDays(input, opened);
+  let found = shortfalls(input, [...input.pastBlocks, ...blocks]);
+  while (needsSoftTime(found) && opened.size < softDates.length) {
+    opened.add(softDates[opened.size]);
+    blocks = planDays(input, opened);
+    found = shortfalls(input, [...input.pastBlocks, ...blocks]);
+  }
+  return {
+    blocks,
+    warnings: [...softUseWarnings(input, blocks, opened), ...found.map((s) => s.warning)],
+  };
 }

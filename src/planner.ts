@@ -1,8 +1,8 @@
-import { addDays, weekdayOf } from './dates.ts';
+import { addDays, weekdayOf, weekStart } from './dates.ts';
 import { busyOn } from './busy.ts';
 import { demandsFor } from './demand.ts';
 import { freeSlots } from './slots.ts';
-import type { Block, DateStr, PlanInput, Window } from './types.ts';
+import type { Block, DateStr, PlanInput, PlanResult, Warning, Window } from './types.ts';
 
 export interface Slot extends Window {
   soft: boolean;
@@ -73,4 +73,59 @@ export function planDays(input: PlanInput): Block[] {
     }
   }
   return placed;
+}
+
+const minutesOf = (blocks: Block[]): number => blocks.reduce((t, b) => t + (b.end - b.start), 0);
+
+export interface Shortfall {
+  warning: Warning;
+  category: string;
+}
+
+export function shortfalls(input: PlanInput, all: Block[]): Shortfall[] {
+  const last = addDays(input.today, input.horizonDays - 1);
+  const out: Shortfall[] = [];
+
+  for (const dl of input.deadlines) {
+    const task = input.tasks.find((t) => t.id === dl.taskId);
+    if (!task || dl.dueDate > last) continue;
+    const rem = dl.effortMinutes - minutesOf(all.filter((b) => b.deadlineId === dl.id));
+    if (rem > 0) {
+      out.push({
+        category: task.category,
+        warning: {
+          kind: 'deadline-short',
+          message: `${task.title} ${dl.kind} due ${dl.dueDate} is short by ${rem} min`,
+        },
+      });
+    }
+  }
+
+  for (const task of input.tasks) {
+    if (!task.weeklyMinutes) continue;
+    for (let ws = weekStart(input.today); addDays(ws, 6) <= last; ws = addDays(ws, 7)) {
+      const done = minutesOf(
+        all.filter((b) => b.taskId === task.id && !b.deadlineId && weekStart(b.date) === ws),
+      );
+      if (done < task.weeklyMinutes) {
+        out.push({
+          category: task.category,
+          warning: {
+            kind: 'weekly-short',
+            message: `${task.title} is short by ${task.weeklyMinutes - done} min in the week of ${ws}`,
+          },
+        });
+      }
+    }
+  }
+  return out;
+}
+
+export function shortfallWarnings(input: PlanInput, all: Block[]): Warning[] {
+  return shortfalls(input, all).map((s) => s.warning);
+}
+
+export function plan(input: PlanInput): PlanResult {
+  const blocks = planDays(input);
+  return { blocks, warnings: shortfallWarnings(input, [...input.pastBlocks, ...blocks]) };
 }

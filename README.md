@@ -2,7 +2,7 @@
 
 A personal everyday planner. It fits flexible tasks (study, gym, chores, errands, projects) around your fixed commitments, ramps up work toward deadlines, and tells you plainly when something cannot fit.
 
-**Status:** Phase 1 (core planner) and most of the UI are built: Week screen, Nudge, Menu, and the Setup screens (commitments, tasks, due dates, places, commutes, preferences). Travel between places is planned around your events and shown in the Week; you type the travel times for now. Run `npm run serve` and open http://127.0.0.1:8787; you no longer need to edit JSON to enter your schedule. Compare the look with the design boards using `docs/ui-visual-check.md`. Day, Deadlines and Settings screens come next, then the Google Maps lookup for commute times. Design: `docs/superpowers/specs/`. Plans: `docs/superpowers/plans/`.
+**Status:** Phase 1 (core planner) and the everyday UI are built: Day, Week and Deadlines screens, Nudge, Menu, Settings (soft time, opt-in browser notifications), and the Setup screens (commitments, tasks, due dates, places, commutes, preferences). Travel between places is planned around your events and shown in the Week; you type the travel times for now. Run `npm run serve` and open http://127.0.0.1:8787; you no longer need to edit JSON to enter your schedule. Compare the look with the design boards using `docs/ui-visual-check.md`. Still to come: the Google Maps lookup for commute times, the AI workload estimate, the daily check-in and class-attendance advice. Design: `docs/superpowers/specs/`. Plans: `docs/superpowers/plans/`.
 
 ## Requirements
 

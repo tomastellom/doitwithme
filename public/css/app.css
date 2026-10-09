@@ -282,3 +282,20 @@ a { color: inherit; }
 @supports (grid-template-rows: subgrid) {
   .fg > .fld { display: grid; grid-row: span 2; grid-template-rows: subgrid; row-gap: 5px; }
 }
+
+.sec { grid-column: span 3; border-top: 4px solid var(--ink); margin-top: 10px; padding-top: 12px; display: flex; justify-content: space-between; align-items: baseline; }
+.sec b { font-size: 24px; font-weight: 800; letter-spacing: -.03em; }
+.tx { height: 96px; width: 100%; border: 2px solid var(--ink); background: #FAF8F2; padding: 8px 10px; font-size: 14px; color: var(--ink); resize: vertical; }
+.estwrap { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; width: 100%; }
+.go2 { height: 40px; border: 2px solid var(--ink); background: var(--ink); color: var(--paper); padding: 0 14px; }
+.go2:disabled { opacity: .5; cursor: not-allowed; }
+.est { width: 100%; display: grid; grid-template-columns: auto 1fr; gap: 18px; border: 2px solid var(--ink); background: #FAF8F2; }
+.est .bar2 { background: var(--study); width: 10px; display: block; }
+.est .in { padding: 14px 16px 16px 6px; display: flex; flex-direction: column; gap: 6px; }
+.est .big { font-size: 56px; font-weight: 800; letter-spacing: -.05em; line-height: .9; }
+.est p { margin: 0; font-size: 14px; line-height: 1.4; }
+.est .tg { font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid #B9B4A6; padding: 2px 5px; color: var(--muted); align-self: flex-start; }
+.estbtns { display: flex; gap: 8px; margin-top: 6px; }
+.estbtns button { padding: 9px 14px; border: 2px solid var(--ink); background: transparent; font-weight: 600; }
+.estbtns button.y { background: var(--study); color: var(--on-study); }
+.ai { color: var(--muted); }

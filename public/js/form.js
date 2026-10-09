@@ -20,6 +20,12 @@ export function renderField(dom, def, draft, ctx) {
         oninput: (e) => { draft[def.name] = e.target.value; },
       }));
 
+    case 'textarea':
+      return wrap(label(def.label), h('textarea', {
+        id, 'data-fk': id, value: draft[def.name], rows: def.rows ?? 4, class: 'tx',
+        oninput: (e) => { draft[def.name] = e.target.value; },
+      }));
+
     case 'select': {
       const options = def.options(ctx.state, draft);
       const current = draft[def.name];

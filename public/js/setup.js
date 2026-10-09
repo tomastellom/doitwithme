@@ -1,6 +1,6 @@
 import { renderField } from './form.js';
 import { isValidDate } from './time.js';
-import { CATEGORIES, DEADLINE_KINDS, KINDS, KIND_IDS, PLACE_KINDS, TRAVEL_MODES, applyItem, itemsOf, newId, parseWhole, removeItem } from './setup-model.js';
+import { CATEGORIES, DEADLINE_KINDS, KINDS, KIND_IDS, PLACE_KINDS, TRAVEL_MODES, applyItem, itemsOf, newId, parseDecimal, parseWhole, removeItem } from './setup-model.js';
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const fixed = (list) => () => list.map((v) => ({ value: v, label: cap(v) }));
@@ -8,6 +8,40 @@ const weekly = (d) => d.repeats === 'weekly';
 const once = (d) => d.repeats === 'once';
 const placeOptions = (state) => (state.places ?? []).map((p) => ({ value: p.id, label: p.name }));
 const hint = (text) => ({ type: 'custom', name: 'hint', span: 3, render: (dom) => dom.h('p', { class: 'hint' }, text) });
+
+const study = (d) => d.category === 'study';
+const difficultyOptions = () => [
+  { value: '1', label: '1 (very easy)' }, { value: '2', label: '2' }, { value: '3', label: '3' },
+  { value: '4', label: '4' }, { value: '5', label: '5 (very hard)' },
+];
+const yesNo = [{ value: false, label: 'No' }, { value: true, label: 'Yes' }];
+const hoursText = (m) => (m < 60 ? `${m} min` : m % 60 === 0 ? `${m / 60}h` : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`);
+
+function estimateBlock(dom, est) {
+  const { h } = dom;
+  const run = h('button', { type: 'button', class: 'go2 mono', 'data-fk': 'estimate-run', disabled: est.status === 'busy', onclick: () => est.run() },
+    est.status === 'busy' ? 'Estimating' : 'Estimate hours');
+  const parts = [run];
+  if (est.status === 'error') parts.push(h('p', { class: 'hint', role: 'alert' }, est.message));
+  if (est.status === 'ready') {
+    const { rule, ai, aiStatus, aiMessage } = est.result;
+    const lead = ai ?? rule;
+    parts.push(h('div', { class: 'est' },
+      h('i', { class: 'bar2' }),
+      h('div', { class: 'in' },
+        h('span', { class: 'mono cap' }, 'Suggested'),
+        h('span', { class: 'big' }, `${hoursText(lead.minutes)} a week`),
+        h('p', {}, lead.reason),
+        ai && h('p', { class: 'ai' }, `Rule of thumb: ${hoursText(rule.minutes)} a week`),
+        h('span', { class: 'tg' }, ai ? 'AI' : 'Rule of thumb'),
+        h('div', { class: 'estbtns' },
+          h('button', { type: 'button', class: 'y mono', 'data-fk': 'estimate-use', onclick: () => est.use(lead.minutes) }, 'Use this'),
+          h('button', { type: 'button', class: 'mono', 'data-fk': 'estimate-keep', onclick: () => est.keep() }, 'Keep mine')),
+        aiStatus === 'unavailable' && h('span', { class: 'mono ai' }, 'AI is not connected yet. The rule of thumb is used until it is.'),
+        aiStatus === 'failed' && h('span', { class: 'mono ai' }, aiMessage))));
+  }
+  return h('div', { class: 'estwrap' }, ...parts);
+}
 
 export const FIELDS = {
   commitments: [
@@ -31,6 +65,14 @@ export const FIELDS = {
     { name: 'maxBlock', label: 'Longest block, min', type: 'text', inputmode: 'numeric' },
     { name: 'priority', label: 'Priority', type: 'select', options: () => [1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: n === 1 ? '1 (highest)' : n === 5 ? '5 (lowest)' : String(n) })) },
     { name: 'onePerDay', label: 'One session a day', type: 'choice', options: [{ value: false, label: 'No' }, { value: true, label: 'Yes' }] },
+    { name: 'courseTitle', type: 'custom', span: 3, show: study, render: (dom) => dom.h('div', { class: 'sec' }, dom.h('b', {}, 'Course details'), dom.h('span', { class: 'mono ai' }, 'Study tasks only')) },
+    { name: 'credits', label: 'Credits', type: 'text', inputmode: 'decimal', show: study },
+    { name: 'difficulty', label: 'Difficulty', type: 'select', options: difficultyOptions, show: study },
+    { name: 'examOnly', label: 'Graded by exams only', type: 'choice', options: yesNo, show: study },
+    { name: 'weeklyGraded', label: 'Weekly graded work', type: 'choice', options: yesNo, show: study },
+    { name: 'lab', label: 'Has a lab', type: 'choice', options: yesNo, show: study },
+    { name: 'syllabus', label: 'Syllabus, optional (paste the text)', type: 'textarea', span: 3, show: study },
+    { name: 'estimate', type: 'custom', span: 3, show: study, render: (dom, d, ctx) => estimateBlock(dom, ctx.estimate) },
   ],
   'due-dates': [
     { name: 'taskId', label: 'Task', type: 'select', span: 2, options: (state) => state.tasks.map((t) => ({ value: t.id, label: t.title })) },
@@ -79,6 +121,9 @@ export const FIELDS = {
     { name: 'dayOffEnd', label: 'Days-off window ends', type: 'text', placeholder: '20:00' },
     { name: 'minBreak', label: 'Break between blocks, min', type: 'text', inputmode: 'numeric' },
     { name: 'travelAllowance', label: 'Travel allowance, min', type: 'text', inputmode: 'numeric' },
+    { name: 'hoursPerCredit', label: 'Hours a week per credit, optional', type: 'text', inputmode: 'decimal' },
+    { name: 'normalCredits', label: 'Credits in a normal semester', type: 'text', inputmode: 'decimal' },
+    { name: 'fullLoadHours', label: 'Study hours a week at a full load', type: 'text', inputmode: 'decimal' },
     { name: 'daysOff', label: 'Days off', type: 'weekdays', span: 3 },
     { name: 'softWindows', label: 'Soft evenings (kept free unless you say yes)', type: 'softWindows', span: 3 },
   ],
@@ -94,12 +139,54 @@ export function createSetup(dom, deps) {
   let current = null;
 
   function freshLocal() {
-    return { error: null, confirm: false, scratch: {}, submittedKey: null };
+    return { error: null, confirm: false, scratch: {}, submittedKey: null, estimate: { status: 'idle', result: null, message: '' } };
   }
 
   function rerender() {
     keepFocus(() => clear(container, build()));
   }
+
+  async function runEstimate() {
+    const est = local.estimate;
+    if (est.status === 'busy') return;
+    const credits = parseDecimal(draft.credits, 0.5, 100);
+    const difficulty = parseWhole(draft.difficulty, 1, 5);
+    if (credits === null || difficulty === null) {
+      est.status = 'error';
+      est.message = String(draft.credits).trim() === '' ? 'Add the credits first, then ask for an estimate.' : 'Credits must be a number from 0.5 to 100, and difficulty 1 to 5.';
+      rerender();
+      return;
+    }
+    if (draft.syllabus.length > 20000) {
+      est.status = 'error';
+      est.message = 'The syllabus can be at most 20000 characters.';
+      rerender();
+      return;
+    }
+    est.status = 'busy';
+    rerender();
+    const mine = local;
+    try {
+      const body = { title: draft.title.trim() || 'Study task', credits, difficulty, examOnly: Boolean(draft.examOnly), weeklyGraded: Boolean(draft.weeklyGraded), lab: Boolean(draft.lab), syllabus: draft.syllabus };
+      const result = await store.estimate(body);
+      if (mine !== local) return;
+      if (result === null) { est.status = 'idle'; } else { est.status = 'ready'; est.result = result; }
+    } catch (e) {
+      if (mine !== local) return;
+      est.status = 'error';
+      est.message = e && e.message ? e.message : 'The estimate did not work. Try again.';
+    }
+    rerender();
+  }
+
+  const estimateApi = () => ({
+    status: local.estimate.status,
+    result: local.estimate.result,
+    message: local.estimate.message,
+    run: runEstimate,
+    use: (minutes) => { draft.weekly = String(minutes); local.estimate = { status: 'idle', result: null, message: '' }; rerender(); },
+    keep: () => { local.estimate = { status: 'idle', result: null, message: '' }; rerender(); },
+  });
 
   function selection() {
     const { kindId, s, route } = current;
@@ -174,7 +261,7 @@ export function createSetup(dom, deps) {
     const { kindId, s } = current;
     if (!sel.editing) return h('div', { class: 'form' }, h('p', { class: 'hint' }, 'Pick one from the list, or add a new one.'));
     const error = local.error ?? (local.submittedKey === key ? s.formError : null);
-    const ctx = { state: s.state, maps: s.maps, scratch: local.scratch, rerender };
+    const ctx = { state: s.state, maps: s.maps, scratch: local.scratch, rerender, estimate: estimateApi() };
     const fields = FIELDS[kindId].filter((f) => !f.show || f.show(draft)).map((f) => renderField(dom, f, draft, ctx)).filter(Boolean);
     return h('form', { class: 'form', novalidate: true, onsubmit: (e) => { e.preventDefault(); save(sel); } },
       error && h('div', { class: 'err', role: 'alert' }, h('b', {}, 'Nothing was saved.'), h('span', { class: 'mono msg' }, error)),

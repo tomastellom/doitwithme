@@ -204,3 +204,16 @@ test('a select flagged redraw asks the screen to redraw when it changes', () => 
   assert.equal(draft.repeats, 'monthly');
   assert.equal(rerenders(), 1);
 });
+
+test('a textarea field has a label tied to it, shows the draft and writes typing back', () => {
+  const { ctx } = setup();
+  const draft: any = { syllabus: 'Weekly sets' };
+  const el: any = renderField(dom, { name: 'syllabus', label: 'Syllabus', type: 'textarea', span: 3 }, draft, ctx);
+  assert.ok(el.hasClass('span3'));
+  const area = byTag(el, 'textarea')[0];
+  assert.equal(byTag(el, 'label')[0].getAttribute('for'), area.getAttribute('id'));
+  assert.equal(area.value, 'Weekly sets');
+  area.value = '<b>Not markup</b>';
+  area.dispatch('input');
+  assert.equal(draft.syllabus, '<b>Not markup</b>');
+});

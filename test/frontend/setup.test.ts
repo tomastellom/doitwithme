@@ -13,6 +13,7 @@ const named = (root: any, text: string) => byTag(root, 'button').find((b: any) =
 
 function setup(state: any = stateWith(), opts: any = {}) {
   const calls: any[] = [];
+  const estimates: any[] = [];
   const navs: string[] = [];
   let current: any = { state, busy: false, formError: null, status: 'ready', ...opts.storeState };
   const store = {
@@ -22,13 +23,18 @@ function setup(state: any = stateWith(), opts: any = {}) {
       if (opts.rejectWith) current = { ...current, formError: opts.rejectWith };
       else current = { ...current, state: payload, formError: null };
     },
+    estimate: async (body: any) => {
+      estimates.push(body);
+      if (opts.estimateFails) throw new Error(opts.estimateFails);
+      return opts.estimateResult ?? { rule: { minutes: 240, reason: '3 credits at 1h a week each. Hard course (4 of 5): about 4h a week.' }, ai: null, aiStatus: 'unavailable' };
+    },
     get: () => current,
   };
   const doc: any = new FakeDocument();
   const dom = createDom(doc);
   const ctl: any = createSetup(dom, { store, getClock: () => ({ today: '2026-10-05', nowMinutes: 540, horizonDays: 14 }), navigate: (h: string) => navs.push(h), keepFocus: (fn: Function) => fn() });
   const render = (kindId: string, param: string | null = null) => ctl.render(kindId, { s: store.get(), route: { id: kindId, param } });
-  return { ctl, render, calls, navs, store, setStore: (patch: any) => { current = { ...current, ...patch }; }, doc };
+  return { ctl, render, calls, estimates, navs, store, setStore: (patch: any) => { current = { ...current, ...patch }; }, doc };
 }
 const type = (root: any, key: string, value: string) => { const el = byKey(root, key); el.value = value; el.dispatch('input'); };
 const submit = async (root: any) => { byTag(root, 'form')[0].dispatch('submit'); await tick(); };
@@ -386,4 +392,143 @@ test('the travel allowance sits with the other preferences', async () => {
   type(el, 'f-travelAllowance', '45');
   await submit(el);
   assert.equal(calls[0].preferences.travelAllowanceMinutes, 45);
+});
+
+const studyWith = (over: any = {}) => stateWith({ tasks: stateWith().tasks.map((t: any) => (t.id === 'chem' ? { ...t, ...over } : t)) });
+
+test('the Course details block is only there for study tasks', () => {
+  const { render } = setup();
+  const study: any = render('tasks', 'chem');
+  assert.ok(byKey(study, 'f-credits'));
+  assert.ok(byKey(study, 'f-syllabus'));
+  assert.ok(byKey(study, 'estimate-run'));
+  assert.match(textOf(study), /Course details/);
+  const gym: any = render('tasks', 'gym');
+  assert.equal(byKey(gym, 'f-credits'), undefined);
+  assert.equal(byKey(gym, 'estimate-run'), undefined);
+});
+
+test('course details are saved with the task', async () => {
+  const { render, calls } = setup();
+  const el: any = render('tasks', 'chem');
+  type(el, 'f-credits', '3');
+  type(el, 'f-syllabus', 'Weekly problem sets.');
+  byKey(el, 'f-weeklyGraded-true').click();
+  await submit(render('tasks', 'chem'));
+  const saved = calls[0].tasks.find((t: any) => t.id === 'chem');
+  assert.deepEqual(saved.course, { credits: 3, difficulty: 3, examOnly: false, weeklyGraded: true, lab: false, syllabus: 'Weekly problem sets.' });
+});
+
+test('Estimate hours asks the server with the draft and shows the suggestion card', async () => {
+  const { render, estimates } = setup();
+  let el: any = render('tasks', 'chem');
+  type(el, 'f-title', 'Organic chemistry');
+  type(el, 'f-credits', '3');
+  byKey(el, 'f-weeklyGraded-true').click();
+  el = render('tasks', 'chem');
+  byKey(el, 'estimate-run').click();
+  await tick();
+  assert.deepEqual(estimates[0], { title: 'Organic chemistry', credits: 3, difficulty: 3, examOnly: false, weeklyGraded: true, lab: false, syllabus: '' });
+  el = render('tasks', 'chem');
+  const card = byClass(el, 'est')[0];
+  assert.match(textOf(card), /4h a week/);
+  assert.match(textOf(card), /3 credits at 1h a week each/);
+  assert.match(textOf(card), /Rule of thumb/);
+  assert.match(textOf(card), /AI is not connected yet/);
+});
+
+test('Use this fills minutes a week and closes the card, Keep mine just closes it', async () => {
+  const { render } = setup();
+  let el: any = render('tasks', 'chem');
+  type(el, 'f-credits', '3');
+  byKey(el, 'estimate-run').click();
+  await tick();
+  el = render('tasks', 'chem');
+  byKey(el, 'estimate-use').click();
+  el = render('tasks', 'chem');
+  assert.equal(byKey(el, 'f-weekly').value, '240');
+  assert.equal(byClass(el, 'est').length, 0);
+  byKey(el, 'estimate-run').click();
+  await tick();
+  el = render('tasks', 'chem');
+  type(el, 'f-weekly', '500');
+  byKey(el, 'estimate-keep').click();
+  el = render('tasks', 'chem');
+  assert.equal(byKey(el, 'f-weekly').value, '500');
+  assert.equal(byClass(el, 'est').length, 0);
+});
+
+test('an AI answer is the headline and the rule becomes the second line', async () => {
+  const { render } = setup(stateWith(), { estimateResult: { rule: { minutes: 240, reason: 'Rule words.' }, ai: { minutes: 300, reason: 'AI words.' }, aiStatus: 'ready' } });
+  let el: any = render('tasks', 'chem');
+  type(el, 'f-credits', '3');
+  byKey(el, 'estimate-run').click();
+  await tick();
+  el = render('tasks', 'chem');
+  const card = textOf(byClass(el, 'est')[0]);
+  assert.match(card, /5h a week/);
+  assert.match(card, /AI words\./);
+  assert.match(card, /Rule of thumb: 4h a week/);
+  assert.doesNotMatch(card, /not connected/);
+  byKey(el, 'estimate-use').click();
+  assert.equal(byKey(render('tasks', 'chem'), 'f-weekly').value, '300');
+});
+
+test('an AI failure still shows the rule with a plain note', async () => {
+  const { render } = setup(stateWith(), { estimateResult: { rule: { minutes: 240, reason: 'Rule words.' }, ai: null, aiStatus: 'failed', aiMessage: 'The AI could not answer this time. The rule of thumb is shown.' } });
+  let el: any = render('tasks', 'chem');
+  type(el, 'f-credits', '3');
+  byKey(el, 'estimate-run').click();
+  await tick();
+  el = render('tasks', 'chem');
+  assert.match(textOf(byClass(el, 'est')[0]), /The AI could not answer this time/);
+  assert.match(textOf(byClass(el, 'est')[0]), /4h a week/);
+});
+
+test('missing credits explain themselves and send nothing; a failing request shows a plain sentence', async () => {
+  const { render, estimates } = setup();
+  let el: any = render('tasks', 'chem');
+  byKey(el, 'estimate-run').click();
+  await tick();
+  assert.equal(estimates.length, 0);
+  assert.match(textOf(render('tasks', 'chem')), /Add the credits first/);
+  const failing = setup(stateWith(), { estimateFails: 'request.credits must be a number between 0.5 and 100' });
+  el = failing.render('tasks', 'chem');
+  type(el, 'f-credits', '3');
+  byKey(el, 'estimate-run').click();
+  await tick();
+  assert.match(textOf(failing.render('tasks', 'chem')), /request\.credits must be a number/);
+});
+
+test('the card belongs to the open item and disappears when another is opened', async () => {
+  const { render } = setup();
+  let el: any = render('tasks', 'chem');
+  type(el, 'f-credits', '3');
+  byKey(el, 'estimate-run').click();
+  await tick();
+  assert.equal(byClass(render('tasks', 'chem'), 'est').length, 1);
+  render('tasks', 'gym');
+  assert.equal(byClass(render('tasks', 'chem'), 'est').length, 0);
+});
+
+test('a hostile syllabus is sent as plain text and the form stays intact', async () => {
+  const { render, estimates } = setup();
+  let el: any = render('tasks', 'chem');
+  type(el, 'f-credits', '3');
+  type(el, 'f-syllabus', '<img src=x onerror=alert(1)> ‮');
+  byKey(el, 'estimate-run').click();
+  await tick();
+  assert.equal(estimates[0].syllabus, '<img src=x onerror=alert(1)> ‮');
+  assert.equal(findAll(render('tasks', 'chem'), (e: any) => e.tag === 'img').length, 0);
+});
+
+test('Preferences has the three scale fields', async () => {
+  const { render, calls } = setup();
+  const el: any = render('preferences');
+  assert.equal(byKey(el, 'f-hoursPerCredit').value, '');
+  assert.equal(byKey(el, 'f-normalCredits').value, '30');
+  assert.equal(byKey(el, 'f-fullLoadHours').value, '40');
+  type(el, 'f-hoursPerCredit', '1');
+  await submit(el);
+  assert.equal(calls[0].preferences.hoursPerCredit, 1);
 });

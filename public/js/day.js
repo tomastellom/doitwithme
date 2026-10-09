@@ -3,7 +3,7 @@ import { duration, hhmm } from './time.js';
 
 export function renderDay(dom, view, actions) {
   const { h } = dom;
-  const { model, needsYou, isEmpty, prevLabel, nextLabel } = view;
+  const { model, needsYou, isEmpty, isToday, prevLabel, nextLabel } = view;
 
   const range = (r) => `${hhmm(r.start)}–${hhmm(r.end)}`;
 
@@ -45,9 +45,9 @@ export function renderDay(dom, view, actions) {
     }, model.label),
     h('div', { class: 'right' },
       h('div', { class: 'step mono' },
-        h('button', { type: 'button', 'data-fk': 'prev', 'aria-label': 'Previous day', onclick: () => actions.go(-1) }, prevLabel),
+        h('button', { type: 'button', 'data-fk': 'prev', 'aria-label': `Previous day, ${prevLabel}`, onclick: () => actions.go(-1) }, prevLabel),
         h('button', { type: 'button', 'data-fk': 'today', onclick: () => actions.today() }, 'Today'),
-        h('button', { type: 'button', 'data-fk': 'next', 'aria-label': 'Next day', onclick: () => actions.go(1) }, nextLabel)),
+        h('button', { type: 'button', 'data-fk': 'next', 'aria-label': `Next day, ${nextLabel}`, onclick: () => actions.go(1) }, nextLabel)),
       h('div', { class: 'meta mono' }, h('span', {}, model.weekLine), h('span', {}, `Booked ${duration(model.booked)}`), status)));
 
   if (isEmpty) {
@@ -60,7 +60,7 @@ export function renderDay(dom, view, actions) {
   }
 
   const side = h('div', { class: 'dv-side' },
-    h('span', { class: 'mono h' }, 'Today by group'),
+    h('span', { class: 'mono h' }, isToday ? 'Today by group' : 'Day by group'),
     GROUPS.map((g) =>
       h('div', { class: 'dv-tot' },
         h('i', { class: `sw g-${g.id}` }),

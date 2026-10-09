@@ -8,6 +8,7 @@ const permissionHint = (ctx) => {
   const p = ctx.ui.permission();
   if (p === 'unsupported') return 'This browser cannot show notifications';
   if (p === 'denied') return "Notifications are blocked. Allow them in your browser's site settings, then try again.";
+  if (p === 'granted') return 'Allowed in this browser';
   return 'Your browser will ask for permission';
 };
 
@@ -85,7 +86,7 @@ export function createSettings(dom, deps) {
       h('div', { class: 'hero' },
         h('h1', {}, 'Settings'),
         h('div', { class: 'sub mono' }, SETTINGS_GROUPS.map((g) =>
-          h('a', { href: `#/settings/${g.id}`, 'aria-current': g.id === active ? 'page' : null }, g.title)))),
+          h('a', { href: `#/settings/${g.id}`, 'data-fk': `set-link-${g.id}`, 'aria-current': g.id === active ? 'page' : null }, g.title)))),
       s.formError && h('div', { class: 'err st-err', role: 'alert' }, h('b', {}, 'Nothing was saved.'), h('span', { class: 'mono msg' }, s.formError)),
       h('div', { class: 'st-groups' }, SETTINGS_GROUPS.map((g) =>
         h('div', { class: 'st-grp' },

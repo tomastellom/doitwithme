@@ -110,3 +110,11 @@ test('every declared row has a title, a sentence and options, and writes through
     assert.ok(SETTINGS_GROUPS.some((g) => g.id === row.group), row.id);
   }
 });
+
+test('the hint says when notifications are already allowed, and the sub-links keep keyboard focus', () => {
+  const allowed = setup({ permission: 'granted' });
+  assert.match(textOf(allowed.draw()), /Allowed in this browser/);
+  assert.doesNotMatch(textOf(allowed.draw()), /will ask for permission/);
+  const links = byClass(allowed.draw(), 'sub')[0].children.filter((c: any) => c.tag === 'a');
+  assert.deepEqual(links.map((l: any) => l.getAttribute('data-fk')), ['set-link-appearance', 'set-link-notifications', 'set-link-planner']);
+});

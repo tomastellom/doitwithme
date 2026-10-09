@@ -25,3 +25,18 @@ export function createNotifier({ ui, win, doc }) {
     },
   };
 }
+
+// A hidden tab does not hear from the server, so while notifications are on it asks for a fresh plan now and then.
+export function startHiddenRefresh({ ui, doc, refresh, setTimer, clearTimer, everyMs = 300000 }) {
+  let timer = null;
+  const arm = () => { timer = setTimer(tick, everyMs); };
+  function tick() {
+    if (doc.visibilityState === 'hidden' && ui.notify()) refresh();
+    arm();
+  }
+  arm();
+  return () => {
+    if (timer !== null) clearTimer(timer);
+    timer = null;
+  };
+}

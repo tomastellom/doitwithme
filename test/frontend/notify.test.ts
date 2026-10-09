@@ -60,3 +60,29 @@ test('a browser that throws on Notification never breaks the page', () => {
   n.observe(ready, []);
   assert.doesNotThrow(() => n.observe(ready, [item('a')]));
 });
+
+test('while the tab is hidden and notifications are on, the plan is refreshed now and then', async () => {
+  const { startHiddenRefresh } = await import('../../public/js/notify.js');
+  const timers: Array<{ fn: Function; ms: number }> = [];
+  const refreshed: number[] = [];
+  const doc: any = { visibilityState: 'hidden' };
+  let on = true;
+  const stop = startHiddenRefresh({
+    ui: { notify: () => on } as any, doc, refresh: () => refreshed.push(1),
+    setTimer: (fn: Function, ms: number) => { timers.push({ fn, ms }); return timers.length; }, clearTimer: () => { timers.length = 0; },
+  });
+  assert.equal(timers.length, 1);
+  assert.equal(timers[0].ms, 300000);
+  timers.shift()!.fn();
+  assert.equal(refreshed.length, 1);
+  assert.equal(timers.length, 1, 'keeps going');
+  doc.visibilityState = 'visible';
+  timers.shift()!.fn();
+  assert.equal(refreshed.length, 1, 'a visible tab refreshes itself');
+  doc.visibilityState = 'hidden';
+  on = false;
+  timers.shift()!.fn();
+  assert.equal(refreshed.length, 1, 'notifications off means no background work');
+  stop();
+  assert.equal(timers.length, 0);
+});

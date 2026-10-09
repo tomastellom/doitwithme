@@ -43,20 +43,21 @@ export function dayModel(state, date, travel = []) {
   const rows = [];
   let cursor = window.start;
   for (const e of entries) {
-    if (e.start - cursor >= MIN_GAP && cursor < window.end) rows.push({ kind: 'gap', start: cursor, end: Math.min(e.start, window.end) });
+    const gapEnd = Math.min(e.start, window.end);
+    if (gapEnd - cursor >= MIN_GAP) rows.push({ kind: 'gap', start: cursor, end: gapEnd });
     rows.push(e);
     cursor = Math.max(cursor, e.end);
   }
   if (window.end - cursor >= MIN_GAP) rows.push({ kind: 'gap', start: cursor, end: window.end });
 
   const totals = Object.fromEntries(GROUP_IDS.map((id) => [id, 0]));
-  let booked = 0;
+  const itemEntries = entries.filter((e) => e.kind === 'item');
   for (const e of entries) {
     if (e.kind === 'item') {
       totals[e.group] += e.end - e.start;
-      booked += e.end - e.start;
     }
   }
+  const booked = busyMinutes(itemEntries, { start: 0, end: 1440 });
   const length = window.end - window.start;
   const free = Math.max(0, Math.min(length, length - busyMinutes(entries, window)));
   const { week, year } = isoWeek(date);

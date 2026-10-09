@@ -129,3 +129,8 @@ test('the stylesheet has hatched travel entries, a travel-off line and dimmed se
   assert.match(css, /^\.travel-off \{/m);
   assert.match(css, /^\.seg button:disabled \{/m);
 });
+
+test('the dashed outline of a short bar is not clipped by the drawing area', () => {
+  const css = readFileSync('public/css/app.css', 'utf8');
+  assert.match(css, /^\.dl-bar \{[^}]*overflow: visible/m);
+});

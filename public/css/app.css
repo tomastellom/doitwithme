@@ -232,7 +232,7 @@ a { color: inherit; }
 .dl-big { font-size: 84px; font-weight: 800; letter-spacing: -.05em; line-height: .85; }
 .dl-tt { font-size: 34px; font-weight: 800; letter-spacing: -.03em; line-height: 1; overflow-wrap: anywhere; }
 .dl-sub { margin-top: 8px; color: var(--muted); }
-.dl-bar { display: block; width: 100%; height: 28px; }
+.dl-bar { display: block; width: 100%; height: 28px; overflow: visible; }
 .dl-done { fill: var(--ink); }
 .dl-plan { fill: var(--study); }
 .dl-short { fill: none; stroke: var(--study); stroke-width: 2; stroke-dasharray: 4 3; vector-effect: non-scaling-stroke; }

@@ -8,7 +8,7 @@ import { replacingLink, startFavicon } from './favicon.js';
 import { createFocusKeeper } from './focus.js';
 import { createMenu } from './menu.js';
 import { GROUP_IDS, weekModel } from './model.js';
-import { createNotifier } from './notify.js';
+import { createNotifier, startHiddenRefresh } from './notify.js';
 import { createNudge } from './nudge.js';
 import { buildNudge } from './nudge-model.js';
 import { buildHash, dateParam, resolveRoute, weekParam } from './router.js';
@@ -113,7 +113,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       const { needsYou } = buildNudge(ctx.s.warnings);
       return renderDay(dom, {
         model, needsYou, isEmpty: ctx.s.isEmpty,
-        prevLabel: WEEKDAYS[weekdayOf(addDays(date, -1))], nextLabel: WEEKDAYS[weekdayOf(addDays(date, 1))],
+        isToday: date === getClock().today, prevLabel: WEEKDAYS[weekdayOf(addDays(date, -1))], nextLabel: WEEKDAYS[weekdayOf(addDays(date, 1))],
       }, dayActions);
     },
   });
@@ -234,6 +234,12 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   store.subscribe(render);
   const notifier = createNotifier({ ui, win, doc: document });
   store.subscribe((s) => notifier.observe(s, s.state ? buildNudge(s.warnings).items : []));
+  if (typeof win.setTimeout === 'function') {
+    startHiddenRefresh({
+      ui, doc: document, refresh: () => store.replan(),
+      setTimer: (fn, ms) => win.setTimeout(fn, ms), clearTimer: (id) => win.clearTimeout(id),
+    });
+  }
   render();
   store.load();
 

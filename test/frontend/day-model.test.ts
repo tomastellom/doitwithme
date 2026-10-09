@@ -81,3 +81,11 @@ test('a state without places or travel still works', () => {
   delete s.places;
   assert.doesNotThrow(() => dayModel(s, '2026-10-14'));
 });
+
+test('a short gap at the end of the window is not announced, and overlapping items are booked once', () => {
+  const s = { ...structuredClone(example), commitments: [], blocks: [block(480, 1310, 'Long', 'study'), block(1380, 1400, 'Late', 'chores')] };
+  const m = dayModel(s, '2026-10-14');
+  assert.deepEqual(m.rows.filter((r: any) => r.kind === 'gap'), []);
+  const lap = { ...structuredClone(example), commitments: [], blocks: [block(480, 900, 'Big', 'study'), block(500, 520, 'In', 'gym'), block(600, 620, 'In2', 'gym')] };
+  assert.equal(dayModel(lap, '2026-10-14').booked, 420);
+});

@@ -15,7 +15,7 @@ const key = (root: any, k: string) => findAll(root, (e) => e.getAttribute('data-
 function draw(over: any = {}, actionOver: any = {}) {
   const calls: any[] = [];
   const actions = { go: (n: number) => calls.push(['go', n]), today: () => calls.push(['today']), loadExample: () => calls.push(['example']), canAdd: true, ...actionOver };
-  const view = { model: dayModel(state(), '2026-10-14'), needsYou: 0, isEmpty: false, prevLabel: 'Tue', nextLabel: 'Thu', ...over };
+  const view = { model: dayModel(state(), '2026-10-14'), needsYou: 0, isEmpty: false, isToday: true, prevLabel: 'Tue', nextLabel: 'Thu', ...over };
   return { el: renderDay(dom, view, actions) as any, calls };
 }
 
@@ -84,4 +84,11 @@ test('a hostile title is text, and an empty schedule offers the example', () => 
   assert.match(textOf(empty), /Nothing planned yet/);
   key(empty, 'example').click();
   assert.deepEqual(calls, [['example']]);
+});
+
+test('other days say Day by group, and the step buttons keep their visible words in their names', () => {
+  const { el } = draw({ isToday: false });
+  assert.match(textOf(byClass(el, 'dv-side')[0]), /Day by group/);
+  assert.equal(key(el, 'prev').getAttribute('aria-label'), 'Previous day, Tue');
+  assert.equal(key(el, 'next').getAttribute('aria-label'), 'Next day, Thu');
 });

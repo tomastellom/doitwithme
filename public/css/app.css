@@ -246,3 +246,18 @@ a { color: inherit; }
   .dl { grid-template-columns: 1fr; gap: 12px; }
   .dl-end { text-align: left; }
 }
+
+/* Settings */
+.st-groups { margin: 30px 40px 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 36px; }
+.st-grp { border-top: 4px solid var(--ink); padding-top: 12px; }
+.st-gh { display: block; margin-bottom: 14px; }
+.st-rows { display: flex; flex-direction: column; gap: 18px; }
+.st-err { margin: 24px 40px 0; }
+.st b { display: block; font-size: 24px; font-weight: 800; letter-spacing: -.03em; line-height: 1.05; }
+.st p { margin: 6px 0 12px; font-size: 14px; line-height: 1.4; color: var(--muted); max-width: 380px; }
+.st .seg { width: 300px; max-width: 100%; }
+.st .seg button { height: 42px; font-size: 13px; }
+.st .seg button:disabled { border-style: solid; border-color: #B9B4A6; color: #8C887D; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.st .hint { margin: 8px 0 0; color: var(--muted); }
+.tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; border: 1px solid #B9B4A6; padding: 2px 5px; }
+@media (max-width: 1100px) { .st-groups { grid-template-columns: 1fr; } }

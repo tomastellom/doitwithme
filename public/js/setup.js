@@ -1,4 +1,5 @@
 import { renderField } from './form.js';
+import { isValidDate } from './time.js';
 import { CATEGORIES, DEADLINE_KINDS, KINDS, KIND_IDS, applyItem, itemsOf, newId, removeItem } from './setup-model.js';
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -98,6 +99,12 @@ export function createSetup(dom, deps) {
   async function save(sel) {
     const { kindId, s } = current;
     const id = sel.spec.single ? '-' : sel.isNew ? newId(sel.spec.prefix) : sel.id;
+    // A date that was picked but never added with "Add date" still belongs to the item.
+    for (const f of FIELDS[kindId]) {
+      const v = f.type === 'dates' ? local.scratch[f.name] : null;
+      if (isValidDate(v) && !draft[f.name].includes(v)) draft[f.name] = [...draft[f.name], v].sort();
+      if (f.type === 'dates') local.scratch[f.name] = '';
+    }
     const result = sel.spec.kind.fromDraft(draft, id, s.state);
     if (result.error) {
       local.error = result.error;
@@ -105,12 +112,12 @@ export function createSetup(dom, deps) {
       return;
     }
     local.error = null;
-    await finish(applyItem(s.state, kindId, result.item), sel.spec.single ? '#/preferences' : `#/${kindId}/${encodeURIComponent(result.item.id)}`);
+    await finish((fresh) => applyItem(fresh, kindId, result.item), sel.spec.single ? '#/preferences' : `#/${kindId}/${encodeURIComponent(result.item.id)}`);
   }
 
   async function remove(sel) {
     const { kindId, s } = current;
-    await finish(removeItem(s.state, kindId, sel.id), `#/${kindId}`);
+    await finish((fresh) => removeItem(fresh, kindId, sel.id), `#/${kindId}`);
   }
 
   function deleteArea(sel) {

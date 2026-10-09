@@ -234,3 +234,26 @@ test('a second save while one runs is ignored', async () => {
   await Promise.all([first, second]);
   assert.equal(calls.filter((c) => c === 'putState').length, 1);
 });
+
+test('saveState given a function builds the new state from the freshest server copy', async () => {
+  const fresh = full({ tasks: [{ id: 't' }, { id: 'from-another-tab' }] });
+  const put: any[] = [];
+  const { store } = make({ getState: () => fresh, putState: (n: any) => { put.push(n); } });
+  await store.load();
+  await store.saveState((latest: any) => ({ ...latest, preferences: { minBreak: 5 } }));
+  assert.deepEqual(put[0].tasks.map((t: any) => t.id), ['t', 'from-another-tab']);
+  assert.deepEqual(put[0].preferences, { minBreak: 5 });
+});
+
+test('a new save clears the previous save error before it runs', async () => {
+  let fail = true;
+  const { store } = make({ putState: () => { if (fail) throw new ApiError(400, 'old message'); } });
+  await store.load();
+  await store.saveState(full());
+  assert.equal(store.get().formError, 'old message');
+  fail = false;
+  const seen: any[] = [];
+  store.subscribe((s: any) => seen.push(s.formError));
+  await store.saveState(full());
+  assert.equal(seen[0], null);
+});

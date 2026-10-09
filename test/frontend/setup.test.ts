@@ -17,9 +17,10 @@ function setup(state: any = stateWith(), opts: any = {}) {
   let current: any = { state, busy: false, formError: null, status: 'ready', ...opts.storeState };
   const store = {
     saveState: async (next: any) => {
-      calls.push(next);
+      const payload = typeof next === 'function' ? next(opts.fresh ?? current.state) : next;
+      calls.push(payload);
       if (opts.rejectWith) current = { ...current, formError: opts.rejectWith };
-      else current = { ...current, state: next, formError: null };
+      else current = { ...current, state: payload, formError: null };
     },
     get: () => current,
   };
@@ -254,4 +255,20 @@ test('every kind has fields, and the field names are unique within a kind', () =
     assert.ok(fields.length > 0, kind);
     assert.equal(new Set(fields.map((f: any) => f.name)).size, fields.length, kind);
   }
+});
+
+test('a save is built on the freshest server copy, so another tab\'s items survive', async () => {
+  const fresh = stateWith({ tasks: [...stateWith().tasks, { id: 'other-tab', title: 'Essay', category: 'study', weeklyMinutes: 60, maxBlock: 60, priority: 3, oneSessionPerDay: false }] });
+  const { render, calls } = setup(stateWith(), { fresh });
+  const el: any = render('preferences');
+  await submit(el);
+  assert.ok(calls[0].tasks.some((t: any) => t.id === 'other-tab'));
+});
+
+test('a cancelled date that was picked but not added is saved with the item', async () => {
+  const { render, calls } = setup();
+  const el: any = render('commitments', 'mass');
+  type(el, 'f-exceptions', '2026-10-18');
+  await submit(el);
+  assert.ok(calls[0].commitments.find((c: any) => c.id === 'mass').exceptions.includes('2026-10-18'));
 });

@@ -31,9 +31,9 @@ export function createStore(api, getClock) {
     ...extra,
   });
 
-  async function guard(fn) {
+  async function guard(fn, extra = {}) {
     if (current.busy || !current.state) return;
-    set({ busy: true });
+    set({ busy: true, ...extra });
     try {
       await fn();
     } catch (e) {
@@ -111,7 +111,8 @@ export function createStore(api, getClock) {
     saveState: (next) =>
       guard(async () => {
         try {
-          await api.putState(next);
+          // A function builds the new state from the freshest copy, so a stale page cannot overwrite another tab.
+          await api.putState(typeof next === 'function' ? next(await api.getState()) : next);
         } catch (e) {
           if (e && e.status === 400) {
             set({ formError: e.message });
@@ -127,7 +128,7 @@ export function createStore(api, getClock) {
           confirm: null,
           formError: null,
         }));
-      }),
+      }, { formError: null }),
     clearFormError: () => set({ formError: null }),
   };
 }

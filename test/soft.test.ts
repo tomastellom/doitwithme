@@ -41,7 +41,11 @@ test('soft time is used, and reported, when a deadline would otherwise be missed
   assert.equal(friday.length, 1);
   assert.equal(friday[0].end - friday[0].start, 120);
   assert.deepEqual(result.warnings, [
-    { kind: 'soft-time-used', message: `Used soft free time on ${FRI} for Study` },
+    {
+      kind: 'soft-time-used',
+      message: `Used soft free time on ${FRI} for Study`,
+      detail: { date: FRI, titles: ['Study'], minutes: 120 },
+    },
   ]);
 });
 
@@ -92,7 +96,11 @@ test('an errand with a deadline never takes soft time, and its shortfall is repo
   );
   assert.equal(result.blocks.filter((b) => b.date === FRI).length, 0);
   assert.deepEqual(result.warnings, [
-    { kind: 'deadline-short', message: `Taxes task due ${FRI} is short by 120 min` },
+    {
+      kind: 'deadline-short',
+      message: `Taxes task due ${FRI} is short by 120 min`,
+      detail: { taskTitle: 'Taxes', kind: 'task', dueDate: FRI, minutes: 120 },
+    },
   ]);
 });
 

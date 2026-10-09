@@ -23,7 +23,11 @@ test('an unmeetable deadline is reported with the exact shortfall', () => {
     }),
   );
   assert.deepEqual(result.warnings, [
-    { kind: 'deadline-short', message: 'Study exam due 2026-10-07 is short by 420 min' },
+    {
+      kind: 'deadline-short',
+      message: 'Study exam due 2026-10-07 is short by 420 min',
+      detail: { taskTitle: 'Study', kind: 'exam', dueDate: '2026-10-07', minutes: 420 },
+    },
   ]);
 });
 
@@ -41,7 +45,11 @@ test('a meetable deadline produces no warning', () => {
 test('a weekly target that cannot fit is reported', () => {
   const result = plan(input({ preferences: tight(), tasks: [task({ weeklyMinutes: 600 })] }));
   assert.deepEqual(result.warnings, [
-    { kind: 'weekly-short', message: 'Study is short by 180 min in the week of 2026-10-05' },
+    {
+      kind: 'weekly-short',
+      message: 'Study is short by 180 min in the week of 2026-10-05',
+      detail: { taskTitle: 'Study', weekStart: '2026-10-05', minutes: 180 },
+    },
   ]);
 });
 
@@ -65,7 +73,11 @@ test('an overdue deadline with work left is reported, not ignored', () => {
     }),
   );
   assert.deepEqual(result.warnings, [
-    { kind: 'deadline-short', message: 'Study exam due 2026-10-01 is short by 60 min' },
+    {
+      kind: 'deadline-short',
+      message: 'Study exam due 2026-10-01 is short by 60 min',
+      detail: { taskTitle: 'Study', kind: 'exam', dueDate: '2026-10-01', minutes: 60 },
+    },
   ]);
 });
 

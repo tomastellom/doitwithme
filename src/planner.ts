@@ -109,6 +109,7 @@ export function shortfalls(input: PlanInput, all: Block[]): Shortfall[] {
         warning: {
           kind: 'deadline-short',
           message: `${task.title} ${dl.kind} due ${dl.dueDate} is short by ${rem} min`,
+          detail: { taskTitle: task.title, kind: dl.kind, dueDate: dl.dueDate, minutes: rem },
         },
       });
     }
@@ -127,6 +128,7 @@ export function shortfalls(input: PlanInput, all: Block[]): Shortfall[] {
           warning: {
             kind: 'weekly-short',
             message: `${task.title} is short by ${task.weeklyMinutes - done} min in the week of ${ws}`,
+            detail: { taskTitle: task.title, weekStart: ws, minutes: task.weeklyMinutes - done },
           },
         });
       }
@@ -149,8 +151,12 @@ function softUseWarnings(input: PlanInput, blocks: Block[], opened: ReadonlySet<
         input.preferences.softWindows.some((s) => s.weekday === wd && b.start >= s.start && b.start < s.end),
     );
     if (used.length > 0) {
-      const titles = [...new Set(used.map((b) => b.title))].join(', ');
-      out.push({ kind: 'soft-time-used', message: `Used soft free time on ${date} for ${titles}` });
+      const titles = [...new Set(used.map((b) => b.title))];
+      out.push({
+        kind: 'soft-time-used',
+        message: `Used soft free time on ${date} for ${titles.join(', ')}`,
+        detail: { date, titles, minutes: minutesOf(used) },
+      });
     }
   }
   return out;

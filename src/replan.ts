@@ -2,6 +2,17 @@ import { addDays, weekStart } from './dates.ts';
 import { plan } from './planner.ts';
 import type { Block, DateStr, Minutes, State, Warning } from './types.ts';
 
+export const warningKey = (w: Warning): string => `${w.kind}|${w.message}`;
+
+export interface DescribedWarning extends Warning {
+  key: string;
+  dismissed: boolean;
+}
+
+export function describeWarnings(warnings: Warning[], dismissed: string[]): DescribedWarning[] {
+  return warnings.map((w) => ({ ...w, key: warningKey(w), dismissed: dismissed.includes(warningKey(w)) }));
+}
+
 export function replan(
   state: State,
   today: DateStr,
@@ -19,6 +30,7 @@ export function replan(
   // rest days) plus blocks tagged to a deadline. Older history only slows it down.
   const cutoff = addDays(weekStart(today), -1);
   const relevant = kept.filter((b) => b.date >= cutoff || b.deadlineId !== undefined);
+  const approvedSoft = state.approvedSoft.filter((d) => d >= today);
   const result = plan({
     today,
     ...(nowMinutes === undefined ? {} : { nowMinutes }),
@@ -28,6 +40,12 @@ export function replan(
     deadlines: state.deadlines,
     preferences: state.preferences,
     pastBlocks: relevant,
+    approvedSoft,
   });
-  return { state: { ...state, blocks: [...kept, ...result.blocks] }, warnings: result.warnings };
+  const open = new Set(result.warnings.map(warningKey));
+  const dismissed = state.dismissed.filter((k) => open.has(k));
+  return {
+    state: { ...state, approvedSoft, dismissed, blocks: [...kept, ...result.blocks] },
+    warnings: result.warnings,
+  };
 }

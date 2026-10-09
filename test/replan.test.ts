@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { replan } from '../src/replan.ts';
+import { describeWarnings, replan, warningKey } from '../src/replan.ts';
+import { defaultPreferences } from '../src/defaults.ts';
 import { emptyState } from '../src/store.ts';
 import type { Block, State } from '../src/types.ts';
 import { task } from './helpers.ts';
@@ -62,4 +63,55 @@ test('replanning in the middle of a block keeps the part already done', () => {
   assert.ok(mondayMinutes <= 90, `Monday has ${mondayMinutes} min`);
   const again = replan(state, '2026-10-05', 520).state;
   assert.deepEqual(again.blocks[0], old('2026-10-05', 480, 500));
+});
+
+const eveningPrefs = () => ({
+  ...structuredClone(defaultPreferences),
+  weekdayWindow: { start: 1080, end: 1200 },
+  dayOffWindow: { start: 1080, end: 1200 },
+  daysOff: [],
+  softWindows: [{ weekday: 5, start: 1080, end: 1440 }],
+  softMode: 'ask' as const,
+});
+
+function studyState(over: Partial<State> = {}): State {
+  return { ...emptyState(), preferences: eveningPrefs(), tasks: [task({ weeklyMinutes: 5000 })], ...over };
+}
+
+test('an approved date is honored by the replan', () => {
+  const { state } = replan(studyState({ approvedSoft: ['2026-10-09'] }), '2026-10-05', undefined, 7);
+  assert.equal(state.blocks.filter((b) => b.date === '2026-10-09').length, 1);
+});
+
+test('approved dates in the past are dropped, future ones kept', () => {
+  const { state } = replan(studyState({ approvedSoft: ['2026-10-01', '2026-10-09'] }), '2026-10-05', undefined, 7);
+  assert.deepEqual(state.approvedSoft, ['2026-10-09']);
+});
+
+test('warningKey joins kind and message', () => {
+  assert.equal(warningKey({ kind: 'weekly-short', message: 'Gym is short' }), 'weekly-short|Gym is short');
+});
+
+test('describeWarnings adds a key and a dismissed flag', () => {
+  const w = { kind: 'weekly-short' as const, message: 'Gym is short' };
+  assert.deepEqual(describeWarnings([w], ['weekly-short|Gym is short']), [
+    { ...w, key: 'weekly-short|Gym is short', dismissed: true },
+  ]);
+  assert.equal(describeWarnings([w], [])[0].dismissed, false);
+});
+
+test('dismissed keys that no longer match a warning are pruned, matching ones kept', () => {
+  const first = replan(studyState(), '2026-10-05', undefined, 7);
+  const offer = first.warnings.find((w) => w.kind === 'soft-offer');
+  assert.ok(offer);
+  const key = warningKey(offer);
+  const withDismissed = studyState({ dismissed: [key, 'stale|gone'] });
+  assert.deepEqual(replan(withDismissed, '2026-10-05', undefined, 7).state.dismissed, [key]);
+});
+
+test('a dismissed warning is forgotten once its shortfall disappears', () => {
+  const first = replan(studyState(), '2026-10-05', undefined, 7);
+  const key = warningKey(first.warnings.find((w) => w.kind === 'soft-offer')!);
+  const fixed = studyState({ tasks: [task({ weeklyMinutes: 100 })], dismissed: [key] });
+  assert.deepEqual(replan(fixed, '2026-10-05', undefined, 7).state.dismissed, []);
 });

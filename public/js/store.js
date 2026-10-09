@@ -107,6 +107,6 @@ export function createStore(api, getClock) {
         current = { ...current, state };
         set(merged(r, { isEmpty: false, confirm: null }));
       }),
-    clearConfirm: () => set({ confirm: null }),
+    clearConfirm: () => set({ confirm: null, notice: null }),
   };
 }

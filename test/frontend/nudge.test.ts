@@ -193,3 +193,33 @@ test('the controls carry stable focus keys so focus can be restored after a redr
   assert.ok(keys.includes('nudge-use') && keys.includes('nudge-leave'));
   assert.equal(byTag(nudge.el, 'input')[0].getAttribute('data-fk'), 'nudge-ask');
 });
+
+test('Nudge rests out of sight when there is nothing to say, and comes out when there is', () => {
+  const { nudge } = setup();
+  const state = () => nudge.el.getAttribute('data-state');
+  nudge.update({ ...base });
+  assert.equal(state(), 'resting');
+  assert.equal(byClass(nudge.el, 'nudge-body')[0].getAttribute('aria-hidden'), 'true');
+  nudge.update({ ...base, status: 'loading' });
+  assert.equal(state(), 'resting');
+  nudge.update({ ...base, items: [item()] });
+  assert.equal(state(), 'alert');
+  assert.equal(byClass(nudge.el, 'nudge-body')[0].hasAttribute('aria-hidden'), false);
+  nudge.update({ ...base, status: 'offline' });
+  assert.equal(state(), 'alert');
+  nudge.update({ ...base, status: 'error', error: 'x' });
+  assert.equal(state(), 'alert');
+  nudge.update({ ...base, confirm: { date: '2026-10-09', weekday: 'Friday', minutes: 0, titles: [], used: false } });
+  assert.equal(state(), 'alert');
+  nudge.update({ ...base, notice: 'That warning changed, so I refreshed the plan.' });
+  assert.equal(state(), 'alert');
+  nudge.update({ ...base });
+  assert.equal(state(), 'resting');
+});
+
+test('a notice with nothing else to say can be dismissed with Okay', () => {
+  const { nudge, calls } = setup();
+  nudge.update({ ...base, notice: 'That warning changed, so I refreshed the plan.' });
+  labelled(nudge.el, 'Okay')!.click();
+  assert.deepEqual(calls, [['okay']]);
+});

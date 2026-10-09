@@ -115,14 +115,22 @@ export function createNudge(dom, handlers) {
       badge = String(view.items.length);
       width = 124;
       bubble = speaking();
+    } else if (view.notice) {
+      bubble = say(
+        h('span', { class: 'mono k' }, 'Nudge'),
+        h('p', {}, view.notice),
+        h('div', { class: 'acts' }, button('Okay', () => handlers.okay(), 'y', 'nudge-okay')),
+      );
     } else if (view.status === 'loading') {
       bubble = h('div', { class: 'quiet' }, h('span', { class: 'mono' }, 'Loading'));
     } else {
-      bubble = h('div', { class: 'quiet' },
-        h('b', {}, 'All clear.'),
-        h('span', { class: 'mono' }, 'No open warnings'),
-        view.notice && h('span', { class: 'notice' }, view.notice));
+      bubble = h('div', { class: 'quiet' }, h('b', {}, 'All clear.'), h('span', { class: 'mono' }, 'No open warnings'));
     }
+    // With nothing to say Nudge rests out of sight; it comes out on its own for anything that needs you.
+    const attention = view.status === 'offline' || view.status === 'error' || Boolean(view.confirm) || view.items.length > 0 || Boolean(view.notice);
+    el.setAttribute('data-state', attention ? 'alert' : 'resting');
+    if (attention) body.removeAttribute('aria-hidden');
+    else body.setAttribute('aria-hidden', 'true');
     clear(body, bubble, createMascot(dom, { eyes, badge, width }));
     const spoken = spokenFor(view, item);
     if (spoken !== lastSpoken) {

@@ -70,6 +70,15 @@ test('approve builds the confirmation from the response', async () => {
   assert.equal(store.get().confirm, null);
 });
 
+test('clearConfirm also clears a notice', async () => {
+  const { store } = make({ dismiss: () => { throw new ApiError(409, 'gone'); } });
+  await store.load();
+  await store.dismiss(['k']);
+  assert.ok(store.get().notice);
+  store.clearConfirm();
+  assert.equal(store.get().notice, null);
+});
+
 test('undo clears the confirmation and updates the approvals', async () => {
   const { store } = make({ undo: () => result({ approvedSoft: [] }) });
   await store.load();

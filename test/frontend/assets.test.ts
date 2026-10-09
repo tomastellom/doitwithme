@@ -108,3 +108,16 @@ test('placeholder and empty-day text use colors that pass, and the screen-reader
   assert.match(css, /\.sr-only \{/);
   assert.doesNotMatch(css, /\.nudge:focus \{ outline: none/);
 });
+
+test('the title is a little smaller, Nudge rests until hovered, and the calm bubble is solid', () => {
+  const css = readFileSync('public/css/app.css', 'utf8');
+  const h1 = css.match(/\.hero h1 \{[^}]*\}/)![0];
+  const size = h1.match(/font-size: clamp\((\d+)px, [^,]+, (\d+)px\)/);
+  assert.ok(size, 'the title size scales with clamp()');
+  assert.ok(Number(size![2]) <= 170 && Number(size![2]) >= 120, `max title size ${size![2]}px`);
+  assert.match(css, /\.nudge\[data-state="resting"\] \.nudge-body \{[^}]*translateY/);
+  assert.match(css, /\.nudge\[data-state="resting"\]:hover \.nudge-body/);
+  assert.match(css, /\.nudge\[data-state="resting"\]:focus-within \.nudge-body/);
+  const quiet = css.match(/^\.quiet \{[^}]*\}/m)![0];
+  assert.match(quiet, /background: var\(--ink\)/);
+});

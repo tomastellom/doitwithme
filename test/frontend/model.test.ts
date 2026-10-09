@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { occurrencesOn as serverOccurrences } from '../../src/busy.ts';
 import { addDays } from '../../public/js/time.js';
-import { GROUP_IDS, GROUPS, dayItems, groupOfBlock, labelOf, occurrencesOn, weekModel } from '../../public/js/model.js';
+import { GROUP_IDS, GROUPS, dayItems, groupOfBlock, itemKey, labelOf, occurrencesOn, weekModel } from '../../public/js/model.js';
 
 const block = (date: string, start: number, end: number, title: string, category: string) => ({
   taskId: title, title, category, date, start, end,
@@ -107,4 +107,31 @@ test('travel legs appear in the day, ignore the filters and do not count as book
   assert.equal(day.booked, 120);
   assert.equal(model.total, 1);
   assert.equal(model.counts.fixed, 1);
+});
+
+test('every calendar item knows its date and what it comes from', () => {
+  const st = state({
+    commitments: [commitment({ id: 'lec' })],
+    blocks: [{ taskId: 'chem', title: 'Chemistry', category: 'study', date: '2026-10-13', start: 480, end: 530, deadlineId: 'exam' }],
+  });
+  const travel = [{ date: '2026-10-13', start: 545, end: 600, fromName: 'Home', toName: 'Campus', estimated: false, placeId: 'campus', commuteId: 'r1' }];
+  const items = dayItems(st, '2026-10-13', travel);
+  const byKind = (k: string) => items.find((i: any) => i.kind === k);
+  assert.deepEqual([byKind('commitment').commitmentId, byKind('commitment').date], ['lec', '2026-10-13']);
+  assert.deepEqual([byKind('block').taskId, byKind('block').deadlineId, byKind('block').date], ['chem', 'exam', '2026-10-13']);
+  assert.deepEqual([byKind('travel').placeId, byKind('travel').commuteId, byKind('travel').fromName, byKind('travel').toName, byKind('travel').estimated], ['campus', 'r1', 'Home', 'Campus', false]);
+});
+
+test('two commitments in one day each keep their own id, in the same order as before', () => {
+  const st = state({ commitments: [commitment({ id: 'a', start: 600, end: 660 }), commitment({ id: 'b', start: 600, end: 660 })] });
+  assert.deepEqual(dayItems(st, '2026-10-13').map((i: any) => i.commitmentId), ['a', 'b']);
+});
+
+test('item keys are unique per item and stable', () => {
+  const a = { kind: 'commitment', commitmentId: 'lec', date: '2026-10-13', start: 600 };
+  const b = { kind: 'block', taskId: 'lec', date: '2026-10-13', start: 600 };
+  const t = { kind: 'travel', placeId: 'campus', date: '2026-10-13', start: 545 };
+  assert.equal(itemKey(a), 'commitment:lec:2026-10-13:600');
+  assert.equal(new Set([itemKey(a), itemKey(b), itemKey(t)]).size, 3);
+  assert.equal(itemKey({ ...a }), itemKey(a));
 });

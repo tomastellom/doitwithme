@@ -39,19 +39,23 @@ export function occurrencesOn(date, commitments) {
   return out;
 }
 
+export const itemKey = (i) => `${i.kind}:${i.commitmentId ?? i.taskId ?? i.placeId ?? ''}:${i.date}:${i.start}`;
+
 export function dayItems(state, date, travel = []) {
   const items = [];
-  for (const o of occurrencesOn(date, state.commitments)) {
-    items.push({ kind: 'commitment', group: 'fixed', start: o.start, end: o.end, title: o.title, label: labelOf(o.category) });
+  for (const c of state.commitments) {
+    for (const o of occurrencesOn(date, [c])) {
+      items.push({ kind: 'commitment', commitmentId: c.id, date, group: 'fixed', start: o.start, end: o.end, title: o.title, label: labelOf(o.category) });
+    }
   }
   for (const b of state.blocks) {
     if (b.date === date) {
-      items.push({ kind: 'block', group: groupOfBlock(b.category), start: b.start, end: b.end, title: b.title, label: labelOf(b.category) });
+      items.push({ kind: 'block', taskId: b.taskId, ...(b.deadlineId ? { deadlineId: b.deadlineId } : {}), date, group: groupOfBlock(b.category), start: b.start, end: b.end, title: b.title, label: labelOf(b.category) });
     }
   }
   for (const leg of travel) {
     if (leg.date === date) {
-      items.push({ kind: 'travel', group: 'travel', start: leg.start, end: leg.end, title: `${leg.fromName} to ${leg.toName}`, label: leg.estimated ? 'estimated' : 'commute' });
+      items.push({ kind: 'travel', group: 'travel', date, placeId: leg.placeId, commuteId: leg.commuteId ?? null, fromName: leg.fromName, toName: leg.toName, estimated: leg.estimated, start: leg.start, end: leg.end, title: `${leg.fromName} to ${leg.toName}`, label: leg.estimated ? 'estimated' : 'commute' });
     }
   }
   return items.sort((a, b) => a.start - b.start || a.end - b.end);

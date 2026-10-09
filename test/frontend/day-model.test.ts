@@ -89,3 +89,14 @@ test('a short gap at the end of the window is not announced, and overlapping ite
   const lap = { ...structuredClone(example), commitments: [], blocks: [block(480, 900, 'Big', 'study'), block(500, 520, 'In', 'gym'), block(600, 620, 'In2', 'gym')] };
   assert.equal(dayModel(lap, '2026-10-14').booked, 420);
 });
+
+test('Day rows carry the same identities as the Week items', () => {
+  const travel = [{ date: '2026-10-14', start: 900, end: 930, fromName: 'Home', toName: 'Anna', estimated: true, placeId: 'anna', commuteId: null }];
+  const m = dayModel(wed(), '2026-10-14', travel);
+  const lesson = m.rows.find((r: any) => r.title === 'Private lesson, Anna');
+  assert.deepEqual([lesson.kind, lesson.commitmentId, lesson.date], ['item', 'lesson-1', '2026-10-14']);
+  const study = m.rows.find((r: any) => r.title === 'Chemistry');
+  assert.deepEqual([study.taskId, study.date], ['Chemistry', '2026-10-14']);
+  const leg = m.rows.find((r: any) => r.kind === 'travel');
+  assert.deepEqual([leg.placeId, leg.commuteId, leg.fromName, leg.toName, leg.estimated], ['anna', null, 'Home', 'Anna', true]);
+});

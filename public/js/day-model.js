@@ -22,20 +22,22 @@ export function dayModel(state, date, travel = []) {
   const window = pref.daysOff.includes(weekdayOf(date)) ? pref.dayOffWindow : pref.weekdayWindow;
   const entries = [];
 
-  for (const o of occurrencesOn(date, state.commitments)) {
-    if (o.bufferBefore > 0) {
-      entries.push({ kind: 'buffer', start: Math.max(0, o.start - o.bufferBefore), end: o.start, title: `Buffer before ${o.title}` });
+  for (const c of state.commitments) {
+    for (const o of occurrencesOn(date, [c])) {
+      if (o.bufferBefore > 0) {
+        entries.push({ kind: 'buffer', start: Math.max(0, o.start - o.bufferBefore), end: o.start, title: `Buffer before ${o.title}` });
+      }
+      entries.push({ kind: 'item', commitmentId: c.id, date, group: 'fixed', start: o.start, end: o.end, title: o.title, label: labelOf(o.category) });
     }
-    entries.push({ kind: 'item', group: 'fixed', start: o.start, end: o.end, title: o.title, label: labelOf(o.category) });
   }
   for (const b of state.blocks) {
     if (b.date === date) {
-      entries.push({ kind: 'item', group: groupOfBlock(b.category), start: b.start, end: b.end, title: b.title, label: labelOf(b.category) });
+      entries.push({ kind: 'item', taskId: b.taskId, ...(b.deadlineId ? { deadlineId: b.deadlineId } : {}), date, group: groupOfBlock(b.category), start: b.start, end: b.end, title: b.title, label: labelOf(b.category) });
     }
   }
   for (const leg of travel) {
     if (leg.date === date) {
-      entries.push({ kind: 'travel', start: leg.start, end: leg.end, title: `${leg.fromName} to ${leg.toName}`, label: leg.estimated ? 'estimated' : 'commute' });
+      entries.push({ kind: 'travel', date, placeId: leg.placeId, commuteId: leg.commuteId ?? null, fromName: leg.fromName, toName: leg.toName, estimated: leg.estimated, start: leg.start, end: leg.end, title: `${leg.fromName} to ${leg.toName}`, label: leg.estimated ? 'estimated' : 'commute' });
     }
   }
   entries.sort((a, b) => a.start - b.start || a.end - b.end);

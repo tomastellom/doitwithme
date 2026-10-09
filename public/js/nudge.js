@@ -67,6 +67,7 @@ export function faceFor(view) {
   if (view.status === 'offline' || view.status === 'error') return 'sleepy';
   if (view.confirm) return view.confirm.used ? 'happy' : 'resting';
   if (view.busy) return 'working';
+  if (view.estimating) return 'thinking';
   if (view.surprised) return 'surprised';
   if (view.items.length > 0) {
     // A deadline that nothing can cover is a worry; a missing address or a tight trip is something to think over.
@@ -74,7 +75,6 @@ export function faceFor(view) {
     if (shortfalls.some((i) => !i.offer)) return 'worried';
     return shortfalls.length > 0 ? 'glance-left' : 'thinking';
   }
-  if (view.estimating) return 'thinking';
   if (view.notice) return 'resting';
   if (view.celebrate) return 'celebrating';
   if (view.glance) return `glance-${view.glance}`;

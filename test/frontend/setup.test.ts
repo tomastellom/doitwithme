@@ -532,3 +532,64 @@ test('Preferences has the three scale fields', async () => {
   await submit(el);
   assert.equal(calls[0].preferences.hoursPerCredit, 1);
 });
+
+test('a card made for other answers is not offered any more, and Use this refuses to apply it', async () => {
+  const { render } = setup();
+  let el: any = render('tasks', 'chem');
+  type(el, 'f-credits', '3');
+  byKey(el, 'estimate-run').click();
+  await tick();
+  el = render('tasks', 'chem');
+  assert.equal(byClass(el, 'est').length, 1);
+  type(el, 'f-credits', '6');
+  const use = byKey(el, 'estimate-use');
+  use.click();
+  el = render('tasks', 'chem');
+  assert.equal(byKey(el, 'f-weekly').value, '360', 'the old suggestion was not applied');
+  assert.equal(byClass(el, 'est').length, 0);
+  byKey(el, 'f-lab-true').click();
+  type(el, 'f-credits', '3');
+  assert.equal(byClass(render('tasks', 'chem'), 'est').length, 0, 'a different set of answers has no card');
+});
+
+test('estimate problems look like the form errors, a busy estimate and a long title say so', async () => {
+  const { render, estimates } = setup();
+  let el: any = render('tasks', 'chem');
+  byKey(el, 'estimate-run').click();
+  await tick();
+  const err = byClass(render('tasks', 'chem'), 'err')[0];
+  assert.equal(err.getAttribute('role'), 'alert');
+  assert.match(textOf(err), /Add the credits first/);
+  el = render('tasks', 'chem');
+  type(el, 'f-credits', '3');
+  type(el, 'f-title', 'x'.repeat(201));
+  byKey(el, 'estimate-run').click();
+  await tick();
+  assert.equal(estimates.length, 0);
+  assert.match(textOf(render('tasks', 'chem')), /title can be at most 200 characters/);
+});
+
+test('a second estimate while another is running explains itself', async () => {
+  const busy = setup();
+  (busy.store as any).estimate = async () => null;
+  let el: any = busy.render('tasks', 'chem');
+  type(el, 'f-credits', '3');
+  byKey(el, 'estimate-run').click();
+  await tick();
+  assert.match(textOf(busy.render('tasks', 'chem')), /already running/);
+});
+
+test('after Use this the keyboard lands on minutes a week, after Keep mine on the Estimate button', async () => {
+  const { render, doc } = setup();
+  let el: any = render('tasks', 'chem');
+  type(el, 'f-credits', '3');
+  byKey(el, 'estimate-run').click();
+  await tick();
+  el = render('tasks', 'chem');
+  byKey(el, 'estimate-use').click();
+  assert.equal(doc.activeElement, byKey(el, 'f-weekly'));
+  byKey(el, 'estimate-run').click();
+  await tick();
+  byKey(el, 'estimate-keep').click();
+  assert.equal(doc.activeElement, byKey(el, 'estimate-run'));
+});

@@ -321,7 +321,11 @@ test('parseDecimal accepts plain decimals inside the limits only', () => {
   assert.equal(parseDecimal('3', 0.5, 100), 3);
   assert.equal(parseDecimal(' 2.5 ', 0.5, 100), 2.5);
   assert.equal(parseDecimal('0.5', 0.5, 100), 0.5);
-  for (const bad of ['', 'abc', '1e3', '-1', '0.4', '100.5', '2,5', '1.', '.5x', 'NaN', 'Infinity', '０５']) assert.equal(parseDecimal(bad, 0.5, 100), null, bad);
+  for (const bad of ['', 'abc', '1e3', '-1', '0.4', '100.5', '1.', '1,', '.5x', '2,5,1', '1.2.3', 'NaN', 'Infinity', '０５']) assert.equal(parseDecimal(bad, 0.5, 100), null, bad);
+  assert.equal(parseDecimal('2,5', 0.5, 100), 2.5, 'a comma is a decimal point');
+  assert.equal(parseDecimal('.5', 0.5, 100), 0.5);
+  assert.equal(parseDecimal(',5', 0.5, 100), 0.5);
+  assert.equal(parseDecimal('2.123456', 0.5, 100), 2.123456);
 });
 
 test('a study task keeps its course details through a draft, and other tasks have none', () => {

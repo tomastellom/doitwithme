@@ -19,11 +19,11 @@ export function parseTime(text) {
   return hours > 23 ? null : hours * 60 + minutes;
 }
 
-// Plain decimals only ("2.5"), never exponents, signs, commas or full-width digits.
+// Plain decimals only ("2.5", "2,5" or ".5"), never exponents, signs or full-width digits.
 export function parseDecimal(text, min, max) {
   const t = String(text).trim();
-  if (!/^\d{1,6}(\.\d{1,4})?$/.test(t)) return null;
-  const n = Number(t);
+  if (!/^(\d{1,6}([.,]\d{1,6})?|[.,]\d{1,6})$/.test(t)) return null;
+  const n = Number(t.replace(',', '.'));
   return n >= min && n <= max ? n : null;
 }
 

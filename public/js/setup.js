@@ -1,4 +1,5 @@
 import { renderField } from './form.js';
+import { findByKey } from './focus.js';
 import { isValidDate } from './time.js';
 import { CATEGORIES, DEADLINE_KINDS, KINDS, KIND_IDS, PLACE_KINDS, TRAVEL_MODES, applyItem, itemsOf, newId, parseDecimal, parseWhole, removeItem } from './setup-model.js';
 
@@ -22,7 +23,7 @@ function estimateBlock(dom, est) {
   const run = h('button', { type: 'button', class: 'go2 mono', 'data-fk': 'estimate-run', disabled: est.status === 'busy', onclick: () => est.run() },
     est.status === 'busy' ? 'Estimating' : 'Estimate hours');
   const parts = [run];
-  if (est.status === 'error') parts.push(h('p', { class: 'hint', role: 'alert' }, est.message));
+  if (est.status === 'error') parts.push(h('div', { class: 'err', role: 'alert' }, h('b', {}, 'Not estimated.'), h('span', { class: 'mono msg' }, est.message)));
   if (est.status === 'ready') {
     const { rule, ai, aiStatus, aiMessage } = est.result;
     const lead = ai ?? rule;
@@ -146,47 +147,62 @@ export function createSetup(dom, deps) {
     keepFocus(() => clear(container, build()));
   }
 
+  // The card belongs to the answers it was made for; any other set of answers has no card.
+  const answersOf = () => JSON.stringify([draft.credits, draft.difficulty, draft.examOnly, draft.weeklyGraded, draft.lab, draft.syllabus]);
+  const closeCard = () => { local.estimate = { status: 'idle', result: null, message: '', answers: null }; };
+  const focusKey = (k) => { const el = container && findByKey(container, k); if (el) el.focus(); };
+
   async function runEstimate() {
     const est = local.estimate;
     if (est.status === 'busy') return;
     const credits = parseDecimal(draft.credits, 0.5, 100);
     const difficulty = parseWhole(draft.difficulty, 1, 5);
+    const fail = (message) => { local.estimate = { status: 'error', result: null, message, answers: null }; rerender(); };
     if (credits === null || difficulty === null) {
-      est.status = 'error';
-      est.message = String(draft.credits).trim() === '' ? 'Add the credits first, then ask for an estimate.' : 'Credits must be a number from 0.5 to 100, and difficulty 1 to 5.';
-      rerender();
+      fail(String(draft.credits).trim() === '' ? 'Add the credits first, then ask for an estimate.' : 'Credits must be a number from 0.5 to 100, and difficulty 1 to 5.');
       return;
     }
-    if (draft.syllabus.length > 20000) {
-      est.status = 'error';
-      est.message = 'The syllabus can be at most 20000 characters.';
-      rerender();
-      return;
-    }
-    est.status = 'busy';
+    if (draft.title.trim().length > 200) return fail('The title can be at most 200 characters.');
+    if (draft.syllabus.length > 20000) return fail('Syllabus text can be at most 20000 characters.');
+    const answers = answersOf();
+    local.estimate = { status: 'busy', result: null, message: '', answers };
     rerender();
     const mine = local;
     try {
       const body = { title: draft.title.trim() || 'Study task', credits, difficulty, examOnly: Boolean(draft.examOnly), weeklyGraded: Boolean(draft.weeklyGraded), lab: Boolean(draft.lab), syllabus: draft.syllabus };
       const result = await store.estimate(body);
       if (mine !== local) return;
-      if (result === null) { est.status = 'idle'; } else { est.status = 'ready'; est.result = result; }
+      local.estimate = result === null
+        ? { status: 'error', result: null, message: 'Another estimate is already running. Try again in a moment.', answers: null }
+        : { status: 'ready', result, message: '', answers };
     } catch (e) {
       if (mine !== local) return;
-      est.status = 'error';
-      est.message = e && e.message ? e.message : 'The estimate did not work. Try again.';
+      local.estimate = { status: 'error', result: null, message: e && e.message ? e.message : 'The estimate did not work. Try again.', answers: null };
     }
     rerender();
   }
 
-  const estimateApi = () => ({
-    status: local.estimate.status,
-    result: local.estimate.result,
-    message: local.estimate.message,
-    run: runEstimate,
-    use: (minutes) => { draft.weekly = String(minutes); local.estimate = { status: 'idle', result: null, message: '' }; rerender(); },
-    keep: () => { local.estimate = { status: 'idle', result: null, message: '' }; rerender(); },
-  });
+  const estimateApi = () => {
+    const est = local.estimate;
+    const stale = est.status === 'ready' && est.answers !== answersOf();
+    return {
+      status: stale ? 'idle' : est.status,
+      result: est.result,
+      message: est.message,
+      run: runEstimate,
+      use: (minutes) => {
+        if (local.estimate.answers === answersOf()) draft.weekly = String(minutes);
+        closeCard();
+        rerender();
+        focusKey('f-weekly');
+      },
+      keep: () => {
+        closeCard();
+        rerender();
+        focusKey('estimate-run');
+      },
+    };
+  };
 
   function selection() {
     const { kindId, s, route } = current;

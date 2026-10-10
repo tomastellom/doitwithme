@@ -109,7 +109,16 @@ export interface Preferences {
   fullLoadHours: number;
 }
 
+export type BlockStatus = 'done' | 'missed' | 'waived';
+
+export interface CommitmentMark {
+  id: string;
+  date: DateStr;
+  status: 'done' | 'missed';
+}
+
 export interface Block {
+  status?: BlockStatus;
   taskId: string;
   title: string;
   category: string;
@@ -175,6 +184,7 @@ export interface State {
   places: Place[];
   commutes: Commute[];
   labels?: Label[];
+  commitmentMarks?: CommitmentMark[];
   preferences: Preferences;
   blocks: Block[];
   approvedSoft: DateStr[];

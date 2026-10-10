@@ -38,6 +38,8 @@ export function daySlots(input: PlanInput, date: DateStr, opened: ReadonlySet<Da
   const busy = [
     ...busyOn(date, input.commitments),
     ...travelOn(input, date).legs.map((l) => ({ title: 'Travel', start: l.start, end: l.end })),
+    // A block already ticked off as done keeps its time, so nothing new is planned on top of it.
+    ...input.pastBlocks.filter((b) => b.date === date && b.status === 'done').map((b) => ({ title: b.title, start: b.start, end: b.end })),
   ];
   const softs = pref.softWindows.filter((s) => s.weekday === weekdayOf(date));
   const normal = freeSlots(window, [...busy, ...softs]).map((s) => ({ ...s, soft: false }));

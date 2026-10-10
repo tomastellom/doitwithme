@@ -147,3 +147,39 @@ test('labels survive a replan untouched', () => {
   const { state } = replan({ ...stateWith([]), labels }, '2026-10-05');
   assert.deepEqual(state.labels, labels);
 });
+
+const week = (blocks: Block[], over: Partial<State> = {}): State => ({
+  ...emptyState(),
+  tasks: [task({ id: 't1', title: 'Study', weeklyMinutes: 120, maxBlock: 60, category: 'study' })],
+  blocks,
+  ...over,
+});
+const study = (date: string, start: number, end: number, status?: Block['status']): Block => ({ taskId: 't1', title: 'Study', category: 'study', date, start, end, ...(status ? { status } : {}) });
+const minutes = (bs: Block[]) => bs.reduce((t, b) => t + (b.end - b.start), 0);
+
+test('a block ticked off as done stays exactly where it is, counts toward the week, and nothing is planned on top of it', () => {
+  const done = study('2026-10-07', 480, 540, 'done');
+  const { state } = replan(week([done]), '2026-10-05', undefined, 7);
+  assert.deepEqual(state.blocks.find((b) => b.status === 'done'), done);
+  const thisWeek = state.blocks.filter((b) => b.date >= '2026-10-05' && b.date <= '2026-10-11');
+  assert.equal(minutes(thisWeek), 120, 'the week target of 120 is met, with the done hour counted');
+  const sameDay = state.blocks.filter((b) => b.date === '2026-10-07' && b !== state.blocks.find((x) => x.status === 'done'));
+  assert.ok(sameDay.every((b) => b.start >= 540 || b.end <= 480), 'no overlap with the done block');
+});
+
+test('a block marked not done stops counting, so its minutes are planned again in free time', () => {
+  const missed = study('2026-10-05', 480, 540, 'missed');
+  const { state, warnings } = replan(week([missed]), '2026-10-06', undefined, 6);
+  assert.deepEqual(state.blocks.find((b) => b.status === 'missed'), missed, 'kept as history');
+  const fresh = state.blocks.filter((b) => b.status === undefined && b.date >= '2026-10-06' && b.date <= '2026-10-11');
+  assert.equal(minutes(fresh), 120, 'the full target is planned again, the missed hour does not count');
+  assert.equal(warnings.filter((w) => w.kind === 'weekly-short').length, 0);
+});
+
+test('a block taken off the week counts as done for the target, and nothing replaces it', () => {
+  const waived = study('2026-10-05', 480, 540, 'waived');
+  const { state } = replan(week([waived]), '2026-10-06', undefined, 6);
+  const fresh = state.blocks.filter((b) => b.status === undefined && b.date >= '2026-10-06' && b.date <= '2026-10-11');
+  assert.equal(minutes(fresh), 60, 'only the other hour of the week is planned');
+  assert.equal(state.blocks.find((b) => b.status === 'waived')?.start, 480);
+});

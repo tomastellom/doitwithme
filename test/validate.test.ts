@@ -268,3 +268,16 @@ test('bad labels are refused with a message that names the problem', () => {
   rejects((s) => { s.labels = [good, { ...good, id: 'b', name: 'a' }]; }, /same name/);
   rejects((s) => { s.labels = Array.from({ length: 101 }, (_, i) => ({ ...good, id: `l${i}`, name: `L${i}` })); }, /at most 100/);
 });
+
+test('block statuses and commitment marks are optional and checked', () => {
+  const s = sample();
+  s.blocks = [{ taskId: 't1', title: 'S', category: 'study', date: '2026-10-05', start: 480, end: 540, status: 'done' }];
+  s.commitmentMarks = [{ id: 'c1', date: '2026-10-05', status: 'missed' }];
+  const out = validateState(s);
+  assert.equal(out.blocks[0].status, 'done');
+  assert.deepEqual(out.commitmentMarks, [{ id: 'c1', date: '2026-10-05', status: 'missed' }]);
+  assert.equal('commitmentMarks' in validateState(sample()), false);
+  rejects((x) => { x.blocks = [{ taskId: 't1', title: 'S', category: 'study', date: '2026-10-05', start: 480, end: 540, status: 'maybe' }]; }, /blocks\[0\]\.status/);
+  rejects((x) => { x.commitmentMarks = [{ id: 'c1', date: '2026-10-05', status: 'waived' }]; }, /commitmentMarks\[0\]\.status/);
+  rejects((x) => { x.commitmentMarks = [{ id: 'c1', date: '2026-10-05', status: 'done' }, { id: 'c1', date: '2026-10-05', status: 'missed' }]; }, /same day twice/);
+});

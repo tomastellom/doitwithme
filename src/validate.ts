@@ -1,5 +1,7 @@
 import { defaultPreferences } from './defaults.ts';
 import type {
+  BlockStatus,
+  CommitmentMark,
   Label,
   Block, Commitment, Commute, Course, Deadline, Pattern, Place, PlaceKind, Preferences, Repeats, SoftWindow, State, Task,
   TravelMode, TravelSource, Window,
@@ -199,7 +201,25 @@ function block(v: unknown, path: string): Block {
     start: w.start,
     end: w.end,
     ...(o.deadlineId === undefined ? {} : { deadlineId: str(o.deadlineId, `${path}.deadlineId`) }),
+    ...(o.status === undefined ? {} : { status: blockStatus(o.status, `${path}.status`) }),
   };
+}
+
+function blockStatus(v: unknown, path: string): BlockStatus {
+  if (v !== 'done' && v !== 'missed' && v !== 'waived') fail(`${path} must be "done", "missed" or "waived"`);
+  return v as BlockStatus;
+}
+
+function commitmentMarks(v: unknown): CommitmentMark[] {
+  const list = arr(v, 'commitmentMarks');
+  if (list.length > 4000) fail('commitmentMarks must have at most 4000 entries');
+  const marks = list.map((m, i) => {
+    const o = obj(m, `commitmentMarks[${i}]`);
+    if (o.status !== 'done' && o.status !== 'missed') fail(`commitmentMarks[${i}].status must be "done" or "missed"`);
+    return { id: str(o.id, `commitmentMarks[${i}].id`), date: dateStr(o.date, `commitmentMarks[${i}].date`), status: o.status as 'done' | 'missed' };
+  });
+  if (new Set(marks.map((m) => `${m.id}|${m.date}`)).size !== marks.length) fail('commitmentMarks has the same day twice for one commitment');
+  return marks;
 }
 
 function label(v: unknown, path: string): Label {
@@ -306,6 +326,7 @@ export function validateState(x: unknown): State {
     places,
     commutes,
     ...(labels === undefined ? {} : { labels }),
+    ...(o.commitmentMarks === undefined ? {} : { commitmentMarks: commitmentMarks(o.commitmentMarks) }),
     preferences: preferences(o.preferences ?? defaultPreferences, 'preferences'),
     blocks: arr(o.blocks ?? [], 'blocks').map((b, i) => block(b, `blocks[${i}]`)),
     approvedSoft: approvedSoft(o.approvedSoft),

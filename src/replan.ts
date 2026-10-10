@@ -33,12 +33,16 @@ export function replan(
     if (b.date < today) kept.push(b);
     else if (b.date === today && nowMinutes !== undefined && b.start < nowMinutes) {
       kept.push(b.end <= nowMinutes ? b : { ...b, end: nowMinutes });
+    } else if (b.status !== undefined) {
+      // Something the person ticked off, skipped or took off stays exactly where they left it.
+      kept.push(b);
     }
   }
   // The planner only needs this week and the day before it (weekly targets,
   // rest days) plus blocks tagged to a deadline. Older history only slows it down.
   const cutoff = addDays(weekStart(today), -1);
-  const relevant = kept.filter((b) => b.date >= cutoff || b.deadlineId !== undefined);
+  // A block marked not done no longer counts as work done, so its minutes come back as a shortfall to plan again.
+  const relevant = kept.filter((b) => (b.date >= cutoff || b.deadlineId !== undefined) && b.status !== 'missed');
   const approvedSoft = state.approvedSoft.filter((d) => d >= today);
   const result = plan({
     today,

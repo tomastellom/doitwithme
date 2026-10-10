@@ -79,3 +79,9 @@ Anything that differs from the boards: spacing, sizes, colors, wrapping, fonts n
 - Nudge keeps one picture while his face changes: bar eyes glide, other faces cross-fade. Hover the bottom-right corner when nothing is wrong: a short bubble with a text box appears; click him to jump into the box. He answers that real answers arrive with the AI phase.
 - Small buttons (the Day stepper, the Nudge pager, Setup and panel buttons) fill on hover and press down a pixel on click.
 - With macOS "Reduce motion" on, none of the motion plays.
+
+## Time grid, adding, colors and hours (boards Y, Z)
+- **Week and Day are time grids.** An hour axis down the left, a thin line per hour, every tile at its real time and as tall as its length, blank time left blank. Today has an ink header and a thick line for the current time. Short tiles show only name and start; long ones add the label and the end. Nothing should be cut off; the full text is in the tooltip.
+- **Adding.** Click empty space on a Week or Day column: a panel opens on that day at the clicked time (snapped to a quarter hour). A "+ Add" button in the title row does the same for keyboard users. On the Month every day shows a "+" on hover (always on touch screens). Add needs a title and saves a one-time commitment.
+- **Month.** One dot per planned item in the group colors, "+N" past eight, a vermilion "Due" tag, today in ink. Click a day to open it.
+- **Settings, Appearance.** "Calendar hours": From and To (at least four hours apart, remembered in this browser; a tile outside the range stretches it). "Colors": twelve swatches for each of Fixed, Study, Gym, Chores and errands, and Projects and social (outline); the chosen one has a tick and a thick outline, Reset is off until you change one. The Week, Day, Month dots and filters change at once, and text stays readable.

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createDom } from '../../public/js/dom.js';
 import { SETTINGS, SETTINGS_GROUPS, createSettings } from '../../public/js/settings.js';
 import { createUiPrefs } from '../../public/js/ui-prefs.js';
-import { FakeDocument, byClass, byTag, findAll, textOf } from './fakedom.ts';
+import { FakeDocument, FakeElement, byClass, byTag, findAll, textOf } from './fakedom.ts';
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 const key = (root: any, k: string) => findAll(root, (e) => e.getAttribute('data-fk') === k)[0];
@@ -28,6 +28,9 @@ function setup(opts: any = {}) {
     notify: () => notify,
     enableNotify: async () => { if (opts.answer === 'granted') notify = true; return opts.answer ?? 'denied'; },
     disableNotify: () => { notify = false; },
+    colors: () => ({ fixed: 'ink', study: 'vermilion', gym: 'cobalt', admin: 'amber', outline: 'ink' }),
+    setColor: () => true,
+    resetColor: () => true,
     hours: () => ({ ...range }),
     setHours: (from: number, to: number) => { range = { from, to }; return true; },
   };
@@ -110,7 +113,7 @@ test('a refusal or an unsupported browser is explained and the switch stays Off'
 
 test('every declared row has a title, a sentence and options, and writes through one function', () => {
   for (const row of SETTINGS) {
-    assert.ok(row.title && row.description.endsWith('.') && (row.hours || row.options.length >= 2), row.id);
+    assert.ok(row.title && row.description.endsWith('.') && (row.hours || row.colors || row.options.length >= 2), row.id);
     assert.ok(SETTINGS_GROUPS.some((g) => g.id === row.group), row.id);
   }
 });
@@ -149,4 +152,27 @@ test('the Calendar hours pickers show the saved range and change it', () => {
   from.value = '9';
   from.dispatch('change');
   assert.deepEqual(ui.hours(), { from: 9, to: 22 });
+});
+
+test('Colors: twelve swatches for each kind, the chosen one pressed, picking applies at once, Reset restores', () => {
+  const picked: any[] = [];
+  const colors: Record<string, string> = { fixed: 'ink', study: 'vermilion', gym: 'cobalt', admin: 'amber', outline: 'ink' };
+  const { settings, store, ui } = setup();
+  ui.colors = () => ({ ...colors });
+  ui.setColor = (g: string, id: string) => { colors[g] = id; picked.push([g, id]); return true; };
+  ui.resetColor = (g: string) => { colors[g] = { fixed: 'ink', study: 'vermilion', gym: 'cobalt', admin: 'amber', outline: 'ink' }[g]!; picked.push([g, 'reset']); return true; };
+  const target: any = new FakeElement('html', null, null as any);
+  const dom2 = createDom(new FakeDocument() as any);
+  const s2 = createSettings(dom2, { store, ui, keepFocus: (fn: Function) => fn(), colorTarget: target });
+  const el: any = s2.render({ s: store.get(), route: { id: 'settings', param: null } });
+  assert.equal(findAll(el, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('color-study-') && e.tag === 'button' && !e.getAttribute('data-fk').endsWith('reset')).length, 12);
+  assert.equal(key(el, 'color-study-vermilion').getAttribute('aria-pressed'), 'true');
+  assert.equal(key(el, 'color-study-teal').getAttribute('aria-pressed'), 'false');
+  assert.notEqual(key(el, 'color-study-reset').getAttribute('disabled'), null, 'nothing to reset yet');
+  key(el, 'color-study-teal').click();
+  assert.deepEqual(picked, [['study', 'teal']]);
+  assert.equal(target.style['--g-study'], '#00A3A3', 'the page is recoloured straight away');
+  assert.equal(key(el, 'color-study-teal').getAttribute('aria-pressed'), 'true');
+  key(el, 'color-study-reset').click();
+  assert.equal(target.style['--g-study'], '#FF4B1F');
 });

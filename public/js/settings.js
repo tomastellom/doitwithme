@@ -1,3 +1,5 @@
+import { COLOR_GROUPS, DEFAULT_COLORS, PALETTE, applyColors, onColor } from './colors.js';
+
 export const SETTINGS_GROUPS = [
   { id: 'appearance', title: 'Appearance' },
   { id: 'notifications', title: 'Notifications' },
@@ -23,6 +25,10 @@ export const SETTINGS = [
   {
     id: 'hours', group: 'appearance', title: 'Calendar hours', hours: true,
     description: 'The hours the Week and the Day show, from the first line to the last. Something planned outside them still appears, and the range stretches to hold it.',
+  },
+  {
+    id: 'colors', group: 'appearance', title: 'Colors', colors: true,
+    description: 'A color for each kind of thing, used on the Week, the Day, the Month and the filters. The text on top switches between ink and white by itself. Reset brings back the original.',
   },
   {
     id: 'notifications', group: 'notifications', title: 'System notifications',
@@ -84,7 +90,37 @@ export function createSettings(dom, deps) {
         make('to', 'To', range.from + 4, 24, range.to, (v) => ui.setHours(range.from, v))));
   }
 
+  function colorsRow(row) {
+    const chosen = ui.colors();
+    const tick = (hex) => dom.svg('svg', { viewBox: '0 0 14 14', 'aria-hidden': 'true' },
+      dom.svg('path', { d: 'M2 7.5 5.5 11 12 3.5', fill: 'none', stroke: onColor(hex), 'stroke-width': '2.4' }));
+    return h('div', { class: 'st' },
+      h('b', {}, row.title),
+      h('p', {}, row.description),
+      COLOR_GROUPS.map((g) =>
+        h('div', { class: 'clr' },
+          h('div', {}, h('b', {}, g.label), h('p', {}, g.note)),
+          h('div', { class: 'sws', role: 'group', 'aria-label': `${g.label} color` },
+            PALETTE.map((c) => {
+              const on = chosen[g.id] === c.id;
+              const button = h('button', {
+                type: 'button', class: 'pick', 'aria-pressed': String(on), 'aria-label': c.name, title: c.name, 'data-fk': `color-${g.id}-${c.id}`,
+                onclick: () => { ui.setColor(g.id, c.id); recolor(); rerender(); },
+              }, on && tick(c.hex));
+              button.style.background = c.hex;
+              return button;
+            })),
+          h('button', {
+            type: 'button', class: 'reset mono', 'data-fk': `color-${g.id}-reset`, disabled: chosen[g.id] === DEFAULT_COLORS[g.id],
+            onclick: () => { ui.resetColor(g.id); recolor(); rerender(); },
+          }, 'Reset'))));
+  }
+
+  // The new colors show at once, without a reload.
+  const recolor = () => applyColors(deps.colorTarget, ui.colors());
+
   function rowEl(row) {
+    if (row.colors) return colorsRow(row);
     if (row.hours) return hoursRow(row);
     const ctx = ctxOf();
     const value = row.read(ctx);

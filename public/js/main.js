@@ -3,6 +3,7 @@ import { dayModel } from './day-model.js';
 import { renderDay } from './day.js';
 import { coveredThisWeek, deadlinesModel } from './deadlines-model.js';
 import { renderDeadlines } from './deadlines.js';
+import { applyColors } from './colors.js';
 import { createDom } from './dom.js';
 import { createDrawer } from './drawer.js';
 import { replacingLink, startFavicon } from './favicon.js';
@@ -199,7 +200,9 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   registry.register({ id: 'preferences', title: 'Preferences', group: 'setup', description: 'Windows, breaks and days off.', render: setupPage('preferences') });
 
   const ui = createUiPrefs(win);
-  const settings = createSettings(dom, { store, ui, keepFocus });
+  const colorTarget = document.documentElement;
+  applyColors(colorTarget, ui.colors());
+  const settings = createSettings(dom, { store, ui, keepFocus, colorTarget });
   registry.register({
     id: 'settings', title: 'Settings', group: 'settings', description: 'Look, notifications and how I treat your evenings.',
     render: (ctx) => settings.render(ctx),

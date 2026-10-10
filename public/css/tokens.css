@@ -32,6 +32,17 @@
   --on-study: #111111;
   --on-gym: #FFFFFF;
   --on-admin: #111111;
+  /* Colours of the five kinds of thing; Settings can change them (colors.js sets these on the page). */
+  --g-fixed: #111111;
+  --on-g-fixed: #FFFFFF;
+  --g-study: #FF4B1F;
+  --on-g-study: #111111;
+  --g-gym: #1746F0;
+  --on-g-gym: #FFFFFF;
+  --g-admin: #F5B400;
+  --on-g-admin: #111111;
+  --g-outline: #111111;
+  --on-g-outline: #FFFFFF;
   --font-sans: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'DM Mono', ui-monospace, Menlo, monospace;
 }

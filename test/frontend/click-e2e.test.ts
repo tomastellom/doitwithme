@@ -91,7 +91,7 @@ test('a planned block leads to its task form, and a trip leads to the commute', 
   blk(root, 'block:').click();
   key(root, 'drawer-link-task').click();
   assert.match(win.location.hash, /^#\/tasks\//);
-  assert.equal(textOf(byTag(root, 'h1')[0]), 'Setup');
+  assert.equal(textOf(byTag(root, 'h1')[0]), 'Plan');
   app.navigate('#/week');
   blk(root, 'travel:').click();
   assert.match(textOf(byClass(root, 'drawer')[0]), /Travel \//);
@@ -127,7 +127,7 @@ test('the Deadlines page adds and edits through the existing form', async () => 
   const add = findAll(root, (e: any) => e.tag === 'a' && e.getAttribute('href') === '#/due-dates/new')[0];
   assert.ok(add);
   app.navigate(add.getAttribute('href'));
-  assert.equal(textOf(byTag(root, 'h1')[0]), 'Setup');
+  assert.equal(textOf(byTag(root, 'h1')[0]), 'Plan');
   app.navigate('#/deadlines');
   app.navigate(byClass(root, 'dl')[0].getAttribute('href'));
   assert.match(win.location.hash, /^#\/due-dates\/.+/);
@@ -159,4 +159,21 @@ test('the plus on a Month day opens the same panel for that day', async () => {
   key(root, 'plus-2026-10-20').click();
   assert.equal(key(root, 'f-date').value, '2026-10-20');
   assert.equal(key(root, 'f-start').value, '09:00');
+});
+
+test('+ New offers the four kinds of thing in plain words and each one goes to the right place', async () => {
+  assert.equal((await put(await exampleState())).status, 200);
+  const { app, root, win } = boot();
+  await settled(app);
+  key(root, 'new').click();
+  assert.deepEqual(['choose-timed', 'choose-task', 'choose-due', 'choose-label'].map((k) => textOf(key(root, k)).length > 0), [true, true, true, true]);
+  key(root, 'choose-task').click();
+  assert.equal(win.location.hash, '#/tasks/new');
+  key(root, 'new').click();
+  key(root, 'choose-label').click();
+  assert.equal(win.location.hash, '#/labels/new');
+  key(root, 'new').click();
+  key(root, 'choose-timed').click();
+  assert.equal(key(root, 'f-start').value, '09:00', 'a set-time item opens the quick panel');
+  assert.equal(key(root, 'f-date').value, '2026-10-05');
 });

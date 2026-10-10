@@ -1,7 +1,8 @@
 export const SETTINGS_GROUPS = [
-  { id: 'appearance', title: 'Appearance' },
+  { id: 'calendar', title: 'Calendar' },
+  { id: 'look', title: 'Look' },
   { id: 'notifications', title: 'Notifications' },
-  { id: 'planner', title: 'Planner' },
+  { id: 'planner', title: 'How I plan' },
 ];
 
 const permissionHint = (ctx) => {
@@ -14,14 +15,14 @@ const permissionHint = (ctx) => {
 
 export const SETTINGS = [
   {
-    id: 'theme', group: 'appearance', title: 'Theme',
+    id: 'theme', group: 'look', title: 'Theme',
     description: 'Light is the only theme for now. Dark is planned and will appear here.',
     options: [{ value: 'light', label: 'Light' }, { value: 'dark', label: 'Dark', disabled: true, tag: 'Later' }],
     read: () => 'light',
     write: null,
   },
   {
-    id: 'hours', group: 'appearance', title: 'Calendar hours', hours: true,
+    id: 'hours', group: 'calendar', title: 'Calendar hours', hours: true,
     description: 'The hours the Week and the Day show, from the first line to the last. Something planned outside them still appears, and the range stretches to hold it.',
   },
   {
@@ -103,19 +104,26 @@ export function createSettings(dom, deps) {
       row.hint && h('div', { class: 'hint mono' }, row.hint(ctx)));
   }
 
+  const column = (ids) =>
+    SETTINGS_GROUPS.filter((g) => ids.includes(g.id)).map((g) =>
+      h('div', { class: 'st-grp' },
+        h('span', { class: 'mono st-gh' }, g.title),
+        h('div', { class: 'st-rows' },
+          SETTINGS.filter((r) => r.group === g.id).map(rowEl),
+          // The planning rules (windows, breaks, days off) live here too, so how I plan is in one place.
+          g.id === 'planner' && deps.setup && h('div', { class: 'st-rules' },
+            h('b', {}, 'Planning rules'),
+            h('p', {}, 'When I may plan, how long breaks are, and which days stay light.'),
+            deps.setup.renderEmbedded('preferences', { s: current.s, route: current.route })))));
+
   function build() {
-    const { route, s } = current;
-    const active = SETTINGS_GROUPS.some((g) => g.id === route.param) ? route.param : 'appearance';
+    const { s } = current;
     return [
-      h('div', { class: 'hero' },
-        h('h1', {}, 'Settings'),
-        h('div', { class: 'sub mono' }, SETTINGS_GROUPS.map((g) =>
-          h('a', { href: `#/settings/${g.id}`, 'data-fk': `set-link-${g.id}`, 'aria-current': g.id === active ? 'page' : null }, g.title)))),
+      h('div', { class: 'hero' }, h('h1', {}, 'Settings')),
       s.formError && h('div', { class: 'err st-err', role: 'alert' }, h('b', {}, 'Nothing was saved.'), h('span', { class: 'mono msg' }, s.formError)),
-      h('div', { class: 'st-groups' }, SETTINGS_GROUPS.map((g) =>
-        h('div', { class: 'st-grp' },
-          h('span', { class: 'mono st-gh' }, g.title),
-          h('div', { class: 'st-rows' }, SETTINGS.filter((r) => r.group === g.id).map(rowEl))))),
+      h('div', { class: 'st-two' },
+        h('div', { class: 'st-col' }, column(['calendar', 'look', 'notifications'])),
+        h('div', { class: 'st-col' }, column(['planner']))),
     ];
   }
 

@@ -60,7 +60,7 @@ export function createDrawer(dom, deps) {
     if (!opened) return;
     opened = false;
     el.setAttribute('hidden', '');
-    const key = item ? (item.kind === 'new' ? item.returnKey ?? null : `blk-${itemKey(item)}`) : null;
+    const key = item ? (item.kind === 'new' || item.kind === 'choose' ? item.returnKey ?? null : `blk-${itemKey(item)}`) : null;
     item = null;
     if (returnFocus && key) focusKey(key);
   }
@@ -153,7 +153,7 @@ export function createDrawer(dom, deps) {
       error && h('div', { class: 'err', role: 'alert' }, h('b', {}, 'Nothing was saved.'), h('span', { class: 'mono msg' }, error)),
       h('form', { class: 'dfg', novalidate: true, onsubmit: (e) => { e.preventDefault(); save(c); } }, ...fields),
       h('span', { class: 'note2' }, 'Changes apply to every week of this class. ',
-        h('a', { href: `#/commitments/${encodeURIComponent(c.id)}`, onclick: () => close(false) }, 'More options are in Setup.')),
+        h('a', { href: `#/commitments/${encodeURIComponent(c.id)}`, onclick: () => close(false) }, 'More options are in Plan.')),
       h('div', { class: 'dbtns' },
         h('button', { type: 'button', class: 'y mono', 'data-fk': 'drawer-save', disabled: busy, onclick: () => save(c) }, 'Save'),
         h('button', { type: 'button', class: 'mono', 'data-fk': 'drawer-discard', onclick: () => { draft = commitmentKind.toDraft(c); error = null; confirm = false; scratch = {}; draw(); } }, 'Discard changes'),
@@ -194,10 +194,26 @@ export function createDrawer(dom, deps) {
       error && h('div', { class: 'err', role: 'alert' }, h('b', {}, 'Nothing was saved.'), h('span', { class: 'mono msg' }, error)),
       h('form', { class: 'dfg', novalidate: true, onsubmit: (e) => { e.preventDefault(); saveNew(); } }, ...fields),
       h('span', { class: 'note2' }, 'It happens once, on this day. For something that repeats every week, ',
-        h('a', { href: '#/commitments/new', onclick: () => close(false) }, 'use Setup.')),
+        h('a', { href: '#/commitments/new', onclick: () => close(false) }, 'use Plan.')),
       h('div', { class: 'dbtns' },
         h('button', { type: 'button', class: 'y mono', 'data-fk': 'drawer-save', disabled: busy, onclick: () => saveNew() }, 'Add'),
         h('button', { type: 'button', class: 'mono', 'data-fk': 'drawer-discard', onclick: () => close() }, 'Cancel')),
+    ];
+  }
+
+  // The "+ New" chooser: what kind of thing is being added, in plain words.
+  function choosePanel() {
+    const options = [
+      { fk: 'choose-timed', title: 'Something at a set time', note: 'A lesson, a meeting, an appointment.', run: () => startNew({ date: item.date, start: 9 * 60, returnKey: item.returnKey }) },
+      { fk: 'choose-task', title: 'A task', note: 'Something that needs time but no fixed slot. I find the time.', run: () => go('#/tasks/new') },
+      { fk: 'choose-due', title: 'A due date', note: 'An exam or an assignment, with how long it needs.', run: () => go('#/due-dates/new') },
+      { fk: 'choose-label', title: 'A label', note: 'Your own kind of thing, with a color.', run: () => go('#/labels/new') },
+    ];
+    return [
+      head('New', 'What are you adding?', ''),
+      h('div', { class: 'choices' }, options.map((o) =>
+        h('button', { type: 'button', class: 'choice', 'data-fk': o.fk, onclick: o.run },
+          h('b', {}, o.title), h('span', {}, o.note)))),
     ];
   }
 
@@ -239,9 +255,23 @@ export function createDrawer(dom, deps) {
 
   function draw() {
     if (!item) return;
-    panel.setAttribute('aria-label', item.kind === 'new' ? 'New commitment' : item.kind === 'travel' ? `Commute ${item.end - item.start}` : item.title);
-    const body = item.kind === 'new' ? newPanel() : item.kind === 'commitment' ? commitmentPanel() : item.kind === 'block' ? blockPanel() : travelPanel();
+    panel.setAttribute('aria-label', item.kind === 'choose' ? 'New' : item.kind === 'new' ? 'New commitment' : item.kind === 'travel' ? `Commute ${item.end - item.start}` : item.title);
+    const body = item.kind === 'choose' ? choosePanel() : item.kind === 'new' ? newPanel() : item.kind === 'commitment' ? commitmentPanel() : item.kind === 'block' ? blockPanel() : travelPanel();
     clear(panel, body);
+  }
+
+  function startNew({ date, start, returnKey = null }) {
+    const end = Math.min(start + 60, 24 * 60 - 1);
+    item = { kind: 'new', date, start, end, returnKey };
+    opened = true;
+    error = null;
+    confirm = false;
+    scratch = {};
+    draft = { ...commitmentKind.blank(date), title: '', category: 'other', repeats: 'once', date, start: hhmm(start), end: hhmm(end) };
+    draw();
+    el.removeAttribute('hidden');
+    const first = focusables()[0];
+    if (first) first.focus();
   }
 
   return {
@@ -263,14 +293,14 @@ export function createDrawer(dom, deps) {
       const first = focusables()[0];
       if (first) first.focus();
     },
-    openNew({ date, start, returnKey = null }) {
-      const end = Math.min(start + 60, 24 * 60 - 1);
-      item = { kind: 'new', date, start, end, returnKey };
+    openNew: (spec) => startNew(spec),
+    openChooser({ date, returnKey = null }) {
+      item = { kind: 'choose', date, returnKey };
       opened = true;
       error = null;
       confirm = false;
       scratch = {};
-      draft = { ...commitmentKind.blank(date), title: '', category: 'other', repeats: 'once', date, start: hhmm(start), end: hhmm(end) };
+      draft = null;
       draw();
       el.removeAttribute('hidden');
       const first = focusables()[0];

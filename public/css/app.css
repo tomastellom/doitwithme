@@ -507,3 +507,23 @@ a.dh:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 .ptile { padding: 6px 12px; font-weight: 600; font-size: 15px; }
 .ptile.is-outline { padding: 4px 10px; }
 .note2.kept { margin-left: auto; max-width: 320px; text-align: right; }
+
+/* Top bar: the calendar views, then Plan and Settings set a little apart, and a plain + New. */
+.tab-gap { margin-left: 14px; }
+.btn.new { background: var(--study); color: var(--on-study); font-weight: 600; }
+.btn.new:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+.choices { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.choice { display: flex; flex-direction: column; gap: 2px; align-items: flex-start; text-align: left; padding: 16px 18px; border: 2px solid var(--ink); background: transparent; }
+.choice b { font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+.choice span { color: var(--muted); font-size: 14px; }
+.choice:hover { background: var(--ink); color: var(--paper); }
+.choice:hover span { color: #D6D8DA; }
+
+/* Settings: one page, two columns. */
+.st-two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; margin: 30px 40px 0; align-items: start; }
+.st-col { min-width: 0; }
+.st-rules { margin-top: 18px; padding-top: 14px; border-top: 1px solid #DADCDD; }
+.st-rules b { font-size: 17px; font-weight: 800; letter-spacing: -.01em; }
+.st-rules > p { margin: 2px 0 12px; color: var(--muted); font-size: 13px; }
+.setup-embed .fg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 1100px) { .st-two { grid-template-columns: 1fr; } }

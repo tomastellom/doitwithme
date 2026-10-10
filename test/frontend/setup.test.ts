@@ -42,11 +42,11 @@ const submit = async (root: any) => { byTag(root, 'form')[0].dispatch('submit');
 test('the hero and the sub-navigation point at the setup screens', () => {
   const { render } = setup();
   const el: any = render('tasks');
-  assert.equal(textOf(byTag(el, 'h1')[0]), 'Setup');
+  assert.equal(textOf(byTag(el, 'h1')[0]), 'Plan');
   const links = byClass(el, 'sub')[0].children.filter((c: any) => c.tag === 'a');
-  assert.deepEqual(links.map((l: any) => textOf(l)), ['Commitments', 'Tasks', 'Due dates', 'Labels', 'Places', 'Commutes', 'Preferences']);
-  assert.deepEqual(links.map((l: any) => l.getAttribute('href')), ['#/commitments', '#/tasks', '#/due-dates', '#/labels', '#/places', '#/commutes', '#/preferences']);
-  assert.deepEqual(links.map((l: any) => l.getAttribute('aria-current')), [null, 'page', null, null, null, null, null]);
+  assert.deepEqual(links.map((l: any) => textOf(l)), ['Commitments', 'Tasks', 'Due dates', 'Labels', 'Places', 'Commutes']);
+  assert.deepEqual(links.map((l: any) => l.getAttribute('href')), ['#/commitments', '#/tasks', '#/due-dates', '#/labels', '#/places', '#/commutes']);
+  assert.deepEqual(links.map((l: any) => l.getAttribute('aria-current')), [null, 'page', null, null, null, null]);
 });
 
 test('the list shows title, label and summary like board H, and marks the selected item', () => {
@@ -226,7 +226,7 @@ test('saving preferences changes only the preferences and keeps softMode', async
   assert.equal(calls[0].preferences.minBlock, 45);
   assert.equal(calls[0].preferences.softMode, 'auto');
   assert.deepEqual(calls[0].tasks, state.tasks);
-  assert.deepEqual(navs, ['#/preferences']);
+  assert.deepEqual(navs, ['#/settings']);
 });
 
 test('due dates pick from the tasks and list their summary', async () => {
@@ -283,7 +283,7 @@ test('the sub-navigation lists the screens with Places and Commutes', () => {
   const { render } = setup();
   const el: any = render('places');
   const links = byClass(el, 'sub')[0].children.filter((c: any) => c.tag === 'a');
-  assert.deepEqual(links.map((l: any) => textOf(l)), ['Commitments', 'Tasks', 'Due dates', 'Labels', 'Places', 'Commutes', 'Preferences']);
+  assert.deepEqual(links.map((l: any) => textOf(l)), ['Commitments', 'Tasks', 'Due dates', 'Labels', 'Places', 'Commutes']);
 });
 
 test('the places list shows address or "Address missing", and the form edits the place', async () => {

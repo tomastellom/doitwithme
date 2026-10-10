@@ -37,11 +37,11 @@ function setup(opts: any = {}) {
   return { settings, draw, saves, ui, store };
 }
 
-test('the screen shows the three groups, the Light theme and a dimmed Dark marked Later', () => {
+test('the screen shows the four groups, the Light theme and a dimmed Dark marked Later', () => {
   const { draw } = setup();
   const el = draw();
   assert.equal(textOf(byTag(el, 'h1')[0]), 'Settings');
-  assert.deepEqual(SETTINGS_GROUPS.map((g) => g.title), ['Appearance', 'Notifications', 'Planner']);
+  assert.deepEqual(SETTINGS_GROUPS.map((g) => g.title), ['Calendar', 'Look', 'Notifications', 'How I plan']);
   const text = textOf(el);
   for (const t of ['Theme', 'System notifications', 'Soft time', 'Later']) assert.match(text, new RegExp(t));
   const dark = key(el, 'set-theme-dark');
@@ -49,12 +49,14 @@ test('the screen shows the three groups, the Light theme and a dimmed Dark marke
   assert.equal(key(el, 'set-theme-light').getAttribute('aria-pressed'), 'true');
 });
 
-test('the sub-navigation links to each group and marks the current one', () => {
+test('everything is on one page, in two columns, with no sub-tabs to hunt through', () => {
   const { draw } = setup();
-  const links = (el: any) => byClass(el, 'sub')[0].children.filter((c: any) => c.tag === 'a');
-  assert.deepEqual(links(draw()).map((l: any) => l.getAttribute('href')), ['#/settings/appearance', '#/settings/notifications', '#/settings/planner']);
-  const el = draw('notifications');
-  assert.equal(links(el).find((l: any) => textOf(l) === 'Notifications').getAttribute('aria-current'), 'page');
+  const el = draw();
+  assert.equal(byClass(el, 'sub').length, 0);
+  assert.equal(byClass(el, 'st-grp').length, 4);
+  assert.deepEqual(byClass(el, 'st-gh').map(textOf), ['Calendar', 'Look', 'Notifications', 'How I plan']);
+  assert.equal(byClass(byClass(el, 'st-col')[0], 'st-grp').length, 3);
+  assert.equal(byClass(byClass(el, 'st-col')[1], 'st-grp').length, 1);
 });
 
 test('soft time saves through the freshest copy and changes only that preference', async () => {
@@ -115,12 +117,10 @@ test('every declared row has a title, a sentence and options, and writes through
   }
 });
 
-test('the hint says when notifications are already allowed, and the sub-links keep keyboard focus', () => {
+test('the hint says when notifications are already allowed', () => {
   const allowed = setup({ permission: 'granted' });
   assert.match(textOf(allowed.draw()), /Allowed in this browser/);
   assert.doesNotMatch(textOf(allowed.draw()), /will ask for permission/);
-  const links = byClass(allowed.draw(), 'sub')[0].children.filter((c: any) => c.tag === 'a');
-  assert.deepEqual(links.map((l: any) => l.getAttribute('data-fk')), ['set-link-appearance', 'set-link-notifications', 'set-link-planner']);
 });
 
 test('Calendar hours: two pickers that can never leave less than four hours, saved in this browser', () => {

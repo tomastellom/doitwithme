@@ -52,22 +52,22 @@ const type = (root: any, k: string, value: string) => { const el = key(root, k);
 const save = async (app: any, root: any) => { byTag(root, 'form')[0].dispatch('submit'); await app.store.idle(); await tick(); };
 const button = (root: any, label: string) => byTag(root, 'button').find((b: any) => textOf(b).trim() === label)!;
 
-test('the Setup tab and Menu entries exist, and the tab is current on every setup route', async () => {
+test('the Plan tab and Menu entries exist, and the tab is current on every setup route', async () => {
   assert.equal((await put(baseState())).status, 200);
   const { app, root } = boot();
   await settled(app);
   const tabs = () => findAll(root, (e) => e.tag === 'a' && e.hasClass('tab'));
-  assert.deepEqual(tabs().map(textOf), ['Day', 'Week', 'Month', 'Deadlines', 'Setup']);
-  for (const id of ['setup', 'commitments', 'tasks', 'due-dates', 'places', 'commutes', 'preferences']) {
+  assert.deepEqual(tabs().map(textOf), ['Day', 'Week', 'Month', 'Deadlines', 'Plan', 'Settings']);
+  for (const id of ['setup', 'commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes']) {
     app.navigate(`#/${id}`);
-    assert.equal(tabs().find((t: any) => textOf(t) === 'Setup').getAttribute('aria-current'), 'page', id);
-    assert.equal(textOf(byTag(root, 'h1')[0]), 'Setup');
+    assert.equal(tabs().find((t: any) => textOf(t) === 'Plan').getAttribute('aria-current'), 'page', id);
+    assert.equal(textOf(byTag(root, 'h1')[0]), 'Plan');
   }
   app.navigate('#/week');
-  assert.equal(tabs().find((t: any) => textOf(t) === 'Setup').getAttribute('aria-current'), null);
+  assert.equal(tabs().find((t: any) => textOf(t) === 'Plan').getAttribute('aria-current'), null);
   app.menu.open(null);
   const menuLinks = byClass(app.menu.el, 'it').map((l: any) => l.getAttribute('href'));
-  assert.deepEqual(menuLinks, ['#/day', '#/week', '#/month', '#/deadlines', '#/commitments', '#/tasks', '#/due-dates', '#/places', '#/commutes', '#/preferences', '#/settings']);
+  assert.deepEqual(menuLinks, ['#/day', '#/week', '#/month', '#/deadlines', '#/commitments', '#/tasks', '#/due-dates', '#/labels', '#/places', '#/commutes', '#/settings']);
 });
 
 test('add a commitment through the form: it is saved on the server and shows on the week', async () => {

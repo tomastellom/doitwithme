@@ -80,8 +80,15 @@ Anything that differs from the boards: spacing, sizes, colors, wrapping, fonts n
 - Small buttons (the Day stepper, the Nudge pager, Setup and panel buttons) fill on hover and press down a pixel on click.
 - With macOS "Reduce motion" on, none of the motion plays.
 
-## Time grid, adding, colors and hours (boards Y, Z)
+## Time grid, adding and hours (board Y)
 - **Week and Day are time grids.** An hour axis down the left, a thin line per hour, every tile at its real time and as tall as its length, blank time left blank. Today has an ink header and a thick line for the current time. Short tiles show only name and start; long ones add the label and the end. Nothing should be cut off; the full text is in the tooltip.
 - **Adding.** Click empty space on a Week or Day column: a panel opens on that day at the clicked time (snapped to a quarter hour). A "+ Add" button in the title row does the same for keyboard users. On the Month every day shows a "+" on hover (always on touch screens). Add needs a title and saves a one-time commitment.
-- **Month.** One dot per planned item in the group colors, "+N" past eight, a vermilion "Due" tag, today in ink. Click a day to open it.
-- **Settings, Appearance.** "Calendar hours": From and To (at least four hours apart, remembered in this browser; a tile outside the range stretches it). "Colors": twelve swatches for each of Fixed, Study, Gym, Chores and errands, and Projects and social (outline); the chosen one has a tick and a thick outline, Reset is off until you change one. The Week, Day, Month dots and filters change at once, and text stays readable.
+- **Month.** One dot per planned item in the label colors, "+N" past eight, a vermilion "Due" tag, today in ink. Click a day to open it.
+
+## Navigation, Labels and Settings (boards AA, AB)
+- **Top bar.** Day, Week, Month, Deadlines, then Plan and Settings set a little apart; on the right a vermilion "+ New" (it asks: something at a set time, a task, a due date, or a label), Menu and Replan.
+- **Plan** (it used to be called Setup) has Commitments, Tasks, Due dates, **Labels**, Places and Commutes.
+- **Labels.** Every kind of thing is filed under a label. Open Plan > Labels: Class, Study, Gym and so on are listed with their color. Click one to rename it, pick one of twelve colors, choose Filled or Outlined; the preview tile updates. "New label" makes your own. Study and Other cannot be deleted (they say why); deleting any other label moves what used it to Other. The commitment and task forms now say "Label" and list your labels by name. Week, Day and Month tiles, dots, legends and filters all use the label colors.
+- **Filters** under the Week list every label in use with its count; "Show all" appears while something is hidden.
+- **Settings** is one page in two columns: Calendar (hours shown, From and To, at least four hours apart, remembered in this browser; a tile outside the range stretches it), Look, Notifications, and How I plan (soft time plus the planning rules form that used to be Preferences). `#/preferences` still works and lands here.
+- **Nudge** now has a "Fix it myself" button next to his offer and "Leave it": it opens the due date, the task, the place or the day the warning is about.

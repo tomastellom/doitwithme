@@ -78,7 +78,7 @@ test('boots, draws the week, and walks the whole approve, undo and dismiss story
   assert.match(textOf(byClass(root, 'day')[0]), /18:00–20:00/);
   assert.equal(byClass(fridayColumn(root), 'blk').filter((b: any) => /18:00/.test(textOf(b))).length, 0, 'the evening is empty again');
   assert.equal(byTag(root, 'nav').length, 1);
-  assert.deepEqual(findAll(root, (e) => e.tag === 'a' && e.hasClass('tab')).map(textOf), ['Day', 'Week', 'Month', 'Deadlines', 'Setup']);
+  assert.deepEqual(findAll(root, (e) => e.tag === 'a' && e.hasClass('tab')).map(textOf), ['Day', 'Week', 'Month', 'Deadlines', 'Plan', 'Settings']);
 
   // Nudge speaks and offers Friday evening
   const nudge = byClass(root, 'nudge')[0];

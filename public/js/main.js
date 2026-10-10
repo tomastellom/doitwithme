@@ -194,22 +194,24 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   const setup = createSetup(dom, { store, getClock, navigate, keepFocus });
   const setupPage = (kindId) => (ctx) => setup.render(kindId, ctx);
   registry.register({
-    id: 'setup', title: 'Setup', group: 'setup', primary: true, inMenu: false,
-    activeFor: ['commitments', 'tasks', 'due-dates', 'places', 'commutes', 'preferences'], render: setupPage('commitments'),
+    id: 'setup', title: 'Plan', group: 'setup', primary: true, inMenu: false,
+    activeFor: ['commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes'], render: setupPage('commitments'),
   });
   registry.register({ id: 'commitments', title: 'Commitments', group: 'setup', description: 'What is fixed.', render: setupPage('commitments') });
   registry.register({ id: 'tasks', title: 'Tasks', group: 'setup', description: 'What needs time but no fixed slot.', render: setupPage('tasks') });
   registry.register({ id: 'due-dates', title: 'Due dates', group: 'setup', description: 'When things are due and how much effort they need.', render: setupPage('due-dates') });
+  registry.register({ id: 'labels', title: 'Labels', group: 'setup', description: 'Your own kinds of things, each with a color.', render: setupPage('labels') });
   registry.register({ id: 'places', title: 'Places', group: 'setup', description: 'Home, campus and where your lessons are.', render: setupPage('places') });
   registry.register({ id: 'commutes', title: 'Commutes', group: 'setup', description: 'How long it takes to get around.', render: setupPage('commutes') });
-  registry.register({ id: 'preferences', title: 'Preferences', group: 'setup', description: 'Windows, breaks and days off.', render: setupPage('preferences') });
 
   const ui = createUiPrefs(win);
-  const settings = createSettings(dom, { store, ui, keepFocus });
+  const settings = createSettings(dom, { store, ui, keepFocus, setup });
   registry.register({
-    id: 'settings', title: 'Settings', group: 'settings', description: 'Look, notifications and how I treat your evenings.',
-    render: (ctx) => settings.render(ctx),
+    id: 'settings', title: 'Settings', group: 'settings', primary: true, description: 'The hours shown, the look, notifications, and how I plan.',
+    activeFor: ['preferences'], render: (ctx) => settings.render(ctx),
   });
+  // The old address for the planning rules still works: it opens Settings, where they live now.
+  registry.register({ id: 'preferences', title: 'Planning rules', group: 'settings', inMenu: false, render: (ctx) => settings.render(ctx) });
 
   function renderBar() {
     const s = store.get();
@@ -218,9 +220,10 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       h('nav', { class: 'tabs mono', 'aria-label': 'Main' },
         registry.primary().map((section) => {
           const current = section.id === route.id || section.activeFor.includes(route.id);
-          return h('a', { class: 'tab', href: `#/${section.id}`, 'data-fk': `tab-${section.id}`, 'aria-current': current ? 'page' : null }, section.title);
+          return h('a', { class: section.id === 'setup' ? 'tab tab-gap' : 'tab', href: `#/${section.id}`, 'data-fk': `tab-${section.id}`, 'aria-current': current ? 'page' : null }, section.title);
         })),
       h('div', { class: 'actions' },
+        h('button', { type: 'button', class: 'btn new', 'data-fk': 'new', onclick: () => drawer.openChooser({ date: getClock().today, returnKey: 'new' }) }, '+ New'),
         menuButton,
         h('button', { type: 'button', class: 'btn go mono', 'data-fk': 'replan', disabled: s.busy || s.status !== 'ready', onclick: () => store.replan() }, 'Replan')));
   }

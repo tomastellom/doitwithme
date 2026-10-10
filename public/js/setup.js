@@ -275,7 +275,7 @@ export function createSetup(dom, deps) {
       return;
     }
     local.error = null;
-    await finish((fresh) => applyItem(fresh, kindId, result.item), sel.spec.single ? '#/preferences' : `#/${kindId}/${encodeURIComponent(result.item.id)}`);
+    await finish((fresh) => applyItem(fresh, kindId, result.item), sel.spec.single ? '#/settings' : `#/${kindId}/${encodeURIComponent(result.item.id)}`);
   }
 
   async function remove(sel) {
@@ -335,9 +335,11 @@ export function createSetup(dom, deps) {
     const { kindId } = current;
     const sel = selection();
     ensureDraft(sel);
+    // Embedded (the planning rules inside Settings) it is just the form, with no title row of its own.
+    if (current.embedded) return [formColumn(sel)];
     return [
       h('div', { class: 'hero' },
-        h('h1', {}, 'Setup'),
+        h('h1', {}, 'Plan'),
         h('div', { class: 'sub mono' }, KIND_IDS.map((id) =>
           h('a', { href: `#/${id}`, 'aria-current': id === kindId ? 'page' : null }, KINDS[id].title)))),
       h('div', { class: 'cols' }, listColumn(sel), formColumn(sel)),
@@ -345,6 +347,12 @@ export function createSetup(dom, deps) {
   }
 
   return {
+    renderEmbedded(kindId, ctx) {
+      current = { kindId, embedded: true, ...ctx };
+      container = h('div', { class: 'setup-embed' });
+      clear(container, build());
+      return container;
+    },
     render(kindId, ctx) {
       current = { kindId, ...ctx };
       container = h('section', { class: 'setup' });

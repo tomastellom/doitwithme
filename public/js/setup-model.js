@@ -404,7 +404,7 @@ export const KINDS = {
   },
   preferences: { id: 'preferences', title: 'Preferences', single: true, kind: preferencesKind },
 };
-export const KIND_IDS = ['commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes', 'preferences'];
+export const KIND_IDS = ['commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes'];
 
 const listOf = (state, spec) => (spec.list === 'labels' ? labelsOf(state) : state[spec.list] ?? []);
 export const itemsOf = (state, kindId) => (KINDS[kindId].list ? listOf(state, KINDS[kindId]) : []);

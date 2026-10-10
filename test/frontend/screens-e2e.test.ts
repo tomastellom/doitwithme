@@ -99,15 +99,19 @@ test('Settings saves soft time to the server and keeps every other preference', 
   assert.equal(key(root, 'set-softMode-auto').getAttribute('aria-pressed'), 'true');
 });
 
-test('the Menu offers Settings, and the Settings sub-links open each group', async () => {
+test('Settings is a tab, one page with the hours, the look, notifications and the planning rules', async () => {
   assert.equal((await put(await exampleState())).status, 200);
   const { app, root } = boot();
   await settled(app);
-  app.menu.open(null);
-  assert.ok(byClass(app.menu.el, 'it').some((l: any) => l.getAttribute('href') === '#/settings'));
-  app.navigate('#/settings/planner');
-  const current = findAll(root, (e: any) => e.tag === 'a' && e.getAttribute('aria-current') === 'page' && e.getAttribute('href')?.startsWith('#/settings/'));
-  assert.equal(textOf(current[0]), 'Planner');
+  const tab = () => findAll(root, (e: any) => e.tag === 'a' && e.hasClass('tab') && textOf(e) === 'Settings')[0];
+  assert.ok(tab(), 'Settings is in the top bar, not hidden in the Menu');
+  app.navigate('#/settings');
+  assert.equal(tab().getAttribute('aria-current'), 'page');
+  assert.deepEqual(byClass(root, 'st-gh').map(textOf), ['Calendar', 'Look', 'Notifications', 'How I plan']);
+  assert.ok(findAll(root, (e: any) => e.getAttribute('data-fk') === 'set-hours-from')[0]);
+  assert.ok(byClass(root, 'setup-embed').length === 1, 'the planning rules form sits inside Settings');
+  app.navigate('#/preferences');
+  assert.equal(tab().getAttribute('aria-current'), 'page', 'the old Preferences address lands on Settings');
 });
 
 test('moving between tabs marks the new screen with the way it came in; staying put does not', async () => {

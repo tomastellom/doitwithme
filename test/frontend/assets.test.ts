@@ -165,3 +165,12 @@ test('calendar items drawn as buttons look like the blocks on the boards', () =>
   for (const later of ['.g-outline {', '.travel {', '.g-fixed {']) assert.ok(css.indexOf(later) > reset, `${later} comes after the reset so its look wins`);
   assert.match(css, /^\.blk \{[^}]*width: 100%;/m);
 });
+
+test('buttons and tabs use the sans face, and no text is oversized', () => {
+  const css = readFileSync('public/css/app.css', 'utf8');
+  assert.match(css, /button\.mono, \.tabs\.mono \{[^}]*font-family: var\(--font-sans\)/);
+  assert.match(css, /\.tab, \.btn \{[^}]*min-height: 44px/);
+  const sizes = [...css.matchAll(/font-size: (\d+)px/g)].map((m) => Number(m[1]));
+  assert.ok(Math.max(...sizes) <= 84, `largest text ${Math.max(...sizes)}px`);
+  assert.ok(sizes.filter((n) => n > 56).length <= 2, 'only the page titles are bigger than 56px');
+});

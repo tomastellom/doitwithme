@@ -62,3 +62,20 @@ Anything that differs from the boards: spacing, sizes, colors, wrapping, fonts n
 - **Preferences:** three new fields in the same style as the others: Hours a week per credit (optional), Credits in a normal semester, Study hours a week at a full load. Labels that wrap to two lines must not push their box lower than the neighbours in the same row.
 - **Tasks, a Study task:** a "Course details" block under a thick rule with Credits, Difficulty (1 very easy to 5 very hard), three Yes/No choices (graded by exams only, weekly graded work, has a lab), a Syllabus box and an Estimate hours button. A task that is not Study shows none of this.
 - **Estimate hours:** press it with credits filled in. A card appears with a vermilion bar on its left, the hours in big type, one sentence, a "Rule of thumb" tag, Use this and Keep mine, and a grey line saying the AI is not connected yet. Use this fills "Minutes a week"; Keep mine just closes the card. Nudge shows his thinking face while it works. Without credits the button explains what is missing.
+
+## Click to edit (boards U, V, G)
+- Click a lecture on the Week: the page dims on the left and a panel slides in from the right with the class, its days, the time, a dashed "Skip this day" box, the fields (Title, Category, Place, Starts, Ends, Weekdays), Save, Discard changes and Delete. Esc, Close and clicking the dimmed area close it.
+- Skip a Tuesday: only that Tuesday disappears; Thursday stays.
+- Click a planned study block: the panel says it was planned for you and offers Edit the task and See its due dates.
+- Click a hatched trip: it says where its time came from, with Add a commute or Edit the commute and Edit the place.
+- The Day screen does the same. Tab stays inside the panel. Pressing `/` in the panel does not open the Menu.
+- Deadlines: a vermilion "+ Add a due date" top right and the caption "Click a row to edit it". Rows highlight on hover and open the due date's form.
+- When a button sends you to another screen (Edit the task, an Edit link, a Deadlines row), that screen starts at the top, not scrolled down.
+
+## Look and motion
+- The background is pure white; buttons and tabs are Bricolage Grotesque, semi-bold, normal case; mono is only for times, counts and small labels. Page titles are 84 px at most.
+- Changing tab slides the old screen out and the new one in (about half a second). Stepping a day or week keeps the title row, the Previous, Today and Next buttons and the filters still; only the plan slides.
+- The Menu settles in from slightly larger with its columns rising one after another, and eases away when closed.
+- Nudge keeps one picture while his face changes: bar eyes glide, other faces cross-fade. Hover the bottom-right corner when nothing is wrong: a short bubble with a text box appears; click him to jump into the box. He answers that real answers arrive with the AI phase.
+- Small buttons (the Day stepper, the Nudge pager, Setup and panel buttons) fill on hover and press down a pixel on click.
+- With macOS "Reduce motion" on, none of the motion plays.

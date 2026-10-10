@@ -231,3 +231,23 @@ test('from the Month, the check-off button lists the day and ticks a class done'
   const marks = (await serverState());
   assert.ok(marks.commitmentMarks?.length === 1 || marks.blocks.some((b: any) => b.status === 'done'));
 });
+
+test('after a tick Nudge cheers, and with nobody pressing Okay he leaves by himself after a few seconds', async () => {
+  assert.equal((await put(await exampleState())).status, 200);
+  const document: any = new FakeDocument();
+  const root = document.createElement('div');
+  const timers: Array<{ fn: Function; ms: number }> = [];
+  const win: any = { location: { hash: '' }, localStorage: undefined, listeners: {}, addEventListener(t: string, f: Function) { (this.listeners[t] ??= []).push(f); }, setTimeout: (fn: Function, ms: number) => { timers.push({ fn, ms }); return timers.length; }, clearTimeout() {} };
+  const app: any = startApp({ root, document, fetch: (p: string, i: any) => fetch(base + p, i), win, now });
+  await settled(app);
+  findAll(root, (e: any) => e.tag === 'button' && (e.getAttribute('data-fk') ?? '').startsWith('tick-block:'))[0].click();
+  await app.store.idle();
+  await tick(80);
+  const nudge = byClass(root, 'nudge')[0];
+  assert.match(textOf(nudge), /done\./i);
+  const auto = timers.filter((t) => t.ms === 5000);
+  assert.equal(auto.length, 1, 'one five second timer was started');
+  auto[0].fn();
+  assert.equal(app.store.get().cheer, null, 'the cheer is gone');
+  assert.doesNotMatch(textOf(byClass(root, 'nudge')[0]), /Nice\.|Well done\.|One less|That counts/);
+});

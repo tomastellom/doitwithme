@@ -534,12 +534,44 @@ test('when something is ticked off he is happy, says what got done, and clears i
   assert.equal(face(), 'happy');
   assert.match(textOf(nudge.el), /Nice\. Chemistry done\./);
   assert.match(textOf(nudge.el), /0h55 of Chemistry is in the bank\./);
-  const clear = timers.find((t) => t.ms === 6000)!;
-  assert.ok(clear, 'a six second timer');
+  const clear = timers.find((t) => t.ms === 5000)!;
+  assert.ok(clear, 'a five second timer');
   clear.fn();
   assert.deepEqual(calls, ['cheerDone']);
   nudge.update({ ...base, cheer: { ...cheer, big: true, title: 'That is everything for today.' } });
   assert.equal(face(), 'celebrating', 'a finished day gets the confetti');
   assert.equal(faceFor({ ...base, cheer: { big: false } }), 'happy');
   assert.equal(faceFor({ ...base, cheer, status: 'offline' }), 'sleepy', 'trouble still comes first');
+});
+
+test('with nothing to say, the pointer on his corner makes him peek over the edge, and he stops when it leaves', () => {
+  const { nudge } = timed();
+  const face = () => byClass(nudge.el, 'mascot')[0].getAttribute('data-face');
+  nudge.update({ ...base });
+  assert.equal(face(), 'resting');
+  nudge.el.dispatch('mouseenter');
+  assert.equal(face(), 'peeking');
+  assert.equal(byClass(nudge.el, 'mascot-mask').length, 1, 'the wall he looks over is drawn');
+  nudge.el.dispatch('mouseleave');
+  assert.equal(face(), 'resting');
+});
+
+test('he does not peek when he has something to tell you', () => {
+  const { nudge } = timed();
+  nudge.update({ ...base, items: [item()] });
+  nudge.el.dispatch('mouseenter');
+  assert.equal(byClass(nudge.el, 'mascot')[0].getAttribute('data-face'), 'glance-left');
+  assert.equal(faceFor({ ...base, peek: true, cheer: { big: false } }), 'happy');
+  assert.equal(faceFor({ ...base, peek: true }), 'peeking');
+  assert.equal(faceFor({ ...base, peek: true, status: 'offline' }), 'sleepy');
+});
+
+test('the cheer still goes away by itself when the person asked for reduced motion', () => {
+  const timers: Array<{ fn: Function; ms: number }> = [];
+  const calls: string[] = [];
+  const env = { setTimer: (fn: Function, ms: number) => { timers.push({ fn, ms }); return timers.length; }, clearTimer: () => {}, random: () => 0.9, reduceMotion: true };
+  const nudge: any = createNudge(dom, { approve() {}, undo() {}, dismiss() {}, okay() {}, retry() {}, cheerDone: () => calls.push('gone') }, env);
+  nudge.update({ ...base, cheer: { big: false, title: 'Nice.', text: 'x' } });
+  timers.find((t) => t.ms === 5000)!.fn();
+  assert.deepEqual(calls, ['gone']);
 });

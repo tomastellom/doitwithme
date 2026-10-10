@@ -156,6 +156,8 @@ export function faceFor(view) {
     return shortfalls.length > 0 ? 'glance-left' : 'thinking';
   }
   if (view.notice) return 'resting';
+  // Nothing to say and the pointer is on his corner: he peeks over the edge before he comes up.
+  if (view.peek) return 'peeking';
   if (view.celebrate) return 'celebrating';
   if (view.glance) return `glance-${view.glance}`;
   return 'resting';
@@ -173,6 +175,8 @@ function spokenFor(view, item) {
   if (item) return item.headline;
   return view.status === 'loading' ? '' : 'All clear.';
 }
+
+const CHEER_MS = 5000;
 
 const needsAttention = (view) =>
   view.status === 'offline' || view.status === 'error' || Boolean(view.cheer) || Boolean(view.confirm) || view.items.length > 0 || Boolean(view.notice);
@@ -192,6 +196,7 @@ export function createNudge(dom, handlers, env = {}) {
   let glanceTimer = null;
   let surpriseTimer = null;
   let cheerTimer = null;
+  let hovered = false;
   let cheerShown = null;
   let wasAttention = false;
   let holding = false;
@@ -311,7 +316,7 @@ export function createNudge(dom, handlers, env = {}) {
     // While he slides out of sight he keeps the face and words he had; the calm ones come after.
     if (holding && !attention) return;
     holding = false;
-    const face = faceFor({ ...view, glance, surprised });
+    const face = faceFor({ ...view, glance, surprised, peek: hovered });
     const key = `${width}|${badge !== null}`;
     if (mascot === null || key !== mascotKey) {
       mascot = createMascot(dom, { face, badge, width });
@@ -330,7 +335,7 @@ export function createNudge(dom, handlers, env = {}) {
   // Idle looks and the startle only move his eyes. The bubble, and any text you are typing in it, stay as they are.
   function updateFace() {
     if (mascot === null || holding) return render();
-    mascot.setFace(faceFor({ ...view, glance, surprised }), motion());
+    mascot.setFace(faceFor({ ...view, glance, surprised, peek: hovered }), motion());
   }
 
   function release() {
@@ -344,6 +349,9 @@ export function createNudge(dom, handlers, env = {}) {
     release();
   });
   // Pressing on him while he rests must not give the corner keyboard focus, or he would stay up until you click elsewhere.
+  // The pointer on his corner makes him peek (only while he has nothing to say).
+  el.addEventListener('mouseenter', () => { hovered = true; updateFace(); });
+  el.addEventListener('mouseleave', () => { hovered = false; updateFace(); });
   el.addEventListener('mousedown', (e) => {
     const tag = ((e.target && (e.target.tagName || e.target.tag)) || '').toLowerCase();
     if (el.getAttribute('data-state') === 'resting' && tag !== 'input') e.preventDefault();
@@ -388,9 +396,9 @@ export function createNudge(dom, handlers, env = {}) {
     update(next) {
       view = { notice: null, cheer: null, ...next };
       // The cheer goes away by itself after a few seconds.
-      if (view.cheer && view.cheer !== cheerShown && animated && handlers.cheerDone) {
+      if (view.cheer && view.cheer !== cheerShown && typeof env.setTimer === 'function' && handlers.cheerDone) {
         if (cheerTimer !== null && typeof env.clearTimer === 'function') env.clearTimer(cheerTimer);
-        cheerTimer = env.setTimer(() => { cheerTimer = null; handlers.cheerDone(); }, 6000);
+        cheerTimer = env.setTimer(() => { cheerTimer = null; handlers.cheerDone(); }, CHEER_MS);
       }
       cheerShown = view.cheer;
       const attentionNow = needsAttention(view);

@@ -92,3 +92,10 @@ Anything that differs from the boards: spacing, sizes, colors, wrapping, fonts n
 - **Filters** under the Week list every label in use with its count; "Show all" appears while something is hidden.
 - **Settings** is one page in two columns: Calendar (hours shown, From and To, at least four hours apart, remembered in this browser; a tile outside the range stretches it), Look, Notifications, and How I plan (soft time plus the planning rules form that used to be Preferences). `#/preferences` still works and lands here.
 - **Nudge** now has a "Fix it myself" button next to his offer and "Leave it": it opens the due date, the task, the place or the day the warning is about.
+
+## Done and not done (board AC)
+- **Tick boxes.** Every planned tile on the Week and the Day has a small box at its left edge. Press it: the tile fades, its name gets a line through it, the box fills, and Nudge comes up happy ("Nice. Chemistry done." with the time in the bank). Press the box again to take it back. Trips have no box.
+- **Panel.** Click a planned block: "Mark as done" and "I did not do this one". Click a class: "Mark as done" and "I did not go" (that day only). Something already done says "Done." and offers "Mark as not done yet".
+- **Not done, for a study or project block.** "I did not do this one" asks what to do with the time: **Find another time** (it stays on the calendar as a dashed "Not done" tile and the minutes are planned again in free time), **Take it off this week** (a dashed "Taken off" tile; the week target drops by that time and nothing replaces it; for a block that belongs to a due date it says "Shorten this by ...") or **Let the AI sort it out** (visible, dashed, "Not connected yet"). Back changes nothing.
+- **Month.** Hover a day with things planned: a check mark button beside the "+" opens that day as a checklist; tick things off right there, or press a row to open it. Dots of done items are faded.
+- **Nudge** is happy after a tick, and does his confetti face when everything planned for that day is done. The message goes away by itself after six seconds.

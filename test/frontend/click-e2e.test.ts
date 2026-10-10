@@ -177,3 +177,57 @@ test('+ New offers the four kinds of thing in plain words and each one goes to t
   assert.equal(key(root, 'f-start').value, '09:00', 'a set-time item opens the quick panel');
   assert.equal(key(root, 'f-date').value, '2026-10-05');
 });
+
+test('tick a study block done on the Week: it is saved on the server, shows faded, and Nudge cheers', async () => {
+  assert.equal((await put(await exampleState())).status, 200);
+  const { app, root } = boot();
+  await settled(app);
+  const box = findAll(root, (e: any) => e.tag === 'button' && (e.getAttribute('data-fk') ?? '').startsWith('tick-block:'))[0];
+  assert.ok(box, 'a planned block has a tick box');
+  const fk = box.getAttribute('data-fk');
+  box.click();
+  await app.store.idle();
+  await tick(80);
+  const doneBlocks = (await serverState()).blocks.filter((b: any) => b.status === 'done');
+  assert.equal(doneBlocks.length, 1);
+  const again = findAll(root, (e: any) => e.getAttribute('data-fk') === fk)[0];
+  assert.equal(again.getAttribute('aria-pressed'), 'true');
+  assert.match(textOf(byClass(root, 'nudge')[0]), /done\./i);
+  assert.equal(byClass(byClass(root, 'nudge')[0], 'mascot')[0].getAttribute('data-face'), 'happy');
+  again.click();
+  await app.store.idle();
+  await tick(80);
+  assert.equal((await serverState()).blocks.filter((b: any) => b.status === 'done').length, 0, 'ticking again takes it back');
+});
+
+test('"not done" then "Find another time" keeps the missed block as history and plans the time again', async () => {
+  assert.equal((await put(await exampleState())).status, 200);
+  const { app, root } = boot();
+  await settled(app);
+  const before = (await serverState()).blocks.filter((b: any) => b.taskId === 'chem').reduce((t: number, b: any) => t + b.end - b.start, 0);
+  const tile = findAll(root, (e: any) => e.tag === 'button' && (e.getAttribute('data-fk') ?? '').startsWith('blk-block:'))[0];
+  tile.click();
+  key(root, 'drawer-notdone').click();
+  key(root, 'drawer-later').click();
+  await app.store.idle();
+  await tick(80);
+  const blocks = (await serverState()).blocks;
+  assert.equal(blocks.filter((b: any) => b.status === 'missed').length, 1);
+  const counting = blocks.filter((b: any) => b.taskId === 'chem' && b.status !== 'missed').reduce((t: number, b: any) => t + b.end - b.start, 0);
+  assert.ok(counting >= before - 1, `the minutes came back: ${counting} vs ${before}`);
+});
+
+test('from the Month, the check-off button lists the day and ticks a class done', async () => {
+  assert.equal((await put(await exampleState())).status, 200);
+  const { app, root } = boot();
+  await settled(app);
+  app.navigate('#/month');
+  key(root, 'review-2026-10-06').click();
+  const ticks = findAll(root, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('daytick-'));
+  assert.ok(ticks.length >= 1);
+  ticks[0].click();
+  await app.store.idle();
+  await tick(80);
+  const marks = (await serverState());
+  assert.ok(marks.commitmentMarks?.length === 1 || marks.blocks.some((b: any) => b.status === 'done'));
+});

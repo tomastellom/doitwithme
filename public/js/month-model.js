@@ -27,7 +27,7 @@ export function monthModel(state, anchor, today, travel = []) {
   for (let i = 0; i < rows * 7; i++) {
     const date = addDays(start, i);
     const inMonth = date.slice(0, 7) === first.slice(0, 7);
-    const groups = inMonth ? dayItems(state, date, travel).filter((x) => x.kind !== 'travel').map((x) => ({ id: x.group, color: x.color, look: x.look, name: x.label })) : [];
+    const groups = inMonth ? dayItems(state, date, travel).filter((x) => x.kind !== 'travel').map((x) => ({ id: x.group, color: x.color, look: x.look, name: x.label, status: x.status })) : [];
     for (const g of groups) if (!used.has(g.id)) used.set(g.id, g);
     const isDue = inMonth && dueDates.has(date);
     if (isDue) due += 1;

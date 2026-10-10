@@ -18,11 +18,15 @@ export function renderMonth(dom, view, actions) {
         h('span', { class: 'cn' }, h('span', { class: 'dn' }, c.num), c.due && h('span', { class: 'due mono' }, 'Due')),
         c.dots.length > 0 && h('span', { class: 'dots', 'aria-hidden': 'true' },
           c.dots.map((g) => {
-            const dot = h('i', { class: `dot ${lookClass(g.look)}`, 'aria-hidden': 'true' });
+            const dot = h('i', { class: `dot ${lookClass(g.look)}${g.status === 'done' ? ' is-done' : g.status ? ' is-missed' : ''}`, 'aria-hidden': 'true' });
             paint(dot, g.color, g.look, { onInk: c.isToday });
             return dot;
           }),
           c.more > 0 && h('span', { class: 'more mono' }, `+${c.more}`))),
+      actions.review && c.planned > 0 && h('button', {
+        type: 'button', class: `review${c.isToday ? ' on-ink' : ''}`, 'data-fk': `review-${c.date}`,
+        'aria-label': `Check off things on ${c.weekday} ${c.num} ${c.monthName}`, title: 'Check off', onclick: () => actions.review(c.date),
+      }, dom.svg('svg', { viewBox: '0 0 14 14', 'aria-hidden': 'true' }, dom.svg('path', { d: 'M2 7.5 5.5 11 12 3.5', fill: 'none', 'stroke-width': '2.4' }))),
       actions.add && h('button', {
         type: 'button', class: `plus${c.isToday ? ' on-ink' : ''}`, 'data-fk': `plus-${c.date}`,
         'aria-label': `Add to ${c.weekday} ${c.num} ${c.monthName}`, onclick: () => actions.add(c.date),

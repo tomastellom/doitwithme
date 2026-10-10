@@ -1,7 +1,8 @@
 import { renderField } from './form.js';
 import { FIELDS } from './setup.js';
 import { WEEK_ORDER, applyItem, commitmentKind, newId, removeItem } from './setup-model.js';
-import { itemKey } from './model.js';
+import { dayItems, itemKey } from './model.js';
+import { labelFor, labelsOf } from './labels.js';
 import { WEEKDAYS, hhmm, longDate } from './time.js';
 
 const SHOWN = ['title', 'category', 'placeId', 'start', 'end', 'date', 'weekdays'];
@@ -10,13 +11,15 @@ const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export function createDrawer(dom, deps) {
   const { h, clear } = dom;
-  const { store, navigate, focusKey } = deps;
+  const { store, navigate, focusKey, marks } = deps;
   let opened = false;
   let item = null;
   let draft = null;
   let error = null;
   let confirm = false;
   let scratch = {};
+  // 'ask' is the step after "I did not do this one": what should happen to the time.
+  let phase = null;
 
   const panel = h('div', { class: 'drawer', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Editor' });
   const scrim = h('div', { class: 'scrim', onclick: () => close() });
@@ -60,7 +63,7 @@ export function createDrawer(dom, deps) {
     if (!opened) return;
     opened = false;
     el.setAttribute('hidden', '');
-    const key = item ? (item.kind === 'new' || item.kind === 'choose' ? item.returnKey ?? null : `blk-${itemKey(item)}`) : null;
+    const key = item ? item.fromKey ?? (item.kind === 'new' || item.kind === 'choose' || item.kind === 'day' ? item.returnKey ?? null : `blk-${itemKey(item)}`) : null;
     item = null;
     if (returnFocus && key) focusKey(key);
   }
@@ -146,7 +149,8 @@ export function createDrawer(dom, deps) {
           h('button', { type: 'button', class: 'mono', 'data-fk': 'drawer-keep', onclick: () => { confirm = false; draw(); } }, 'Keep it'))
       : h('button', { type: 'button', class: 'del mono', 'data-fk': 'drawer-delete', onclick: () => { confirm = true; draw(); } }, 'Delete');
     return [
-      head(`${cap(c.category)} / ${patternText(c)}`, c.title, when(item)),
+      head(`${labelFor(labelsOf(state), c.category).name} / ${patternText(c)}`, c.title, when(item)),
+      ...(marks ? statusRow('commitment') : []),
       weekly && !c.exceptions.includes(item.date) && h('div', { class: 'skip' },
         h('span', {}, `Not going this week? Skip only ${longDate(item.date)}. The other weeks stay.`),
         h('button', { type: 'button', class: 'mono', 'data-fk': 'drawer-skip', disabled: busy, onclick: () => skip(c) }, 'Skip this day')),
@@ -201,6 +205,28 @@ export function createDrawer(dom, deps) {
     ];
   }
 
+  // A whole day as a checklist, opened from the Month: tick things off without leaving it.
+  function dayPanel() {
+    const state = store.get().state;
+    const items = dayItems(state, item.date, []).filter((i) => i.kind !== 'travel');
+    const busy = store.get().busy;
+    return [
+      head('Check off', longDate(item.date), `${items.length} planned`),
+      items.length === 0 ? h('p', { class: 'skip' }, h('span', {}, 'Nothing is planned on this day.')) : null,
+      h('div', { class: 'daylist' }, items.map((i) => {
+        const status = marks ? marks.statusOf(i) : null;
+        return h('div', { class: `drow${status === 'done' ? ' is-done' : status ? ' is-missed' : ''}` },
+          h('button', {
+            type: 'button', class: status === 'done' ? 'tick on' : 'tick', 'aria-pressed': String(status === 'done'), disabled: busy, 'data-fk': `daytick-${itemKey(i)}`,
+            'aria-label': status === 'done' ? `${i.title} is done. Mark it as not done yet` : `Mark ${i.title} as done`,
+            onclick: async () => { await (status === 'done' ? marks.undo(i) : marks.done(i)); draw(); },
+          }, status === 'done' && dom.svg('svg', { viewBox: '0 0 14 14', 'aria-hidden': 'true' }, dom.svg('path', { d: 'M2 7.5 5.5 11 12 3.5', fill: 'none', 'stroke-width': '2.4' }))),
+          h('button', { type: 'button', class: 'dname', 'data-fk': `dayopen-${itemKey(i)}`, onclick: () => openItem({ ...i, status }, item.returnKey) },
+            h('b', {}, i.title), h('span', { class: 'mono' }, `${hhmm(i.start)}–${hhmm(i.end)} / ${i.label}${status === 'missed' ? ' / not done' : status === 'waived' ? ' / taken off' : ''}`)));
+      })),
+    ];
+  }
+
   // The "+ New" chooser: what kind of thing is being added, in plain words.
   function choosePanel() {
     const options = [
@@ -217,6 +243,62 @@ export function createDrawer(dom, deps) {
     ];
   }
 
+  const statusNow = () => (marks ? marks.statusOf(item) : null);
+  const finish = async (run) => {
+    await run();
+    if (!store.get().formError) close();
+    else draw();
+  };
+
+  // The done / not done choices every planned thing has.
+  function statusRow(kindWord) {
+    const status = statusNow();
+    const busy = store.get().busy;
+    if (status === 'done') {
+      return [
+        h('p', { class: 'banner done' }, h('b', {}, 'Done.'), h('span', {}, ' It stays on the calendar, faded.')),
+        h('div', { class: 'dbtns' }, h('button', { type: 'button', class: 'mono', 'data-fk': 'drawer-undo', disabled: busy, onclick: () => finish(() => marks.undo(item)) }, 'Mark as not done yet')),
+      ];
+    }
+    if (status === 'missed' || status === 'waived') {
+      return [
+        h('p', { class: 'banner off' }, h('b', {}, status === 'waived' ? 'Taken off this week.' : 'Not done.'), h('span', {}, status === 'waived' ? ' It no longer counts toward the week.' : '')),
+        h('div', { class: 'dbtns' },
+          h('button', { type: 'button', class: 'y mono', 'data-fk': 'drawer-done', disabled: busy, onclick: () => finish(() => marks.done(item)) }, 'Mark as done'),
+          h('button', { type: 'button', class: 'mono', 'data-fk': 'drawer-undo', disabled: busy, onclick: () => finish(() => marks.undo(item)) }, 'Put it back as planned')),
+      ];
+    }
+    return [
+      h('div', { class: 'dbtns marks' },
+        h('button', { type: 'button', class: 'y mono', 'data-fk': 'drawer-done', disabled: busy, onclick: () => finish(() => marks.done(item)) }, 'Mark as done'),
+        h('button', {
+          type: 'button', class: 'mono', 'data-fk': 'drawer-notdone', disabled: busy,
+          onclick: () => {
+            if (kindWord === 'block') { phase = 'ask'; draw(); } else finish(() => marks.skipped(item));
+          },
+        }, kindWord === 'block' ? 'I did not do this one' : 'I did not go')),
+    ];
+  }
+
+  // What to do with the time that was not used.
+  function askPanel() {
+    const minutes = item.end - item.start;
+    const busy = store.get().busy;
+    const forDue = Boolean(item.deadlineId);
+    const option = (fk, title, note, cls, run, off = false) =>
+      h('button', { type: 'button', class: `choice ${cls}`.trim(), 'data-fk': fk, disabled: busy || off, 'aria-disabled': off ? 'true' : null, onclick: off ? null : run }, h('b', {}, title), h('span', {}, note));
+    return [
+      head(`${cap(item.label)} / not done`, item.title, when(item)),
+      h('p', { class: 'skip' }, h('span', {}, `That is ${hoursText(minutes)} you still need. What should I do with it?`)),
+      h('div', { class: 'choices' },
+        option('drawer-later', 'Find another time', 'I move it to the next free space and plan it again.', 'y', () => finish(() => marks.moveLater(item))),
+        option('drawer-takeoff', forDue ? `Shorten this by ${hoursText(minutes)}` : 'Take it off this week',
+          forDue ? 'I count it as not needed for this due date and plan nothing in its place.' : 'I lower this week by the same time and plan nothing in its place.', '', () => finish(() => marks.takeOff(item))),
+        option('drawer-ai', 'Let the AI sort it out', 'Not connected yet. This arrives with the AI phase.', 'off', null, true)),
+      h('div', { class: 'dbtns' }, h('button', { type: 'button', class: 'mono', 'data-fk': 'drawer-back', onclick: () => { phase = null; draw(); } }, 'Back')),
+    ];
+  }
+
   function blockPanel() {
     const state = store.get().state;
     const task = state.tasks.find((t) => t.id === item.taskId);
@@ -227,8 +309,10 @@ export function createDrawer(dom, deps) {
     ].join(', ');
     const due = state.deadlines.filter((d) => d.taskId === task.id);
     const dueText = due.length > 0 ? ` Due: ${due.map((d) => `${d.kind} on ${longDate(d.dueDate)}`).join(', ')}.` : '';
+    if (phase === 'ask') return askPanel();
     return [
       head(`${cap(item.label)} / planned for you`, item.title, when(item)),
+      ...(marks ? statusRow('block') : []),
       h('p', { class: 'skip' }, h('span', {}, `I put this here for the task ${task.title} (${facts}).${dueText} Change the task and I replan.`)),
       h('div', { class: 'dbtns' },
         h('button', { type: 'button', class: 'y mono', 'data-fk': 'drawer-link-task', onclick: () => go(`#/tasks/${encodeURIComponent(task.id)}`) }, 'Edit the task'),
@@ -255,9 +339,27 @@ export function createDrawer(dom, deps) {
 
   function draw() {
     if (!item) return;
-    panel.setAttribute('aria-label', item.kind === 'choose' ? 'New' : item.kind === 'new' ? 'New commitment' : item.kind === 'travel' ? `Commute ${item.end - item.start}` : item.title);
-    const body = item.kind === 'choose' ? choosePanel() : item.kind === 'new' ? newPanel() : item.kind === 'commitment' ? commitmentPanel() : item.kind === 'block' ? blockPanel() : travelPanel();
+    panel.setAttribute('aria-label', item.kind === 'day' ? 'Check off' : item.kind === 'choose' ? 'New' : item.kind === 'new' ? 'New commitment' : item.kind === 'travel' ? `Commute ${item.end - item.start}` : item.title);
+    const body = item.kind === 'day' ? dayPanel() : item.kind === 'choose' ? choosePanel() : item.kind === 'new' ? newPanel() : item.kind === 'commitment' ? commitmentPanel() : item.kind === 'block' ? blockPanel() : travelPanel();
     clear(panel, body);
+  }
+
+  function openItem(next, fromKey = null) {
+    phase = null;
+    item = fromKey ? { ...next, fromKey } : next;
+    opened = true;
+    error = null;
+    confirm = false;
+    scratch = {};
+    draft = null;
+    if (item.kind === 'commitment') {
+      const c = store.get().state.commitments.find((x) => x.id === item.commitmentId);
+      if (c) draft = commitmentKind.toDraft(c);
+    }
+    draw();
+    el.removeAttribute('hidden');
+    const first = focusables()[0];
+    if (first) first.focus();
   }
 
   function startNew({ date, start, returnKey = null }) {
@@ -277,23 +379,21 @@ export function createDrawer(dom, deps) {
   return {
     el,
     isOpen: () => opened,
-    open(next) {
-      item = next;
+    open: (next) => openItem(next),
+    openNew: (spec) => startNew(spec),
+    openDay({ date, returnKey = null }) {
+      phase = null;
+      item = { kind: 'day', date, returnKey };
       opened = true;
       error = null;
       confirm = false;
       scratch = {};
       draft = null;
-      if (item.kind === 'commitment') {
-        const c = store.get().state.commitments.find((x) => x.id === item.commitmentId);
-        if (c) draft = commitmentKind.toDraft(c);
-      }
       draw();
       el.removeAttribute('hidden');
       const first = focusables()[0];
       if (first) first.focus();
     },
-    openNew: (spec) => startNew(spec),
     openChooser({ date, returnKey = null }) {
       item = { kind: 'choose', date, returnKey };
       opened = true;

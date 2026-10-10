@@ -143,6 +143,8 @@ export function createMascot(dom, { face, eyes = 'center', badge = null, width =
 // Which face fits the moment. The order matters: trouble first, then busy, then news, then calm.
 export function faceFor(view) {
   if (view.status === 'offline' || view.status === 'error') return 'sleepy';
+  // Something was just ticked off: happy, and the confetti face when the whole day is done.
+  if (view.cheer) return view.cheer.big ? 'celebrating' : 'happy';
   if (view.confirm) return view.confirm.used ? 'happy' : 'resting';
   if (view.busy) return 'working';
   if (view.estimating) return 'thinking';
@@ -162,6 +164,7 @@ export function faceFor(view) {
 function spokenFor(view, item) {
   if (view.status === 'offline') return "I can't reach the planner.";
   if (view.status === 'error') return 'Something went wrong.';
+  if (view.cheer) return view.cheer.title;
   if (view.confirm) {
     const c = view.confirm;
     return c.used ? `Done. ${c.weekday} evening is in your plan.` : `${c.weekday} evening is open.`;
@@ -170,6 +173,9 @@ function spokenFor(view, item) {
   if (item) return item.headline;
   return view.status === 'loading' ? '' : 'All clear.';
 }
+
+const needsAttention = (view) =>
+  view.status === 'offline' || view.status === 'error' || Boolean(view.cheer) || Boolean(view.confirm) || view.items.length > 0 || Boolean(view.notice);
 
 export function createNudge(dom, handlers, env = {}) {
   const { h, clear } = dom;
@@ -185,6 +191,8 @@ export function createNudge(dom, handlers, env = {}) {
   let prevKeys = null;
   let glanceTimer = null;
   let surpriseTimer = null;
+  let cheerTimer = null;
+  let cheerShown = null;
   let wasAttention = false;
   let holding = false;
   let mascot = null;
@@ -259,6 +267,13 @@ export function createNudge(dom, handlers, env = {}) {
         h('p', {}, offline ? 'The local server is not running. Start it with npm run serve, then try again. Nothing was lost.' : view.error),
         h('div', { class: 'acts' }, button('Retry', () => handlers.retry(), 'y', 'nudge-retry')),
       );
+    } else if (view.cheer) {
+      bubble = say(
+        h('span', { class: 'mono k' }, 'Nudge'),
+        h('b', {}, view.cheer.title),
+        h('p', {}, view.cheer.text),
+        h('div', { class: 'acts' }, button('Okay', () => handlers.okay(), 'y', 'nudge-okay')),
+      );
     } else if (view.confirm) {
       const c = view.confirm;
       bubble = say(
@@ -284,7 +299,7 @@ export function createNudge(dom, handlers, env = {}) {
       bubble = h('div', { class: 'quiet' }, h('b', {}, 'All clear.'), h('span', { class: 'mono' }, 'No open warnings'), form, reply);
     }
     // With nothing to say Nudge rests out of sight; it comes out on its own for anything that needs you.
-    const attention = view.status === 'offline' || view.status === 'error' || Boolean(view.confirm) || view.items.length > 0 || Boolean(view.notice);
+    const attention = needsAttention(view);
     el.setAttribute('data-state', attention ? 'alert' : 'resting');
     const spoken = spokenFor(view, item);
     if (spoken !== lastSpoken) {
@@ -371,8 +386,14 @@ export function createNudge(dom, handlers, env = {}) {
   return {
     el,
     update(next) {
-      view = { notice: null, ...next };
-      const attentionNow = view.status === 'offline' || view.status === 'error' || Boolean(view.confirm) || view.items.length > 0 || Boolean(view.notice);
+      view = { notice: null, cheer: null, ...next };
+      // The cheer goes away by itself after a few seconds.
+      if (view.cheer && view.cheer !== cheerShown && animated && handlers.cheerDone) {
+        if (cheerTimer !== null && typeof env.clearTimer === 'function') env.clearTimer(cheerTimer);
+        cheerTimer = env.setTimer(() => { cheerTimer = null; handlers.cheerDone(); }, 6000);
+      }
+      cheerShown = view.cheer;
+      const attentionNow = needsAttention(view);
       if (animated && wasAttention && !attentionNow) {
         holding = true;
         env.setTimer(release, 400);
@@ -381,7 +402,7 @@ export function createNudge(dom, handlers, env = {}) {
       if (animated) {
         if (view.status === 'ready') startle(view.items.map((i) => i.key));
         else prevKeys = null;
-        const attention = view.status === 'offline' || view.status === 'error' || Boolean(view.confirm) || view.items.length > 0 || Boolean(view.notice);
+        const attention = needsAttention(view);
         if (attention) stopGlance();
         else armGlance();
       }

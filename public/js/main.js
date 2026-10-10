@@ -5,6 +5,7 @@ import { coveredThisWeek, deadlinesModel } from './deadlines-model.js';
 import { renderDeadlines } from './deadlines.js';
 import { createDom } from './dom.js';
 import { createDrawer } from './drawer.js';
+import { createMarks } from './marks.js';
 import { replacingLink, startFavicon } from './favicon.js';
 import { createFocusKeeper, findByKey } from './focus.js';
 import { createMenu } from './menu.js';
@@ -65,6 +66,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     okay: () => store.clearConfirm(),
     retry: () => store.load(),
     fix: (hash) => navigate(hash),
+    cheerDone: () => store.clearConfirm(),
   }, typeof win.setTimeout === 'function'
     ? {
         setTimer: (fn, ms) => win.setTimeout(fn, ms),
@@ -84,8 +86,10 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   const main = h('main', { class: 'view', id: 'view', tabindex: '-1' });
   const bar = h('header', { class: 'bar' });
   const menuButton = h('button', { type: 'button', class: 'btn dark mono', 'data-fk': 'menu', onclick: () => menu.open(menuButton) }, 'Menu');
+  const marks = createMarks(store);
   const drawer = createDrawer(dom, {
     store,
+    marks,
     navigate: (hash) => navigate(hash),
     // If the block is gone (deleted, skipped) focus falls back to the page itself, never to nothing.
     focusKey: (key) => { const target = findByKey(root, key) ?? main; if (typeof target.focus === 'function') target.focus(); },
@@ -106,8 +110,12 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   // Adding starts at the day, and the time if one was clicked; focus comes back to what was pressed.
   const addAt = (date, start = 9 * 60) => drawer.openNew({ date, start, returnKey: `plus-${date}` });
 
+  // Ticking a box: done, or back to not done yet when it already was.
+  const tick = (item) => (item.status === 'done' ? marks.undo(item) : marks.done(item));
+
   const dayActions = {
     open: (item) => drawer.open(item),
+    tick,
     add: addAt,
     go: (delta) => navigate(buildHash('day', addDays(currentDay(), delta))),
     today: () => navigate(buildHash('day', null)),
@@ -119,6 +127,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
 
   const weekActions = {
     open: (item) => drawer.open(item),
+    tick,
     add: addAt,
     toggleGroup(id) {
       const next = new Set(hidden);
@@ -169,6 +178,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
 
   const monthActions = {
     add: (date) => addAt(date),
+    review: (date) => drawer.openDay({ date, returnKey: `review-${date}` }),
     go: (delta) => navigate(buildHash('month', addMonths(currentMonth(), delta))),
     today: () => navigate(buildHash('month', null)),
     loadExample: () => store.loadExample(),
@@ -338,6 +348,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       busy: s.busy,
       notice: s.notice,
       estimating: s.estimating,
+      cheer: s.cheer,
       celebrate: Boolean(s.state) && !s.isEmpty && coveredThisWeek(deadlinesModel(s.state, getClock())),
     });
   }

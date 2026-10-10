@@ -47,7 +47,7 @@ test('each day carries one dot per planned item, in time order, tagged with its 
   assert.deepEqual(ids('2026-10-12'), ['study']);
   assert.deepEqual(ids('2026-10-13'), ['personal project', 'gym']);
   assert.deepEqual(ids('2026-10-18'), ['mass']);
-  assert.deepEqual(day('2026-10-12').dots[0], { id: 'study', name: 'Study', color: '#FF4B1F', look: 'fill' });
+  assert.deepEqual(day('2026-10-12').dots[0], { id: 'study', name: 'Study', color: '#FF4B1F', look: 'fill', status: null });
   assert.deepEqual(day('2026-10-15').dots, []);
   assert.deepEqual(m.cells[0].dots, [], 'days of the neighbouring month stay empty');
 });
@@ -117,4 +117,18 @@ test('every day has its own Add button next to its link, so a link never holds a
   tue.click();
   assert.deepEqual(adds, ['2026-10-13']);
   assert.ok(byClass(el, 'cell').every((c: any) => byTag(c, 'button').length === 0), 'no button inside a link');
+});
+
+test('a day with things planned has a check-off button, done dots fade, and an empty day has none', () => {
+  const reviews: string[] = [];
+  const s = state({ blocks: [{ ...block('2026-10-12', 480, 535, 'Chemistry', 'study'), status: 'done' }, block('2026-10-13', 765, 825, 'Gym', 'gym')] });
+  const { el } = draw({ model: monthModel(s, '2026-10-14', '2026-10-14', []) }, { review: (d: string) => reviews.push(d) });
+  const rv = findAll(el, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('review-'));
+  assert.ok(rv.length >= 3);
+  assert.ok(rv.every((b: any) => b.tag === 'button'));
+  assert.equal(rv.find((b: any) => b.getAttribute('data-fk') === 'review-2026-10-15'), undefined, 'nothing planned on the 15th');
+  rv.find((b: any) => b.getAttribute('data-fk') === 'review-2026-10-12')!.click();
+  assert.deepEqual(reviews, ['2026-10-12']);
+  const dot = byClass(findAll(el, (e: any) => e.getAttribute('data-fk') === 'cell-2026-10-12')[0], 'dot')[0];
+  assert.ok(dot.hasClass('is-done'));
 });

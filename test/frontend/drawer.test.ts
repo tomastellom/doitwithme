@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createDom } from '../../public/js/dom.js';
 import { createDrawer } from '../../public/js/drawer.js';
+import { createMarks } from '../../public/js/marks.js';
 import { dayItems } from '../../public/js/model.js';
 import { FakeDocument, byClass, byTag, findAll, textOf } from './fakedom.ts';
 
@@ -15,6 +16,7 @@ function rig(state: any = structuredClone(example), opts: any = {}) {
   const saves: any[] = [];
   const navs: string[] = [];
   const focused: string[] = [];
+  const cheers: any[] = [];
   let current: any = { state, busy: false, formError: null, status: 'ready' };
   const store: any = {
     get: () => current,
@@ -24,11 +26,12 @@ function rig(state: any = structuredClone(example), opts: any = {}) {
       if (opts.reject) current = { ...current, formError: opts.reject };
       else current = { ...current, state: next, formError: null };
     },
+    cheer: (c: any) => cheers.push(c),
   };
   const dom = createDom(new FakeDocument() as any);
-  const drawer: any = createDrawer(dom, { store, navigate: (h: string) => navs.push(h), focusKey: (k: string) => focused.push(k) });
+  const drawer: any = createDrawer(dom, { store, marks: createMarks(store, { pick: () => 0 }), navigate: (h: string) => navs.push(h), focusKey: (k: string) => focused.push(k) });
   const itemOf = (kind: string, date: string, match: (i: any) => boolean) => dayItems(current.state, date, opts.travel ?? []).find((i: any) => i.kind === kind && match(i));
-  return { drawer, saves, navs, focused, store, itemOf, setState: (s: any) => { current = { ...current, state: s }; } };
+  return { drawer, saves, navs, focused, cheers, store, itemOf, setState: (s: any) => { current = { ...current, state: s }; } };
 }
 // 2026-10-13 is a Tuesday: the chemistry lecture (Tue and Thu, 10:00-12:00) is on it.
 const TUE = '2026-10-13';
@@ -278,4 +281,105 @@ test('a new item near midnight still ends the same day', () => {
   const r = rig();
   r.drawer.openNew({ date: '2026-10-15', start: 23 * 60 + 30 });
   assert.equal(key(r.drawer.el, 'f-end').value, '23:59');
+});
+
+const planned = () => structuredClone({ ...example, blocks: [{ taskId: 'chem', title: 'Chemistry', category: 'study', date: TUE, start: 480, end: 535 }] });
+const theBlock = (r: any) => r.itemOf('block', TUE, () => true);
+
+test('a planned block can be marked done from its panel: it is saved, the panel closes and Nudge is told to cheer', async () => {
+  const r = rig(planned());
+  r.drawer.open(theBlock(r));
+  key(r.drawer.el, 'drawer-done').click();
+  await tick();
+  assert.equal(r.saves.at(-1).blocks[0].status, 'done');
+  assert.equal(r.drawer.isOpen(), false);
+  assert.equal(r.cheers.length, 1);
+  assert.equal(r.cheers[0].title, 'Nice. Chemistry done.');
+});
+
+test('"I did not do this one" asks what to do with the time before anything is saved', async () => {
+  const r = rig(planned());
+  r.drawer.open(theBlock(r));
+  key(r.drawer.el, 'drawer-notdone').click();
+  assert.equal(r.saves.length, 0, 'nothing changes until a choice is made');
+  const text = textOf(r.drawer.el);
+  assert.match(text, /0h55 you still need|55 min you still need/);
+  for (const k of ['drawer-later', 'drawer-takeoff', 'drawer-ai', 'drawer-back']) assert.ok(key(r.drawer.el, k), k);
+  assert.notEqual(key(r.drawer.el, 'drawer-ai').getAttribute('disabled'), null, 'the AI choice is there but not connected yet');
+  assert.match(textOf(key(r.drawer.el, 'drawer-ai')), /Not connected yet/);
+  key(r.drawer.el, 'drawer-back').click();
+  assert.ok(key(r.drawer.el, 'drawer-done'), 'Back returns to the first panel');
+});
+
+test('Find another time marks it not done so it is planned again; Take it off lowers the week instead', async () => {
+  const later = rig(planned());
+  later.drawer.open(theBlock(later));
+  key(later.drawer.el, 'drawer-notdone').click();
+  key(later.drawer.el, 'drawer-later').click();
+  await tick();
+  assert.equal(later.saves.at(-1).blocks[0].status, 'missed');
+  assert.equal(later.drawer.isOpen(), false);
+  const off = rig(planned());
+  off.drawer.open(theBlock(off));
+  key(off.drawer.el, 'drawer-notdone').click();
+  key(off.drawer.el, 'drawer-takeoff').click();
+  await tick();
+  assert.equal(off.saves.at(-1).blocks[0].status, 'waived');
+  assert.equal(off.cheers.length, 0, 'not done is never cheered');
+});
+
+test('for a block that belongs to a due date, taking it off says it shortens that due date', () => {
+  const s = planned();
+  s.blocks[0].deadlineId = 'chem-exam';
+  const r = rig(s);
+  r.drawer.open(theBlock(r));
+  key(r.drawer.el, 'drawer-notdone').click();
+  assert.match(textOf(key(r.drawer.el, 'drawer-takeoff')), /Shorten this by 55 min/);
+});
+
+test('a done block offers to be marked not done yet, and a not-done one offers Mark as done or Put it back', async () => {
+  const s = planned();
+  s.blocks[0].status = 'done';
+  const done = rig(s);
+  done.drawer.open(theBlock(done));
+  assert.match(textOf(done.drawer.el), /Done\./);
+  key(done.drawer.el, 'drawer-undo').click();
+  await tick();
+  assert.equal('status' in done.saves.at(-1).blocks[0], false);
+  const s2 = planned();
+  s2.blocks[0].status = 'missed';
+  const missed = rig(s2);
+  missed.drawer.open(theBlock(missed));
+  assert.match(textOf(missed.drawer.el), /Not done\./);
+  assert.ok(key(missed.drawer.el, 'drawer-done') && key(missed.drawer.el, 'drawer-undo'));
+});
+
+test('a class is ticked done or skipped for that day only, with no follow-up question', async () => {
+  const r = rig(planned());
+  r.drawer.open(r.itemOf('commitment', TUE, (i: any) => i.commitmentId === 'chem-lecture'));
+  key(r.drawer.el, 'drawer-notdone').click();
+  await tick();
+  assert.deepEqual(r.saves.at(-1).commitmentMarks, [{ id: 'chem-lecture', date: TUE, status: 'missed' }]);
+  const d = rig(planned());
+  d.drawer.open(d.itemOf('commitment', TUE, (i: any) => i.commitmentId === 'chem-lecture'));
+  assert.match(textOf(key(d.drawer.el, 'drawer-notdone')), /I did not go/);
+  key(d.drawer.el, 'drawer-done').click();
+  await tick();
+  assert.deepEqual(d.saves.at(-1).commitmentMarks, [{ id: 'chem-lecture', date: TUE, status: 'done' }]);
+});
+
+test('the Month day checklist lists what is planned, ticks things off in place and opens an item', async () => {
+  const r = rig(planned());
+  r.drawer.openDay({ date: TUE, returnKey: 'review-2026-10-13' });
+  assert.match(textOf(r.drawer.el), /Check off/);
+  const ticks = findAll(r.drawer.el, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('daytick-'));
+  assert.ok(ticks.length >= 2, 'the lecture and the study block');
+  ticks[0].click();
+  await tick();
+  assert.ok(r.saves.length === 1);
+  assert.ok(findAll(r.drawer.el, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('daytick-'))[0].getAttribute('aria-pressed') === 'true', 'the list redraws with the tick on');
+  findAll(r.drawer.el, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('dayopen-'))[1].click();
+  assert.ok(key(r.drawer.el, 'drawer-done') || key(r.drawer.el, 'drawer-undo'), 'a row opens that item\'s panel');
+  r.drawer.close();
+  assert.equal(r.focused.at(-1), 'review-2026-10-13');
 });

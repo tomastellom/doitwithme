@@ -520,3 +520,26 @@ test('besides his offer and Leave it, a warning has a Fix it myself button that 
   nudge.update({ ...base, items: [item({ offer: null, fix: { label: 'Fix it myself', hash: '#/tasks/gym' } })] });
   assert.deepEqual(byTag(byClass(nudge.el, 'acts')[0], 'button').map((b: any) => textOf(b)), ['Fix it myself', 'Leave it'], 'it is there even when there is no offer');
 });
+
+test('when something is ticked off he is happy, says what got done, and clears it by himself', () => {
+  const timers: Array<{ fn: Function; ms: number }> = [];
+  const calls: string[] = [];
+  const env = { setTimer: (fn: Function, ms: number) => { timers.push({ fn, ms }); return timers.length; }, clearTimer: () => {}, random: () => 0.9 };
+  const nudge: any = createNudge(dom, { approve() {}, undo() {}, dismiss() {}, okay: () => calls.push('okay'), retry() {}, cheerDone: () => calls.push('cheerDone') }, env);
+  const face = () => byClass(nudge.el, 'mascot')[0].getAttribute('data-face');
+  nudge.update({ ...base });
+  const cheer = { big: false, title: 'Nice. Chemistry done.', text: '0h55 of Chemistry is in the bank.' };
+  nudge.update({ ...base, cheer });
+  assert.equal(nudge.el.getAttribute('data-state'), 'alert', 'he comes up to say it');
+  assert.equal(face(), 'happy');
+  assert.match(textOf(nudge.el), /Nice\. Chemistry done\./);
+  assert.match(textOf(nudge.el), /0h55 of Chemistry is in the bank\./);
+  const clear = timers.find((t) => t.ms === 6000)!;
+  assert.ok(clear, 'a six second timer');
+  clear.fn();
+  assert.deepEqual(calls, ['cheerDone']);
+  nudge.update({ ...base, cheer: { ...cheer, big: true, title: 'That is everything for today.' } });
+  assert.equal(face(), 'celebrating', 'a finished day gets the confetti');
+  assert.equal(faceFor({ ...base, cheer: { big: false } }), 'happy');
+  assert.equal(faceFor({ ...base, cheer, status: 'offline' }), 'sleepy', 'trouble still comes first');
+});

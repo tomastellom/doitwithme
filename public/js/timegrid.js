@@ -67,18 +67,24 @@ export function axisEl(dom, hours) {
 }
 
 // tileFor(item, size) builds the tile's content; this places it.
-export function bodyEl(dom, { items, hours, nowMinutes = null, tileFor, extras = [], sizeFor = sizeOf, onBlank = null }) {
+export function bodyEl(dom, { items, hours, nowMinutes = null, tileFor, extras = [], sizeFor = sizeOf, onBlank = null, tickFor = null }) {
   const { h } = dom;
-  const tiles = assignLanes(items).map(({ item, lane, lanes }) => {
+  const tiles = assignLanes(items).flatMap(({ item, lane, lanes }) => {
     const height = heightOf(item);
-    const node = tileFor(item, sizeFor(height));
+    const size = sizeFor(height);
+    const node = tileFor(item, size);
     node.style.top = `${topOf(item.start, hours)}px`;
     node.style.height = `${height}px`;
     if (lanes > 1) {
       node.style.left = `${(lane / lanes) * 100}%`;
       node.style.width = `${100 / lanes}%`;
     }
-    return node;
+    // The tick box sits on the tile as its own button, so a tile never holds a button.
+    const tick = tickFor ? tickFor(item, size) : null;
+    if (!tick) return [node];
+    tick.style.top = `${topOf(item.start, hours) + (height < 46 ? (height - 24) / 2 : 6)}px`;
+    tick.style.left = lanes > 1 ? `calc(${(lane / lanes) * 100}% + 6px)` : '6px';
+    return [node, tick];
   });
   const showNow = nowMinutes !== null && nowMinutes >= hours.from * 60 && nowMinutes <= hours.to * 60;
   const lines = [];

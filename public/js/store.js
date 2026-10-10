@@ -6,7 +6,7 @@ const STALE_NOTICE = 'That warning changed, so I refreshed the plan.';
 export function createStore(api, getClock) {
   let current = {
     status: 'loading', state: null, warnings: [], approvedSoft: [], dismissed: [], travel: [], maps: 'unavailable', estimating: false,
-    isEmpty: false, error: null, busy: false, confirm: null, notice: null, formError: null,
+    isEmpty: false, error: null, busy: false, confirm: null, notice: null, formError: null, cheer: null,
   };
   const listeners = new Set();
 
@@ -124,7 +124,9 @@ export function createStore(api, getClock) {
         set({ estimating: false });
       }
     },
-    clearConfirm: () => set({ confirm: null, notice: null }),
+    // Nudge cheers when something is ticked off; he clears it himself after a few seconds.
+    cheer: (cheer) => set({ cheer }),
+    clearConfirm: () => set({ confirm: null, notice: null, cheer: null }),
     saveState: (next) =>
       guard(async () => {
         try {

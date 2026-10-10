@@ -1,6 +1,7 @@
 import { itemKey } from './model.js';
 import { lookClass, paint } from './labels.js';
 import { duration, hhmm } from './time.js';
+import { STATUS_WORDS, TAG, statusClass, tickButton } from './status-ui.js';
 import { DEFAULT_HOURS, axisEl, bodyEl, dayTileSize, hoursFor, topOf } from './timegrid.js';
 
 export function renderDay(dom, view, actions) {
@@ -13,8 +14,9 @@ export function renderDay(dom, view, actions) {
   // Day rows call commitments and blocks "item"; the editor wants to know which is which.
   const asItem = (r) => ({ ...r, kind: r.kind === 'travel' ? 'travel' : r.commitmentId ? 'commitment' : 'block' });
   const lines = (r, shown, size) => {
-    const when = `${timeOf(r)} · ${r.end - r.start} min`;
-    return size === 'one' ? [h('span', { class: 'n' }, shown), h('span', { class: 't' }, when)] : [h('span', { class: 'k' }, r.label), h('span', { class: 'n' }, shown), h('span', { class: 't' }, when)];
+    const off = r.status === 'missed' || r.status === 'waived';
+    const when = off ? h('span', { class: 'tag' }, TAG[r.status]) : h('span', { class: 't' }, `${timeOf(r)} · ${r.end - r.start} min`);
+    return size === 'one' ? [h('span', { class: 'n' }, shown), when] : [h('span', { class: 'k' }, r.label), h('span', { class: 'n' }, shown), when];
   };
   const tileFor = (r, size) => {
     if (r.kind === 'buffer') {
@@ -23,10 +25,10 @@ export function renderDay(dom, view, actions) {
     const item = asItem(r);
     const name = item.kind === 'travel' ? `Commute ${r.end - r.start}` : r.title;
     const node = h('button', {
-      type: 'button', class: `dv-blk tile ${size} ${item.kind === 'travel' ? 'travel' : lookClass(r.look)}`, 'data-fk': `blk-${itemKey(item)}`,
-      title: `${name}, ${timeOf(r)}`, 'aria-label': `${name}, ${timeOf(r)}, ${r.label}. Opens the editor.`, onclick: () => actions.open(item),
+      type: 'button', class: ['dv-blk', 'tile', size, item.kind === 'travel' ? 'travel' : lookClass(r.look), item.kind === 'travel' ? '' : 'has-tick', statusClass(r.status)].filter(Boolean).join(' '), 'data-fk': `blk-${itemKey(item)}`,
+      title: `${name}, ${timeOf(r)}`, 'aria-label': `${name}, ${timeOf(r)}, ${r.label}${r.status ? `, ${STATUS_WORDS[r.status]}` : ''}. Opens the editor.`, onclick: () => actions.open(item),
     }, lines(r, r.title, size));
-    if (item.kind !== 'travel') paint(node, r.color, r.look);
+    if (item.kind !== 'travel' && r.status !== 'missed' && r.status !== 'waived') paint(node, r.color, r.look);
     return node;
   };
 
@@ -79,7 +81,7 @@ export function renderDay(dom, view, actions) {
     .map((r) => h('div', { class: 'gaplabel mono', style: { top: `${topOf((r.start + r.end) / 2, hours) - 8}px` } }, `Free ${hhmm(r.start)}–${hhmm(r.end)} / ${duration(r.end - r.start)}`));
   const grid = h('div', { class: 'dv-grid' },
     axisEl(dom, hours),
-    h('div', { class: 'dv-col' }, bodyEl(dom, { items: entries, hours, nowMinutes: isToday ? view.nowMinutes ?? null : null, tileFor, extras: gapLabels, sizeFor: dayTileSize, onBlank: actions.add ? (minutes) => actions.add(view.date, minutes) : null })));
+    h('div', { class: 'dv-col' }, bodyEl(dom, { items: entries, hours, nowMinutes: isToday ? view.nowMinutes ?? null : null, tileFor, extras: gapLabels, sizeFor: dayTileSize, tickFor: actions.tick ? (r) => (r.kind === 'buffer' || r.kind === 'travel' ? null : tickButton(dom, asItem(r), r.title, actions.tick)) : null, onBlank: actions.add ? (minutes) => actions.add(view.date, minutes) : null })));
 
   return h('section', { class: 'dayv' }, hero, h('div', { class: 'dv-body' }, grid, side));
 }

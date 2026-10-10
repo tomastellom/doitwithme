@@ -27,15 +27,16 @@ export function dayItems(state, date, travel = []) {
     const l = labelFor(labels, category);
     return { group: l.id, label: l.name, color: l.color, look: l.style };
   };
+  const marks = new Map((state.commitmentMarks ?? []).map((m) => [`${m.id}|${m.date}`, m.status]));
   const items = [];
   for (const c of state.commitments) {
     for (const o of occurrencesOn(date, [c])) {
-      items.push({ kind: 'commitment', commitmentId: c.id, date, ...look(o.category), start: o.start, end: o.end, title: o.title });
+      items.push({ kind: 'commitment', commitmentId: c.id, date, ...look(o.category), start: o.start, end: o.end, title: o.title, status: marks.get(`${c.id}|${date}`) ?? null });
     }
   }
   for (const b of state.blocks) {
     if (b.date === date) {
-      items.push({ kind: 'block', taskId: b.taskId, ...(b.deadlineId ? { deadlineId: b.deadlineId } : {}), date, ...look(b.category), start: b.start, end: b.end, title: b.title });
+      items.push({ kind: 'block', taskId: b.taskId, ...(b.deadlineId ? { deadlineId: b.deadlineId } : {}), date, ...look(b.category), start: b.start, end: b.end, title: b.title, status: b.status ?? null });
     }
   }
   for (const leg of travel) {

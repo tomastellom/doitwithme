@@ -26,6 +26,7 @@ export function dayModel(state, date, travel = []) {
     const l = labelFor(labels, category);
     return { group: l.id, label: l.name, color: l.color, look: l.style };
   };
+  const marks = new Map((state.commitmentMarks ?? []).map((m) => [`${m.id}|${m.date}`, m.status]));
   const entries = [];
 
   for (const c of state.commitments) {
@@ -33,12 +34,12 @@ export function dayModel(state, date, travel = []) {
       if (o.bufferBefore > 0) {
         entries.push({ kind: 'buffer', start: Math.max(0, o.start - o.bufferBefore), end: o.start, title: `Buffer before ${o.title}` });
       }
-      entries.push({ kind: 'item', commitmentId: c.id, date, ...look(o.category), start: o.start, end: o.end, title: o.title });
+      entries.push({ kind: 'item', commitmentId: c.id, date, ...look(o.category), start: o.start, end: o.end, title: o.title, status: marks.get(`${c.id}|${date}`) ?? null });
     }
   }
   for (const b of state.blocks) {
     if (b.date === date) {
-      entries.push({ kind: 'item', taskId: b.taskId, ...(b.deadlineId ? { deadlineId: b.deadlineId } : {}), date, ...look(b.category), start: b.start, end: b.end, title: b.title });
+      entries.push({ kind: 'item', taskId: b.taskId, ...(b.deadlineId ? { deadlineId: b.deadlineId } : {}), date, ...look(b.category), start: b.start, end: b.end, title: b.title, status: b.status ?? null });
     }
   }
   for (const leg of travel) {

@@ -527,3 +527,43 @@ a.dh:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 .st-rules > p { margin: 2px 0 12px; color: var(--muted); font-size: 13px; }
 .setup-embed .fg { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @media (max-width: 1100px) { .st-two { grid-template-columns: 1fr; } }
+
+/* Done and not done. */
+.tile.has-tick { padding-left: 38px; }
+.tile.is-done { opacity: .45; }
+.tile.is-done .n, .drow.is-done .dname b { text-decoration: line-through; text-decoration-thickness: 2px; }
+.tile.is-missed { background: var(--paper); color: var(--ink); border: 2px dashed var(--ink); }
+.tile.is-missed .n, .drow.is-missed .dname b { text-decoration: line-through; }
+.tile .tag { flex: none; font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; background: var(--ink); color: var(--paper); padding: 1px 6px; }
+.tick { position: absolute; width: 24px; height: 24px; padding: 0; border: 2px solid var(--ink); background: var(--paper); z-index: 2; display: inline-flex; align-items: center; justify-content: center; transition: background-color .15s ease-out; }
+.tick:hover { background: #E6E7E8; }
+.tick.on { background: var(--ink); }
+.tick svg { width: 14px; height: 14px; }
+.tick.on svg path { stroke: var(--paper); }
+.tick:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.dot.is-done { opacity: .4; }
+.dot.is-missed { background: var(--paper) !important; border: 2px dashed var(--ink); }
+.banner { margin: 0; padding: 10px 14px; border: 2px solid var(--ink); background: #F4F4F2; }
+.banner.off { border-style: dashed; background: var(--paper); }
+.dbtns.marks { margin-top: 0; }
+.choice.y { background: var(--study); color: var(--on-study); }
+.choice.y span { color: inherit; opacity: .8; }
+.choice.y:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+.choice.off, .choice:disabled { border-style: dashed; color: var(--muted); cursor: not-allowed; }
+.choice.off:hover, .choice:disabled:hover { background: transparent; color: var(--muted); }
+.daylist { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+.drow { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #DADCDD; }
+.drow .tick { position: static; flex: none; }
+.drow .dname { flex: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; border: 0; background: transparent; text-align: left; padding: 4px 0; }
+.drow .dname b { font-size: 18px; font-weight: 800; letter-spacing: -.01em; }
+.drow .dname span { color: var(--muted); }
+.drow.is-done .dname { opacity: .55; }
+.review { position: absolute; right: 42px; bottom: 6px; width: 30px; height: 30px; padding: 0; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); display: inline-flex; align-items: center; justify-content: center; opacity: 0; transition: opacity .15s ease-out, background-color .15s ease-out; }
+.review svg { width: 14px; height: 14px; }
+.review svg path { stroke: var(--ink); }
+.review.on-ink { border-color: var(--paper); background: var(--ink); }
+.review.on-ink svg path { stroke: var(--paper); }
+.cw:hover .review, .cw:focus-within .review, .review:focus-visible { opacity: 1; }
+.review:hover { background: var(--ink); }
+.review:hover svg path { stroke: var(--paper); }
+@media (hover: none) { .review { opacity: 1; } }

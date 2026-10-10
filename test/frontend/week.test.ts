@@ -256,3 +256,44 @@ test('the hero has a plain Add button for keyboard users, defaulting to today wh
   add.click();
   assert.deepEqual(adds, [['2026-10-13', 9 * 60]]);
 });
+
+test('every planned tile has its own tick box that marks it done, and trips have none', () => {
+  const ticks: any[] = [];
+  const travel = [{ date: '2026-10-13', start: 545, end: 600, fromName: 'Home', toName: 'Campus', estimated: false }];
+  const s = state();
+  const model = weekModel(s, '2026-10-12', all, '2026-10-13', travel);
+  const el: any = renderWeek(dom, { model, hidden: all, needsYou: 0, isEmpty: false }, { tick: (i: any) => ticks.push(i.title), canAdd: false } as any);
+  const tiles = byClass(el, 'blk').filter((b: any) => !b.hasClass('travel'));
+  const boxes = byClass(el, 'tick');
+  assert.equal(boxes.length, tiles.length, 'one per planned tile, none for the trip');
+  const chem = boxes.find((b: any) => b.getAttribute('aria-label') === 'Mark Chemistry as done')!;
+  assert.equal(chem.tag, 'button');
+  assert.equal(chem.getAttribute('aria-pressed'), 'false');
+  chem.click();
+  assert.deepEqual(ticks, ['Chemistry']);
+  assert.ok(tiles.every((t: any) => byTag(t, 'button').length === 1), 'a tile holds no other button, its tick box is a neighbour');
+  assert.ok(tiles[0].hasClass('has-tick'), 'the tile leaves room for its box');
+});
+
+test('a done tile is faded with its box ticked; a not-done tile is dashed with a tag and keeps its place', () => {
+  const s = state({ blocks: [
+    { ...block('2026-10-12', 480, 535, 'Chemistry', 'study'), status: 'done' },
+    { ...block('2026-10-12', 600, 655, 'Gym', 'gym'), status: 'missed' },
+    { ...block('2026-10-12', 700, 755, 'Laundry', 'chores'), status: 'waived' },
+  ] });
+  const model = weekModel(s, '2026-10-12', all, '2026-10-13');
+  const el: any = renderWeek(dom, { model, hidden: all, needsYou: 0, isEmpty: false }, { tick: () => {}, canAdd: false } as any);
+  const mon = byClass(el, 'day')[0];
+  const find = (name: string) => byClass(mon, 'blk').find((b: any) => textOf(b).includes(name))!;
+  assert.ok(find('Chemistry').hasClass('is-done'));
+  assert.equal(find('Chemistry').style.background, '#FF4B1F', 'a done tile keeps its color and is only faded');
+  assert.match(find('Chemistry').getAttribute('aria-label'), /done/);
+  const done = byClass(mon, 'tick').find((b: any) => b.getAttribute('aria-pressed') === 'true')!;
+  assert.match(done.getAttribute('aria-label'), /Chemistry is done/);
+  assert.ok(find('Gym').hasClass('is-missed'));
+  assert.equal(find('Gym').style.background, undefined, 'it is drawn dashed on paper instead of filled');
+  assert.equal(textOf(byClass(find('Gym'), 'tag')[0]), 'Not done');
+  assert.equal(textOf(byClass(find('Laundry'), 'tag')[0]), 'Taken off');
+  assert.match(find('Gym').getAttribute('aria-label'), /not done/);
+  assert.equal(find('Gym').style.top, find('Gym').style.top, 'still at its time');
+});

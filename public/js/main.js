@@ -215,10 +215,12 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     main.removeAttribute('data-sliding');
     if (main.children[0]) clear(main, main.children[0]);
   }
-  function startSlide(leaving, entering, dir) {
+  // Stepping a day or a week keeps the title row, its buttons and the filters where they are; only the plan itself slides.
+  function startSlide(leaving, entering, dir, step) {
+    const kind = step ? 'step' : 'slide';
     const tag = (node, name) => node.setAttribute('class', `${node.getAttribute('class') ?? ''} ${name}-${dir}`.trim());
-    tag(entering, 'slide-in');
-    tag(leaving, 'slide-out');
+    tag(entering, `${kind}-in`);
+    tag(leaving, `${kind}-out`);
     slideKey = `${route.id}|${route.param ?? ''}`;
     main.setAttribute('data-sliding', dir);
     // The new screen comes first so focus lookups find it before the old one.
@@ -226,13 +228,13 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     slideTimer = win.setTimeout(() => {
       slideTimer = null;
       main.removeAttribute('data-sliding');
-      entering.setAttribute('class', (entering.getAttribute('class') ?? '').replace(` slide-in-${dir}`, '').trim());
+      entering.setAttribute('class', (entering.getAttribute('class') ?? '').replace(` ${kind}-in-${dir}`, '').trim());
       clear(main, entering);
       if (redrawAfterSlide) {
         redrawAfterSlide = false;
         render();
       }
-    }, 640);
+    }, 520);
   }
 
   function draw() {
@@ -267,7 +269,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     }
     settleSlide();
     const leaving = main.children[0];
-    if (way && leaving && canSlide()) startSlide(leaving, screen, way.endsWith('back') ? 'back' : 'fwd');
+    if (way && leaving && canSlide()) startSlide(leaving, screen, way.endsWith('back') ? 'back' : 'fwd', way.startsWith('step'));
     else clear(main, screen);
     nudge.update({
       status: s.status,

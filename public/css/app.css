@@ -369,10 +369,10 @@ main[data-sliding] > * { grid-area: 1 / 1; min-width: 0; }
 @keyframes out-fwd { to { transform: translateX(-100%); } }
 @keyframes in-back { from { transform: translateX(-100%); } }
 @keyframes out-back { to { transform: translateX(100%); } }
-.slide-in-fwd { position: relative; z-index: 1; background: var(--paper); animation: in-fwd .6s cubic-bezier(.32, .72, 0, 1) backwards; }
-.slide-in-back { position: relative; z-index: 1; background: var(--paper); animation: in-back .6s cubic-bezier(.32, .72, 0, 1) backwards; }
-.slide-out-fwd { animation: out-fwd .6s cubic-bezier(.32, .72, 0, 1) forwards; }
-.slide-out-back { animation: out-back .6s cubic-bezier(.32, .72, 0, 1) forwards; }
+.slide-in-fwd { position: relative; z-index: 1; background: var(--paper); animation: in-fwd .48s cubic-bezier(.32, .72, 0, 1) backwards; }
+.slide-in-back { position: relative; z-index: 1; background: var(--paper); animation: in-back .48s cubic-bezier(.32, .72, 0, 1) backwards; }
+.slide-out-fwd { animation: out-fwd .48s cubic-bezier(.32, .72, 0, 1) forwards; }
+.slide-out-back { animation: out-back .48s cubic-bezier(.32, .72, 0, 1) forwards; }
 @keyframes step-fwd { from { transform: translateX(32px); } }
 @keyframes step-back { from { transform: translateX(-32px); } }
 
@@ -389,3 +389,11 @@ main[data-sliding] > * { grid-area: 1 / 1; min-width: 0; }
 .menu .grp:nth-child(3) { animation-delay: .16s; }
 .menu .grp:nth-child(4) { animation-delay: .2s; }
 .menu .foot-note { animation-delay: .24s; }
+
+/* Stepping a day or week: the title row, its buttons and the filters stay put; only the plan slides. */
+.step-in-fwd, .step-in-back { position: relative; z-index: 1; }
+.step-in-fwd > :not(.hero):not(.foot) { animation: in-fwd .48s cubic-bezier(.32, .72, 0, 1) backwards; }
+.step-in-back > :not(.hero):not(.foot) { animation: in-back .48s cubic-bezier(.32, .72, 0, 1) backwards; }
+.step-out-fwd > :not(.hero):not(.foot) { animation: out-fwd .48s cubic-bezier(.32, .72, 0, 1) forwards; }
+.step-out-back > :not(.hero):not(.foot) { animation: out-back .48s cubic-bezier(.32, .72, 0, 1) forwards; }
+.step-out-fwd > .hero, .step-out-fwd > .foot, .step-out-back > .hero, .step-out-back > .foot { visibility: hidden; }

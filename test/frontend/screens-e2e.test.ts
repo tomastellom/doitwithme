@@ -153,12 +153,18 @@ test('with timers the old screen slides out while the new one slides in, then is
   assert.equal(view.getAttribute('data-sliding'), 'back');
   app.render();
   assert.equal(view.children.length, 2, 'a redraw during the slide waits, so it cannot cut the slide short');
-  timers.filter((t) => t.ms === 640).forEach((t) => t.fn());
+  timers.filter((t) => t.ms === 520).forEach((t) => t.fn());
   assert.equal(view.children.length, 1);
   assert.equal(view.hasAttribute('data-sliding'), false);
   app.navigate('#/week');
   app.navigate('#/deadlines');
   assert.equal(view.children.length, 2, 'a new move while sliding settles the first one');
+  timers.filter((t) => t.ms === 520).forEach((t) => t.fn());
+  app.navigate('#/day/2026-10-06');
+  timers.filter((t) => t.ms === 520).forEach((t) => t.fn());
+  app.navigate('#/day/2026-10-07');
+  assert.match(view.children[0].getAttribute('class'), /step-in-fwd/, 'stepping keeps the title row and buttons still');
+  assert.match(view.children[1].getAttribute('class'), /step-out-fwd/);
 });
 
 test('opening another screen or another record starts at the top; redrawing the same one keeps your place', async () => {

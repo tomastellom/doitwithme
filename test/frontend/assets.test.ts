@@ -175,12 +175,16 @@ test('buttons and tabs use the sans face, and no text is oversized', () => {
   assert.ok(sizes.filter((n) => n > 56).length <= 2, 'only the page titles are bigger than 56px');
 });
 
-test('screens slide in from the side of their tab, faces cross-fade, and reduced motion still wins', () => {
+test('screens slide past each other with no fading, faces cross-fade, and reduced motion still wins', () => {
   const css = readFileSync('public/css/app.css', 'utf8');
-  for (const dir of ['fwd', 'back', 'fade']) assert.match(css, new RegExp(`\\[data-enter="${dir}"\\] \\{[^}]*animation: enter-${dir} \\.?\\d*\\.?\\d+s`));
+  for (const dir of ['fwd', 'back']) {
+    assert.match(css, new RegExp(`\\.slide-in-${dir} \\{[^}]*animation: in-${dir} \\.\\d+s`));
+    assert.match(css, new RegExp(`\\.slide-out-${dir} \\{[^}]*animation: out-${dir} \\.\\d+s`));
+  }
+  assert.doesNotMatch(css.match(/@keyframes in-fwd \{[^}]*\}[^}]*\}/)![0], /opacity/);
   assert.match(css, /\.mascot-face\.in \{[^}]*face-in/);
   assert.match(css, /\.mascot-face\.out \{[^}]*face-out/);
-  assert.ok(css.indexOf('prefers-reduced-motion') < css.indexOf('[data-enter="fwd"]'), 'the reduced-motion rule is declared first and uses !important');
+  assert.ok(css.indexOf('prefers-reduced-motion') < css.indexOf('.slide-in-fwd'), 'the reduced-motion rule is declared first and uses !important');
 });
 
 test('deadline rows are links that keep the board look', () => {

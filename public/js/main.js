@@ -53,6 +53,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   let lastDay = getClock().today;
   let lastRouteId = null;
   let lastWhere = null;
+  let lastParam = null;
 
   const nudge = createNudge(dom, {
     approve: (date) => store.approve(date),
@@ -200,28 +201,59 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     return section.render({ dom, store, s, route, getClock, navigate, keepFocus, registry });
   }
 
+  // Sliding keeps the old screen in place beside the new one for a moment; any redraw settles it first.
+  let slideTimer = null;
+  const canSlide = () => typeof win.setTimeout === 'function' && !(win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function settleSlide() {
+    if (slideTimer === null) return;
+    if (typeof win.clearTimeout === 'function') win.clearTimeout(slideTimer);
+    slideTimer = null;
+    main.removeAttribute('data-sliding');
+    if (main.children[0]) clear(main, main.children[0]);
+  }
+  function startSlide(leaving, entering, dir) {
+    const tag = (node, name) => node.setAttribute('class', `${node.getAttribute('class') ?? ''} ${name}-${dir}`.trim());
+    tag(entering, 'slide-in');
+    tag(leaving, 'slide-out');
+    main.setAttribute('data-sliding', dir);
+    // The new screen comes first so focus lookups find it before the old one.
+    clear(main, entering, leaving);
+    slideTimer = win.setTimeout(() => {
+      slideTimer = null;
+      main.removeAttribute('data-sliding');
+      entering.setAttribute('class', (entering.getAttribute('class') ?? '').replace(` slide-in-${dir}`, '').trim());
+      clear(main, entering);
+    }, 460);
+  }
+
   function draw() {
     route = resolveRoute(win.location.hash, registry.ids());
     const s = store.get();
     renderBar();
     const screen = renderMain(s);
-    // Changing tab, or stepping a day or a week, slides the new screen in from the side you moved towards; plain redraws stay still.
+    // Changing tab, or stepping a day or a week, slides the old screen out and the new one in, towards the side you moved.
     const where = route.id === 'day' ? dateParam(route.param, getClock().today) : route.id === 'week' ? weekParam(route.param, getClock().today) : null;
+    let way = null;
     if (lastRouteId !== null && screen && typeof screen.setAttribute === 'function') {
-      let way = null;
       if (route.id !== lastRouteId) {
         const order = registry.primary().map((x) => x.id);
         const from = order.indexOf(lastRouteId);
         const to = order.indexOf(route.id);
-        way = from < 0 || to < 0 ? 'fade' : to > from ? 'fwd' : 'back';
+        way = to > from ? 'fwd' : from < 0 || to < 0 ? 'fwd' : 'back';
       } else if (where !== null && lastWhere !== null && where !== lastWhere) {
         way = where > lastWhere ? 'step-fwd' : 'step-back';
       }
       if (way) screen.setAttribute('data-enter', way);
     }
+    // A different screen or record is a new page: it starts at the top, not where the last one was scrolled to.
+    if (lastRouteId !== null && (route.id !== lastRouteId || route.param !== lastParam) && typeof win.scrollTo === 'function') win.scrollTo(0, 0);
     lastRouteId = route.id;
     lastWhere = where;
-    clear(main, screen);
+    lastParam = route.param;
+    settleSlide();
+    const leaving = main.children[0];
+    if (way && leaving && canSlide()) startSlide(leaving, screen, way.endsWith('back') ? 'back' : 'fwd');
+    else clear(main, screen);
     nudge.update({
       status: s.status,
       items: s.isEmpty || !s.state ? [] : buildNudge(s.warnings).items,

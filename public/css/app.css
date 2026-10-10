@@ -331,13 +331,7 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 .drawer button:disabled { opacity: .5; cursor: not-allowed; }
 @media (max-width: 700px) { .drawer { width: 100vw; } .drawer-root .scrim { right: 0; } }
 
-/* Motion: short, from the side the tab sits on, nothing that makes you wait. */
-@keyframes enter-fwd { from { opacity: .35; transform: translateX(14px); } }
-@keyframes enter-back { from { opacity: .35; transform: translateX(-14px); } }
-@keyframes enter-fade { from { opacity: .35; } }
-[data-enter="fwd"] { animation: enter-fwd .32s cubic-bezier(.2, .7, .2, 1) backwards; }
-[data-enter="back"] { animation: enter-back .32s cubic-bezier(.2, .7, .2, 1) backwards; }
-[data-enter="fade"] { animation: enter-fade .28s ease-out backwards; }
+/* Motion: screens slide past each other; nothing fades, so nothing flickers. */
 .tab, .btn, .fl, button { transition: background-color .18s ease-out, color .18s ease-out, border-color .18s ease-out; }
 .tab:active, .btn:active, .btns button:active, .acts button:active { transform: translateY(1px); }
 @keyframes face-in { from { opacity: 0; } }
@@ -365,11 +359,19 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 .say .pg button:focus-visible { outline-color: var(--paper); }
 .btn.dark:hover:not(:disabled) { background: #3A3D40; }
 
-/* Stepping a day or a week keeps the page still and slides only the content, with no fading, so nothing flickers. */
-@keyframes step-fwd { from { transform: translateX(32px); } }
-@keyframes step-back { from { transform: translateX(-32px); } }
-[data-enter="step-fwd"] > :not(.hero) { animation: step-fwd .4s cubic-bezier(.2, .7, .2, 1) backwards; }
-[data-enter="step-back"] > :not(.hero) { animation: step-back .4s cubic-bezier(.2, .7, .2, 1) backwards; }
 .say[data-enter="page-fwd"] { animation: step-fwd .34s cubic-bezier(.2, .7, .2, 1) backwards; }
 .say[data-enter="page-back"] { animation: step-back .34s cubic-bezier(.2, .7, .2, 1) backwards; }
 .week, .dayv { overflow-x: clip; }
+
+main[data-sliding] { display: grid; overflow: clip; }
+main[data-sliding] > * { grid-area: 1 / 1; min-width: 0; }
+@keyframes in-fwd { from { transform: translateX(100%); } }
+@keyframes out-fwd { to { transform: translateX(-100%); } }
+@keyframes in-back { from { transform: translateX(-100%); } }
+@keyframes out-back { to { transform: translateX(100%); } }
+.slide-in-fwd { position: relative; z-index: 1; background: var(--paper); animation: in-fwd .44s cubic-bezier(.4, 0, .15, 1) backwards; }
+.slide-in-back { position: relative; z-index: 1; background: var(--paper); animation: in-back .44s cubic-bezier(.4, 0, .15, 1) backwards; }
+.slide-out-fwd { animation: out-fwd .44s cubic-bezier(.4, 0, .15, 1) forwards; }
+.slide-out-back { animation: out-back .44s cubic-bezier(.4, 0, .15, 1) forwards; }
+@keyframes step-fwd { from { transform: translateX(32px); } }
+@keyframes step-back { from { transform: translateX(-32px); } }

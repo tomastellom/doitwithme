@@ -135,3 +135,44 @@ test('stepping through days slides the same way you step', async () => {
   app.navigate('#/day/2026-10-06');
   assert.deepEqual(entering(), ['step-back']);
 });
+
+test('with timers the old screen slides out while the new one slides in, then is removed', async () => {
+  await put(baseState());
+  const document: any = new FakeDocument();
+  const root = document.createElement('div');
+  const timers: Array<{ fn: Function; ms: number }> = [];
+  const win: any = { location: { hash: '' }, localStorage: undefined, listeners: {}, addEventListener(t: string, f: Function) { (this.listeners[t] ??= []).push(f); }, setTimeout: (fn: Function, ms: number) => timers.push({ fn, ms }), clearTimeout() {} };
+  const app: any = startApp({ root, document, fetch: (p: string, i: any) => fetch(base + p, i), win, now });
+  await settled(app);
+  const view = byTag(root, 'main')[0];
+  assert.equal(view.children.length, 1, 'the first screen just appears');
+  app.navigate('#/day');
+  assert.equal(view.children.length, 2, 'old and new are both there while they slide');
+  assert.match(view.children[0].getAttribute('class'), /slide-in-back/);
+  assert.match(view.children[1].getAttribute('class'), /slide-out-back/);
+  assert.equal(view.getAttribute('data-sliding'), 'back');
+  timers.filter((t) => t.ms === 460).forEach((t) => t.fn());
+  assert.equal(view.children.length, 1);
+  assert.equal(view.hasAttribute('data-sliding'), false);
+  app.navigate('#/week');
+  app.navigate('#/deadlines');
+  assert.equal(view.children.length, 2, 'a new move while sliding settles the first one');
+});
+
+test('opening another screen or another record starts at the top; redrawing the same one keeps your place', async () => {
+  await put(await exampleState());
+  const document: any = new FakeDocument();
+  const root = document.createElement('div');
+  const jumps: any[] = [];
+  const win: any = { location: { hash: '' }, localStorage: undefined, listeners: {}, addEventListener(t: string, f: Function) { (this.listeners[t] ??= []).push(f); }, scrollTo: (...a: any[]) => jumps.push(a) };
+  const app: any = startApp({ root, document, fetch: (p: string, i: any) => fetch(base + p, i), win, now });
+  await settled(app);
+  assert.equal(jumps.length, 0, 'the first screen needs no jump');
+  app.navigate('#/tasks');
+  assert.equal(jumps.length, 1);
+  assert.deepEqual(jumps[0], [0, 0]);
+  app.navigate('#/tasks/some-task');
+  assert.equal(jumps.length, 2, 'a different record is a new page');
+  app.render();
+  assert.equal(jumps.length, 2, 'a plain redraw keeps the scroll');
+});

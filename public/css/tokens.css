@@ -21,14 +21,14 @@
 }
 
 :root {
-  --paper: #F1EEE6;
+  --paper: #FFFFFF;
   --ink: #111111;
   --study: #FF4B1F;
   --gym: #1746F0;
   --admin: #F5B400;
-  --muted: #6F6B61;
-  --line: #B9B4A6;
-  --ghost: #8C887D;
+  --muted: #55585C;
+  --line: #C9CBCD;
+  --ghost: #9A9DA0;
   --on-study: #111111;
   --on-gym: #FFFFFF;
   --on-admin: #111111;

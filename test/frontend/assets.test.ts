@@ -46,7 +46,7 @@ test('the stylesheets the page references are served', async () => {
 
 test('tokens.css defines the design tokens and both self-hosted fonts', () => {
   const css = readFileSync('public/css/tokens.css', 'utf8');
-  for (const token of ['--paper: #F1EEE6', '--ink: #111111', '--study: #FF4B1F', '--gym: #1746F0', '--admin: #F5B400', '--muted: #6F6B61']) {
+  for (const token of ['--paper: #FFFFFF', '--ink: #111111', '--study: #FF4B1F', '--gym: #1746F0', '--admin: #F5B400', '--muted: #55585C']) {
     assert.ok(css.includes(token), token);
   }
   for (const name of ['--line', '--ghost', '--font-sans', '--font-mono']) assert.ok(css.includes(name), name);
@@ -58,7 +58,7 @@ test('tokens.css defines the design tokens and both self-hosted fonts', () => {
 test('app.css never loads anything from another origin and uses no gradients except the grey travel hatch', () => {
   const css = readFileSync('public/css/app.css', 'utf8');
   assert.doesNotMatch(css, /https?:\/\//);
-  const hatch = 'repeating-linear-gradient(135deg, var(--paper) 0 6px, #DAD5C8 6px 12px)';
+  const hatch = 'repeating-linear-gradient(135deg, var(--paper) 0 6px, #E6E7E8 6px 12px)';
   assert.doesNotMatch(css.split(hatch).join(''), /gradient/i);
 });
 
@@ -113,9 +113,9 @@ test('placeholder and empty-day text use colors that pass, and the screen-reader
 test('the title is a little smaller, Nudge rests until hovered, and the calm bubble is solid', () => {
   const css = readFileSync('public/css/app.css', 'utf8');
   const h1 = css.match(/\.hero h1 \{[^}]*\}/)![0];
-  const size = h1.match(/font-size: clamp\((\d+)px, [^,]+, (\d+)px\)/);
-  assert.ok(size, 'the title size scales with clamp()');
-  assert.ok(Number(size![2]) <= 170 && Number(size![2]) >= 120, `max title size ${size![2]}px`);
+  const size = h1.match(/font-size: (\d+)px/);
+  assert.ok(size, 'the title has a fixed size');
+  assert.ok(Number(size![1]) <= 90 && Number(size![1]) >= 60, `title size ${size![1]}px`);
   assert.match(css, /\.nudge\[data-state="resting"\] \.nudge-body \{[^}]*translateY/);
   assert.match(css, /\.nudge\[data-state="resting"\]:hover \.nudge-body/);
   assert.match(css, /\.nudge\[data-state="resting"\]:focus-within \.nudge-body/);
@@ -125,7 +125,7 @@ test('the title is a little smaller, Nudge rests until hovered, and the calm bub
 
 test('the stylesheet has hatched travel entries, a travel-off line and dimmed segments', () => {
   const css = readFileSync('public/css/app.css', 'utf8');
-  assert.match(css, /^\.travel \{[^}]*repeating-linear-gradient[^}]*#DAD5C8/m);
+  assert.match(css, /^\.travel \{[^}]*repeating-linear-gradient[^}]*#E6E7E8/m);
   assert.match(css, /^\.travel-off \{/m);
   assert.match(css, /^\.seg button:disabled \{/m);
 });
@@ -150,7 +150,7 @@ test('the mascot blinks with a short eye animation that respects reduced motion'
 
 test('the Week title is smaller than the other screens', () => {
   const css = readFileSync('public/css/app.css', 'utf8');
-  assert.match(css, /^\.week \.hero h1 \{[^}]*font-size: clamp\(56px, 7\.2vw, 104px\)/m);
+  assert.match(css, /^\.week \.hero h1 \{[^}]*font-size: 84px/m);
 });
 
 test('form rows line up their labels and input boxes even when a label wraps', () => {

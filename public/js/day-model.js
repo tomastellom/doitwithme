@@ -1,4 +1,5 @@
-import { GROUP_IDS, groupOfBlock, labelOf, occurrencesOn } from './model.js';
+import { labelFor, labelsOf } from './labels.js';
+import { occurrencesOn } from './model.js';
 import { WEEKDAYS, isoWeek, shortDate, weekdayOf } from './time.js';
 
 const MIN_GAP = 15;
@@ -20,6 +21,11 @@ function busyMinutes(entries, window) {
 export function dayModel(state, date, travel = []) {
   const pref = state.preferences;
   const window = pref.daysOff.includes(weekdayOf(date)) ? pref.dayOffWindow : pref.weekdayWindow;
+  const labels = labelsOf(state);
+  const look = (category) => {
+    const l = labelFor(labels, category);
+    return { group: l.id, label: l.name, color: l.color, look: l.style };
+  };
   const entries = [];
 
   for (const c of state.commitments) {
@@ -27,12 +33,12 @@ export function dayModel(state, date, travel = []) {
       if (o.bufferBefore > 0) {
         entries.push({ kind: 'buffer', start: Math.max(0, o.start - o.bufferBefore), end: o.start, title: `Buffer before ${o.title}` });
       }
-      entries.push({ kind: 'item', commitmentId: c.id, date, group: 'fixed', start: o.start, end: o.end, title: o.title, label: labelOf(o.category) });
+      entries.push({ kind: 'item', commitmentId: c.id, date, ...look(o.category), start: o.start, end: o.end, title: o.title });
     }
   }
   for (const b of state.blocks) {
     if (b.date === date) {
-      entries.push({ kind: 'item', taskId: b.taskId, ...(b.deadlineId ? { deadlineId: b.deadlineId } : {}), date, group: groupOfBlock(b.category), start: b.start, end: b.end, title: b.title, label: labelOf(b.category) });
+      entries.push({ kind: 'item', taskId: b.taskId, ...(b.deadlineId ? { deadlineId: b.deadlineId } : {}), date, ...look(b.category), start: b.start, end: b.end, title: b.title });
     }
   }
   for (const leg of travel) {
@@ -52,13 +58,14 @@ export function dayModel(state, date, travel = []) {
   }
   if (window.end - cursor >= MIN_GAP) rows.push({ kind: 'gap', start: cursor, end: window.end });
 
-  const totals = Object.fromEntries(GROUP_IDS.map((id) => [id, 0]));
+  const totals = {};
   const itemEntries = entries.filter((e) => e.kind === 'item');
   for (const e of entries) {
     if (e.kind === 'item') {
-      totals[e.group] += e.end - e.start;
+      totals[e.group] = (totals[e.group] ?? 0) + (e.end - e.start);
     }
   }
+  const breakdown = labels.map((l) => ({ id: l.id, name: l.name, color: l.color, look: l.style, minutes: totals[l.id] ?? 0 })).filter((b) => b.minutes > 0);
   const booked = busyMinutes(itemEntries, { start: 0, end: 1440 });
   const length = window.end - window.start;
   const free = Math.max(0, Math.min(length, length - busyMinutes(entries, window)));
@@ -70,6 +77,7 @@ export function dayModel(state, date, travel = []) {
     year,
     weekLine: `Week ${week} / ${shortDate(date)} ${date.slice(0, 4)}`,
     booked,
+    breakdown,
     free,
     window,
     rows,

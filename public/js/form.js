@@ -1,3 +1,4 @@
+import { PALETTE, onColor } from './colors.js';
 import { WEEK_ORDER } from './setup-model.js';
 import { FULL_WEEKDAYS, isValidDate, longDate } from './time.js';
 
@@ -46,6 +47,18 @@ export function renderField(dom, def, draft, ctx) {
           onclick: () => { if (off.includes(o.value)) return; draft[def.name] = o.value; ctx.rerender(); },
         }, o.label)));
     }
+
+    case 'swatches':
+      return wrap(caption(def.label), h('div', { class: 'pks', role: 'group', 'aria-label': def.label },
+        PALETTE.map((c) => {
+          const on = draft[def.name] === c.hex;
+          const button = h('button', {
+            type: 'button', class: 'pk', 'aria-pressed': String(on), 'aria-label': c.name, title: c.name, 'data-fk': `${id}-${c.id}`,
+            onclick: () => { draft[def.name] = c.hex; ctx.rerender(); },
+          }, on && dom.svg('svg', { viewBox: '0 0 14 14', 'aria-hidden': 'true' }, dom.svg('path', { d: 'M2 7.5 5.5 11 12 3.5', fill: 'none', stroke: onColor(c.hex), 'stroke-width': '2.4' })));
+          button.style.background = c.hex;
+          return button;
+        })));
 
     case 'weekdays':
       return seg(def.label, WEEK_ORDER.map((w) => {

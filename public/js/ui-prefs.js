@@ -1,8 +1,5 @@
-import { COLOR_GROUPS, DEFAULT_COLORS, PALETTE } from './colors.js';
-
 const KEY = 'doitwithme.notify';
 const HOURS_KEY = 'doitwithme.hours';
-const COLORS_KEY = 'doitwithme.colors';
 export const DEFAULT_RANGE = { from: 7, to: 22 };
 const MIN_SPAN = 4;
 
@@ -33,17 +30,6 @@ export function createUiPrefs(win) {
     }
     return { ...DEFAULT_RANGE };
   };
-  const readColors = () => {
-    const out = { ...DEFAULT_COLORS };
-    try {
-      const saved = JSON.parse((win.localStorage && win.localStorage.getItem(COLORS_KEY)) || '{}');
-      for (const g of COLOR_GROUPS) if (PALETTE.some((c) => c.id === saved[g.id])) out[g.id] = saved[g.id];
-    } catch {
-      // A damaged value falls back to the defaults.
-    }
-    return out;
-  };
-  let chosen = readColors();
   let range = readHours();
   let on = read();
   const supported = () => typeof win.Notification === 'function';
@@ -73,21 +59,6 @@ export function createUiPrefs(win) {
         // The choice then lasts until the page closes.
       }
       return true;
-    },
-    // The colour of each kind of thing, kept in this browser.
-    colors: () => ({ ...chosen }),
-    setColor(group, id) {
-      if (!COLOR_GROUPS.some((g) => g.id === group) || !PALETTE.some((c) => c.id === id)) return false;
-      chosen = { ...chosen, [group]: id };
-      try {
-        if (win.localStorage) win.localStorage.setItem(COLORS_KEY, JSON.stringify(chosen));
-      } catch {
-        // The choice then lasts until the page closes.
-      }
-      return true;
-    },
-    resetColor(group) {
-      return this.setColor(group, DEFAULT_COLORS[group]);
     },
     disableNotify() {
       on = false;

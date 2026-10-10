@@ -18,13 +18,14 @@ test('a day lists items, buffers and free gaps in time order, as on board F', ()
     ['gap', 620, 930], ['buffer', 930, 960], ['item', 960, 1020], ['gap', 1020, 1320],
   ]);
   assert.equal(m.rows[4].title, 'Buffer before Private lesson, Anna');
-  assert.equal(m.rows[5].group, 'fixed');
-  assert.equal(m.rows[0].label, 'study');
+  assert.equal(m.rows[5].group, 'lesson');
+  assert.equal(m.rows[0].label, 'Study');
 });
 
 test('the side totals, booked time and free time add up', () => {
   const m = dayModel(wed(), '2026-10-14');
-  assert.deepEqual(m.totals, { fixed: 60, study: 85, gym: 0, admin: 0, outline: 35 });
+  assert.deepEqual(m.totals, { lesson: 60, study: 85, 'personal project': 35 });
+  assert.deepEqual(m.breakdown.map((b: any) => [b.name, b.minutes]), [['Lesson', 60], ['Study', 85], ['Personal project', 35]]);
   assert.equal(m.booked, 180);
   assert.deepEqual(m.window, { start: 480, end: 1320 });
   assert.equal(m.free, 630);

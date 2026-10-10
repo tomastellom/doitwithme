@@ -1,3 +1,5 @@
+import { DEFAULT_LABELS, LOCKED_IDS, labelsOf } from './labels.js';
+import { PALETTE } from './colors.js';
 import { WEEKDAYS, addDays, hhmm, isValidDate, longDate, shortDate } from './time.js';
 
 export const CATEGORIES = {
@@ -94,6 +96,31 @@ export const commitmentKind = {
 };
 
 const TITLE_ERROR = 'The title can be at most 200 characters.';
+
+const usage = (state, id) =>
+  state.commitments.filter((c) => c.category === id).length + state.tasks.filter((t) => t.category === id).length;
+
+export const labelKind = {
+  blank() {
+    return { name: '', color: PALETTE[5].hex, style: 'fill' };
+  },
+  toDraft(l) {
+    return { name: l.name, color: l.color, style: l.style };
+  },
+  fromDraft(d, id, state) {
+    const name = d.name.trim();
+    if (!name) return { error: 'Give the label a name.' };
+    if (name.length > 40) return { error: 'The name can be at most 40 characters.' };
+    if (labelsOf(state).some((l) => l.id !== id && l.name.toLowerCase() === name.toLowerCase())) return { error: 'Another label already has that name.' };
+    if (!PALETTE.some((c) => c.hex === d.color)) return { error: 'Pick a color from the list.' };
+    if (d.style !== 'fill' && d.style !== 'outline') return { error: 'Pick filled or outlined.' };
+    return { item: { id, name, color: d.color, style: d.style } };
+  },
+  summary(l, state) {
+    const n = usage(state, l.id);
+    return `${l.style === 'outline' ? 'outlined' : 'filled'} / ${n === 0 ? 'not used yet' : `${n} item${n === 1 ? '' : 's'}`}`;
+  },
+};
 
 export const taskKind = {
   blank() {
@@ -340,6 +367,16 @@ export const KINDS = {
       return n > 0 ? ` Its ${n} due date${n === 1 ? ' goes' : 's go'} too.` : '';
     },
   },
+  labels: {
+    id: 'labels', title: 'Labels', list: 'labels', add: 'New label', prefix: 'label', kind: labelKind,
+    itemTitle: (l) => l.name, itemLabel: (l) => (l.style === 'outline' ? 'outlined' : 'filled'),
+    // Study and Other hold the planner together, so they can be renamed and recolored but not deleted.
+    keep: (l) => (LOCKED_IDS.includes(l.id) ? `${l.name} is built in: you can rename and recolor it, but it cannot be deleted.` : null),
+    confirmNote: (state, id) => {
+      const n = usage(state, id);
+      return n > 0 ? ` ${n} item${n === 1 ? '' : 's'} using it move${n === 1 ? 's' : ''} to Other.` : '';
+    },
+  },
   'due-dates': {
     id: 'due-dates', title: 'Due dates', list: 'deadlines', add: 'Add a due date', prefix: 'd', kind: deadlineKind,
     itemTitle: (d, state) => {
@@ -367,21 +404,29 @@ export const KINDS = {
   },
   preferences: { id: 'preferences', title: 'Preferences', single: true, kind: preferencesKind },
 };
-export const KIND_IDS = ['commitments', 'tasks', 'due-dates', 'places', 'commutes', 'preferences'];
+export const KIND_IDS = ['commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes', 'preferences'];
 
-export const itemsOf = (state, kindId) => (KINDS[kindId].list ? state[KINDS[kindId].list] ?? [] : []);
+const listOf = (state, spec) => (spec.list === 'labels' ? labelsOf(state) : state[spec.list] ?? []);
+export const itemsOf = (state, kindId) => (KINDS[kindId].list ? listOf(state, KINDS[kindId]) : []);
 
 export function applyItem(state, kindId, item) {
   const spec = KINDS[kindId];
   if (spec.single) return { ...state, preferences: item };
-  const list = state[spec.list] ?? [];
+  const list = listOf(state, spec);
   const exists = list.some((x) => x.id === item.id);
   return { ...state, [spec.list]: exists ? list.map((x) => (x.id === item.id ? item : x)) : [...list, item] };
 }
 
 export function removeItem(state, kindId, id) {
   const spec = KINDS[kindId];
-  const next = { ...state, [spec.list]: (state[spec.list] ?? []).filter((x) => x.id !== id) };
+  const next = { ...state, [spec.list]: listOf(state, spec).filter((x) => x.id !== id) };
+  if (kindId === 'labels') {
+    // Whatever used the label moves to Other, planned blocks included, so nothing keeps pointing at a label that is gone.
+    const move = (x) => (x.category === id ? { ...x, category: 'other' } : x);
+    next.commitments = state.commitments.map(move);
+    next.tasks = state.tasks.map(move);
+    next.blocks = (state.blocks ?? []).map(move);
+  }
   if (kindId === 'tasks') next.deadlines = next.deadlines.filter((d) => d.taskId !== id);
 
   if (kindId === 'places') {

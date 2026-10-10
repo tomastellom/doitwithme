@@ -162,7 +162,7 @@ test('calendar items drawn as buttons look like the blocks on the boards', () =>
   const css = readFileSync('public/css/app.css', 'utf8');
   const reset = css.indexOf('.blk, .dv-blk { border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; }');
   assert.ok(reset >= 0, 'one shared reset');
-  for (const later of ['.g-outline {', '.travel {', '.g-fixed {']) assert.ok(css.indexOf(later) > reset, `${later} comes after the reset so its look wins`);
+  for (const later of ['.is-outline {', '.travel {']) assert.ok(css.indexOf(later) > reset, `${later} comes after the reset so its look wins`);
   assert.match(css, /^\.blk \{[^}]*width: 100%;/m);
 });
 

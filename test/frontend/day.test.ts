@@ -49,16 +49,16 @@ test('rows show time, block, duration, gaps and buffers', () => {
   assert.match(text, /Buffer before Private lesson, Anna/);
   assert.match(text, /Travel and setup/);
   assert.equal(byClass(el, 'dv-buf').length, 1);
-  assert.ok(byClass(el, 'g-study').length >= 1);
+  assert.ok(byClass(el, 'dv-blk').some((b: any) => b.style.background === '#FF4B1F'), 'the study block is painted in the Study color');
 });
 
 test('the side lists the groups and the free time in the window', () => {
   const { el } = draw();
   const side = textOf(byClass(el, 'dv-side')[0]);
-  assert.match(side, /Today by group/);
-  assert.match(side, /Fixed.*1h00/);
+  assert.match(side, /Today by label/);
+  assert.match(side, /Lesson.*1h00/);
   assert.match(side, /Study.*0h50/);
-  assert.match(side, /Projects and social.*0h35/);
+  assert.match(side, /Personal project.*0h35/);
   assert.match(side, /Free in the 08:00–22:00 window/);
   assert.match(textOf(byClass(el, 'dv-free')[0]), /^\d+h\d\d$/);
 });
@@ -86,9 +86,9 @@ test('a hostile title is text, and an empty schedule offers the example', () => 
   assert.deepEqual(calls, [['example']]);
 });
 
-test('other days say Day by group, and the step buttons keep their visible words in their names', () => {
+test('other days say Day by label, and the step buttons keep their visible words in their names', () => {
   const { el } = draw({ isToday: false });
-  assert.match(textOf(byClass(el, 'dv-side')[0]), /Day by group/);
+  assert.match(textOf(byClass(el, 'dv-side')[0]), /Day by label/);
   assert.equal(key(el, 'prev').getAttribute('aria-label'), 'Previous day, Tue');
   assert.equal(key(el, 'next').getAttribute('aria-label'), 'Next day, Thu');
 });

@@ -1,26 +1,6 @@
 import { WEEKDAYS, addDays, compactRange, isoWeek, rangeLabel, weekdayOf } from './time.js';
 
-export const GROUPS = [
-  { id: 'fixed', label: 'Fixed' },
-  { id: 'study', label: 'Study' },
-  { id: 'gym', label: 'Gym' },
-  { id: 'admin', label: 'Chores and errands' },
-  { id: 'outline', label: 'Projects and social' },
-];
-export const GROUP_IDS = GROUPS.map((g) => g.id);
-
-export function groupOfBlock(category) {
-  const c = String(category).toLowerCase().trim();
-  if (c === 'study') return 'study';
-  if (c === 'gym') return 'gym';
-  if (c === 'chores' || c === 'errands') return 'admin';
-  return 'outline';
-}
-
-export function labelOf(category) {
-  const c = String(category).toLowerCase().trim();
-  return c.startsWith('personal ') ? c.slice('personal '.length) : c;
-}
+import { labelFor, labelsOf } from './labels.js';
 
 // Same rule as src/busy.ts; test/frontend/model.test.ts keeps the two in step.
 export function occurrencesOn(date, commitments) {
@@ -42,15 +22,20 @@ export function occurrencesOn(date, commitments) {
 export const itemKey = (i) => `${i.kind}:${i.commitmentId ?? i.taskId ?? i.placeId ?? ''}:${i.date}:${i.start}`;
 
 export function dayItems(state, date, travel = []) {
+  const labels = labelsOf(state);
+  const look = (category) => {
+    const l = labelFor(labels, category);
+    return { group: l.id, label: l.name, color: l.color, look: l.style };
+  };
   const items = [];
   for (const c of state.commitments) {
     for (const o of occurrencesOn(date, [c])) {
-      items.push({ kind: 'commitment', commitmentId: c.id, date, group: 'fixed', start: o.start, end: o.end, title: o.title, label: labelOf(o.category) });
+      items.push({ kind: 'commitment', commitmentId: c.id, date, ...look(o.category), start: o.start, end: o.end, title: o.title });
     }
   }
   for (const b of state.blocks) {
     if (b.date === date) {
-      items.push({ kind: 'block', taskId: b.taskId, ...(b.deadlineId ? { deadlineId: b.deadlineId } : {}), date, group: groupOfBlock(b.category), start: b.start, end: b.end, title: b.title, label: labelOf(b.category) });
+      items.push({ kind: 'block', taskId: b.taskId, ...(b.deadlineId ? { deadlineId: b.deadlineId } : {}), date, ...look(b.category), start: b.start, end: b.end, title: b.title });
     }
   }
   for (const leg of travel) {
@@ -63,22 +48,26 @@ export function dayItems(state, date, travel = []) {
 
 const minutesOf = (items) => items.reduce((t, i) => t + (i.end - i.start), 0);
 
-export function weekModel(state, start, visible, today, travel = []) {
-  const counts = Object.fromEntries(GROUP_IDS.map((id) => [id, 0]));
+// `hidden` holds the ids of labels the person has switched off; a new label is shown until they do.
+export function weekModel(state, start, hidden, today, travel = []) {
+  const counts = {};
   const days = [];
   for (let i = 0; i < 7; i++) {
     const date = addDays(start, i);
     const items = dayItems(state, date, travel);
-    for (const item of items) if (item.group in counts) counts[item.group]++;
+    for (const item of items) if (item.kind !== 'travel') counts[item.group] = (counts[item.group] ?? 0) + 1;
     days.push({
       date,
       weekday: WEEKDAYS[weekdayOf(date)],
       num: Number(date.slice(8)),
       isToday: date === today,
       booked: minutesOf(items.filter((item) => item.kind !== 'travel')),
-      items: items.filter((item) => item.kind === 'travel' || visible.has(item.group)),
+      items: items.filter((item) => item.kind === 'travel' || !hidden.has(item.group)),
     });
   }
   const { week, year } = isoWeek(start);
-  return { start, week, year, range: rangeLabel(start), title: compactRange(start), days, counts, total: Object.values(counts).reduce((a, b) => a + b, 0) };
+  const filters = labelsOf(state)
+    .map((l) => ({ id: l.id, name: l.name, color: l.color, look: l.style, count: counts[l.id] ?? 0 }))
+    .filter((f) => f.count > 0 || hidden.has(f.id));
+  return { start, week, year, range: rangeLabel(start), title: compactRange(start), days, counts, filters, total: Object.values(counts).reduce((a, b) => a + b, 0) };
 }

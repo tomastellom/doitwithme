@@ -1,3 +1,4 @@
+import { lookClass, paint } from './labels.js';
 import { WEEKDAYS } from './time.js';
 
 const HEADS = [...WEEKDAYS.slice(1), WEEKDAYS[0]];
@@ -16,7 +17,11 @@ export function renderMonth(dom, view, actions) {
       },
         h('span', { class: 'cn' }, h('span', { class: 'dn' }, c.num), c.due && h('span', { class: 'due mono' }, 'Due')),
         c.dots.length > 0 && h('span', { class: 'dots', 'aria-hidden': 'true' },
-          c.dots.map((g) => h('i', { class: `dot g-${g}`, 'aria-hidden': 'true' })),
+          c.dots.map((g) => {
+            const dot = h('i', { class: `dot ${lookClass(g.look)}`, 'aria-hidden': 'true' });
+            paint(dot, g.color, g.look, { onInk: c.isToday });
+            return dot;
+          }),
           c.more > 0 && h('span', { class: 'more mono' }, `+${c.more}`))),
       actions.add && h('button', {
         type: 'button', class: `plus${c.isToday ? ' on-ink' : ''}`, 'data-fk': `plus-${c.date}`,
@@ -49,11 +54,11 @@ export function renderMonth(dom, view, actions) {
   const heads = h('div', { class: 'heads mono' }, HEADS.map((d) => h('span', {}, d)));
   const grid = h('div', { class: 'mgrid' }, model.cells.map(cell));
   const legend = h('div', { class: 'legend mono' },
-    h('span', {}, h('i', { class: 'dot g-fixed' }), 'Fixed'),
-    h('span', {}, h('i', { class: 'dot g-study' }), 'Study'),
-    h('span', {}, h('i', { class: 'dot g-gym' }), 'Gym'),
-    h('span', {}, h('i', { class: 'dot g-admin' }), 'Chores and errands'),
-    h('span', {}, h('i', { class: 'dot g-outline' }), 'Projects and social'),
+    model.legend.map((g) => {
+      const dot = h('i', { class: `dot ${lookClass(g.look)}` });
+      paint(dot, g.color, g.look);
+      return h('span', {}, dot, g.name);
+    }),
     h('span', { class: 'hint' }, 'One dot per planned item'));
 
   if (isEmpty) {

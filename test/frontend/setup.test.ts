@@ -39,14 +39,14 @@ function setup(state: any = stateWith(), opts: any = {}) {
 const type = (root: any, key: string, value: string) => { const el = byKey(root, key); el.value = value; el.dispatch('input'); };
 const submit = async (root: any) => { byTag(root, 'form')[0].dispatch('submit'); await tick(); };
 
-test('the hero and the sub-navigation point at the six setup screens', () => {
+test('the hero and the sub-navigation point at the setup screens', () => {
   const { render } = setup();
   const el: any = render('tasks');
   assert.equal(textOf(byTag(el, 'h1')[0]), 'Setup');
   const links = byClass(el, 'sub')[0].children.filter((c: any) => c.tag === 'a');
-  assert.deepEqual(links.map((l: any) => textOf(l)), ['Commitments', 'Tasks', 'Due dates', 'Places', 'Commutes', 'Preferences']);
-  assert.deepEqual(links.map((l: any) => l.getAttribute('href')), ['#/commitments', '#/tasks', '#/due-dates', '#/places', '#/commutes', '#/preferences']);
-  assert.deepEqual(links.map((l: any) => l.getAttribute('aria-current')), [null, 'page', null, null, null, null]);
+  assert.deepEqual(links.map((l: any) => textOf(l)), ['Commitments', 'Tasks', 'Due dates', 'Labels', 'Places', 'Commutes', 'Preferences']);
+  assert.deepEqual(links.map((l: any) => l.getAttribute('href')), ['#/commitments', '#/tasks', '#/due-dates', '#/labels', '#/places', '#/commutes', '#/preferences']);
+  assert.deepEqual(links.map((l: any) => l.getAttribute('aria-current')), [null, 'page', null, null, null, null, null]);
 });
 
 test('the list shows title, label and summary like board H, and marks the selected item', () => {
@@ -279,11 +279,11 @@ test('a cancelled date that was picked but not added is saved with the item', as
   assert.ok(calls[0].commitments.find((c: any) => c.id === 'mass').exceptions.includes('2026-10-18'));
 });
 
-test('the sub-navigation lists six screens with Places and Commutes', () => {
+test('the sub-navigation lists the screens with Places and Commutes', () => {
   const { render } = setup();
   const el: any = render('places');
   const links = byClass(el, 'sub')[0].children.filter((c: any) => c.tag === 'a');
-  assert.deepEqual(links.map((l: any) => textOf(l)), ['Commitments', 'Tasks', 'Due dates', 'Places', 'Commutes', 'Preferences']);
+  assert.deepEqual(links.map((l: any) => textOf(l)), ['Commitments', 'Tasks', 'Due dates', 'Labels', 'Places', 'Commutes', 'Preferences']);
 });
 
 test('the places list shows address or "Address missing", and the form edits the place', async () => {
@@ -592,4 +592,38 @@ test('after Use this the keyboard lands on minutes a week, after Keep mine on th
   await tick();
   byKey(el, 'estimate-keep').click();
   assert.equal(doc.activeElement, byKey(el, 'estimate-run'));
+});
+
+test('the Labels page lists every label with its look, and a new one is made with a name, a color and a look', async () => {
+  const { render, calls } = setup();
+  const el: any = render('labels');
+  const names = byClass(el, 'item').map((i: any) => textOf(byClass(i, 'n')[0]));
+  assert.ok(names.includes('Study') && names.includes('Gym') && names.includes('Other'), names.join(', '));
+  assert.ok(byClass(byClass(el, 'item')[0], 'lsw').length === 1, 'each row has its swatch');
+  const form: any = render('labels', 'new');
+  assert.equal(findAll(form, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('f-color-')).length, 12);
+  type(form, 'f-name', 'Piano');
+  byKey(form, 'f-color-pink').click();
+  byKey(form, 'f-style-outline').click();
+  await submit(form);
+  const saved = calls.at(-1).labels.find((l: any) => l.name === 'Piano');
+  assert.deepEqual([saved.color, saved.style], ['#FF5FA2', 'outline']);
+  assert.ok(saved.id.startsWith('label-'));
+  assert.equal(calls.at(-1).labels.length, 14, 'thirteen built in plus the new one');
+});
+
+test('a locked label says why it cannot be deleted, and an ordinary one asks first', () => {
+  const { render } = setup();
+  const locked: any = render('labels', 'study');
+  assert.match(textOf(byKey(locked, 'setup-kept')), /built in/);
+  assert.equal(byKey(locked, 'setup-delete'), undefined);
+  const plain: any = render('labels', 'gym');
+  assert.ok(byKey(plain, 'setup-delete'));
+});
+
+test('the Label field in the commitment and task forms offers the labels by name', () => {
+  const { render } = setup(stateWith({ labels: [{ id: 'study', name: 'Learning', color: '#FF4B1F', style: 'fill' }, { id: 'label-p', name: 'Piano', color: '#00A3A3', style: 'fill' }, { id: 'other', name: 'Other', color: '#8A8D91', style: 'fill' }] }));
+  const form: any = render('tasks', 'new');
+  const options = byTag(byKey(form, 'f-category'), 'option').map((o: any) => [o.value, textOf(o)]);
+  assert.deepEqual(options, [['study', 'Learning'], ['label-p', 'Piano'], ['other', 'Other']]);
 });

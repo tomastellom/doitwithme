@@ -1,4 +1,4 @@
-// The colours a person can give each kind of thing. Text on top switches between ink and white by itself.
+// The colours a person can give a label. Text on top switches between ink and white by itself.
 export const PALETTE = [
   { id: 'ink', name: 'Ink', hex: '#111111' },
   { id: 'vermilion', name: 'Vermilion', hex: '#FF4B1F' },
@@ -14,15 +14,6 @@ export const PALETTE = [
   { id: 'grey', name: 'Grey', hex: '#8A8D91' },
 ];
 
-export const COLOR_GROUPS = [
-  { id: 'fixed', label: 'Fixed', note: 'Classes, work, lessons, mass', fallback: 'ink' },
-  { id: 'study', label: 'Study', note: 'Study blocks the planner makes', fallback: 'vermilion' },
-  { id: 'gym', label: 'Gym', note: 'Training', fallback: 'cobalt' },
-  { id: 'admin', label: 'Chores and errands', note: 'Laundry, shopping, admin', fallback: 'amber' },
-  { id: 'outline', label: 'Projects and social', note: 'Side projects, friends, volunteering (drawn as an outline)', fallback: 'ink' },
-];
-
-export const DEFAULT_COLORS = Object.fromEntries(COLOR_GROUPS.map((g) => [g.id, g.fallback]));
 export const hexOf = (id) => (PALETTE.find((c) => c.id === id) ?? PALETTE[0]).hex;
 
 const channel = (v) => {
@@ -39,13 +30,3 @@ export const contrast = (a, b) => {
 };
 // Whichever of ink or white reads better on the colour.
 export const onColor = (hex) => (contrast(hex, '#111111') >= contrast(hex, '#FFFFFF') ? '#111111' : '#FFFFFF');
-
-// Sets the colours on the page through the style object, which the content policy allows.
-export function applyColors(target, choices) {
-  if (!target || !target.style || typeof target.style.setProperty !== 'function') return;
-  for (const g of COLOR_GROUPS) {
-    const hex = hexOf(choices[g.id] ?? g.fallback);
-    target.style.setProperty(`--g-${g.id}`, hex);
-    target.style.setProperty(`--on-g-${g.id}`, onColor(hex));
-  }
-}

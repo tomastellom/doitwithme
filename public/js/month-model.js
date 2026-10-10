@@ -22,11 +22,13 @@ export function monthModel(state, anchor, today, travel = []) {
   const dueDates = new Set((state.deadlines ?? []).map((d) => d.dueDate));
   const monthIndex = Number(first.slice(5, 7)) - 1;
   const cells = [];
+  const used = new Map();
   let due = 0;
   for (let i = 0; i < rows * 7; i++) {
     const date = addDays(start, i);
     const inMonth = date.slice(0, 7) === first.slice(0, 7);
-    const groups = inMonth ? dayItems(state, date, travel).filter((x) => x.kind !== 'travel').map((x) => x.group) : [];
+    const groups = inMonth ? dayItems(state, date, travel).filter((x) => x.kind !== 'travel').map((x) => ({ id: x.group, color: x.color, look: x.look, name: x.label })) : [];
+    for (const g of groups) if (!used.has(g.id)) used.set(g.id, g);
     const isDue = inMonth && dueDates.has(date);
     if (isDue) due += 1;
     cells.push({
@@ -43,5 +45,5 @@ export function monthModel(state, anchor, today, travel = []) {
       due: isDue,
     });
   }
-  return { first, title: MONTH_NAMES[monthIndex], year: Number(first.slice(0, 4)), cells, due };
+  return { first, title: MONTH_NAMES[monthIndex], year: Number(first.slice(0, 4)), cells, due, legend: [...used.values()] };
 }

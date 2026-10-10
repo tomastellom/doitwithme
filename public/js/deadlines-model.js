@@ -1,4 +1,4 @@
-import { labelOf } from './model.js';
+import { labelFor, labelsOf } from './labels.js';
 import { WEEKDAYS, MONTHS, addDays, daysBetween, weekdayOf } from './time.js';
 
 const sum = (blocks) => blocks.reduce((t, b) => t + (b.end - b.start), 0);
@@ -36,7 +36,7 @@ export function deadlinesModel(state, clock) {
         days: daysBetween(today, d.dueDate),
         daysLabel: daysLabel(daysBetween(today, d.dueDate)),
         title: `${task ? task.title : 'Unknown task'} ${d.kind}`,
-        sub: task ? `${cap(labelOf(task.category))} / ${task.title}` : 'Unknown task',
+        sub: task ? `${labelFor(labelsOf(state), task.category).name} / ${task.title}` : 'Unknown task',
         effort: d.effortMinutes,
         done,
         planned,

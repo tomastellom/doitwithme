@@ -151,8 +151,8 @@ test('preferences round-trip, keep softMode, and validate windows', () => {
   assert.equal(preferencesKind.fromDraft({ ...draft, softWindows: [{ weekday: 5, start: '18:00', end: '24:00' }, { weekday: 6, start: '18:00', end: '24:00' }] }, '-', state).item.softWindows.length, 2);
 });
 
-test('KINDS describes the six setup screens', () => {
-  assert.deepEqual(KIND_IDS, ['commitments', 'tasks', 'due-dates', 'places', 'commutes', 'preferences']);
+test('KINDS describes the setup screens', () => {
+  assert.deepEqual(KIND_IDS, ['commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes', 'preferences']);
   assert.equal(KINDS['due-dates'].list, 'deadlines');
   assert.equal(KINDS.preferences.single, true);
   assert.equal(KINDS.commitments.add, 'Add a commitment');
@@ -306,7 +306,7 @@ test('a state without places or commutes still lists and deletes safely', () => 
   assert.deepEqual(itemsOf(old, 'places'), []);
   assert.deepEqual(itemsOf(old, 'commutes'), []);
   assert.doesNotThrow(() => removeItem(old, 'places', 'x'));
-  assert.deepEqual(KIND_IDS, ['commitments', 'tasks', 'due-dates', 'places', 'commutes', 'preferences']);
+  assert.deepEqual(KIND_IDS, ['commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes', 'preferences']);
 });
 
 test('adding and editing a commute only touches the commutes list', () => {

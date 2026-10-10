@@ -1,4 +1,5 @@
 import { renderField } from './form.js';
+import { labelOptions, lookClass, paint } from './labels.js';
 import { findByKey } from './focus.js';
 import { isValidDate } from './time.js';
 import { CATEGORIES, DEADLINE_KINDS, KINDS, KIND_IDS, PLACE_KINDS, TRAVEL_MODES, applyItem, itemsOf, newId, parseDecimal, parseWhole, removeItem } from './setup-model.js';
@@ -9,6 +10,22 @@ const weekly = (d) => d.repeats === 'weekly';
 const once = (d) => d.repeats === 'once';
 const placeOptions = (state) => (state.places ?? []).map((p) => ({ value: p.id, label: p.name }));
 const hint = (text) => ({ type: 'custom', name: 'hint', span: 3, render: (dom) => dom.h('p', { class: 'hint' }, text) });
+
+function labelSwatch(dom, l) {
+  const node = dom.h('i', { class: `lsw ${lookClass(l.style)}` });
+  paint(node, l.color, l.style);
+  return node;
+}
+
+function labelPreview(dom, d) {
+  const { h } = dom;
+  const tile = (text) => {
+    const node = h('span', { class: `ptile ${lookClass(d.style)}` }, text);
+    paint(node, d.color, d.style);
+    return node;
+  };
+  return h('div', { class: 'lprev' }, h('span', { class: 'mono cap' }, 'How it looks'), h('div', { class: 'prev' }, tile(d.name.trim() || 'Label name'), tile('08:00 – 09:00')));
+}
 
 const study = (d) => d.category === 'study';
 const difficultyOptions = () => [
@@ -47,7 +64,7 @@ function estimateBlock(dom, est) {
 export const FIELDS = {
   commitments: [
     { name: 'title', label: 'Title', type: 'text', span: 2 },
-    { name: 'category', label: 'Category', type: 'select', options: fixed(CATEGORIES.commitments) },
+    { name: 'category', label: 'Label', type: 'select', options: (state) => labelOptions(state) },
     { name: 'start', label: 'Starts', type: 'text', placeholder: '16:00' },
     { name: 'end', label: 'Ends', type: 'text', placeholder: '17:00' },
     { name: 'buffer', label: 'Buffer before, min', type: 'text', inputmode: 'numeric' },
@@ -59,9 +76,15 @@ export const FIELDS = {
     { name: 'to', label: 'To', type: 'date', show: weekly },
     { name: 'exceptions', label: 'Cancelled dates', type: 'dates', span: 2, show: weekly },
   ],
+  labels: [
+    { name: 'name', label: 'Name', type: 'text', span: 2 },
+    { name: 'color', label: 'Color', type: 'swatches', span: 3 },
+    { name: 'style', label: 'Look', type: 'choice', options: [{ value: 'fill', label: 'Filled' }, { value: 'outline', label: 'Outlined' }] },
+    { name: 'preview', type: 'custom', span: 3, render: (dom, d) => labelPreview(dom, d) },
+  ],
   tasks: [
     { name: 'title', label: 'Title', type: 'text', span: 2 },
-    { name: 'category', label: 'Category', type: 'select', options: fixed(CATEGORIES.tasks) },
+    { name: 'category', label: 'Label', type: 'select', options: (state) => labelOptions(state) },
     { name: 'weekly', label: 'Minutes a week, blank for none', type: 'text', inputmode: 'numeric' },
     { name: 'maxBlock', label: 'Longest block, min', type: 'text', inputmode: 'numeric' },
     { name: 'priority', label: 'Priority', type: 'select', options: () => [1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: n === 1 ? '1 (highest)' : n === 5 ? '5 (lowest)' : String(n) })) },
@@ -262,6 +285,8 @@ export function createSetup(dom, deps) {
 
   function deleteArea(sel) {
     const { kindId, s } = current;
+    const kept = sel.spec.keep ? sel.spec.keep(sel.item) : null;
+    if (kept) return h('span', { class: 'note2 kept', 'data-fk': 'setup-kept' }, kept);
     if (!local.confirm) {
       return h('button', { type: 'button', class: 'del mono', 'data-fk': 'setup-delete', onclick: () => { local.confirm = true; rerender(); } }, 'Delete');
     }
@@ -298,6 +323,7 @@ export function createSetup(dom, deps) {
       items.map((item) => {
         const on = item.id === current.route.param;
         return h('a', { class: on ? 'item on' : 'item', href: `#/${kindId}/${encodeURIComponent(item.id)}`, 'aria-current': on ? 'true' : null },
+          kindId === 'labels' && labelSwatch(dom, item),
           h('span', { class: 'n' }, sel.spec.itemTitle(item, s.state)),
           h('span', { class: 'mono' }, sel.spec.itemLabel(item)),
           h('span', { class: 'd' }, sel.spec.kind.summary(item, s.state)));

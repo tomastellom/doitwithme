@@ -3,7 +3,6 @@ import { dayModel } from './day-model.js';
 import { renderDay } from './day.js';
 import { coveredThisWeek, deadlinesModel } from './deadlines-model.js';
 import { renderDeadlines } from './deadlines.js';
-import { applyColors } from './colors.js';
 import { createDom } from './dom.js';
 import { createDrawer } from './drawer.js';
 import { replacingLink, startFavicon } from './favicon.js';
@@ -11,7 +10,7 @@ import { createFocusKeeper, findByKey } from './focus.js';
 import { createMenu } from './menu.js';
 import { addMonths, monthModel, monthStart } from './month-model.js';
 import { renderMonth } from './month.js';
-import { GROUP_IDS, weekModel } from './model.js';
+import { weekModel } from './model.js';
 import { createNotifier, startHiddenRefresh } from './notify.js';
 import { createNudge } from './nudge.js';
 import { buildNudge } from './nudge-model.js';
@@ -24,22 +23,23 @@ import { WEEKDAYS, addDays, currentClock, weekStart, weekdayOf } from './time.js
 import { createSetup } from './setup.js';
 import { renderWeek } from './week.js';
 
-const STORE_KEY = 'doitwithme.visible';
+const STORE_KEY = 'doitwithme.hidden';
 const RENDER_FAILED = 'Something unexpected happened. Reload the page.';
 
-function loadVisible(win) {
+// The labels switched off in the filters; a label that is new is shown until the person hides it.
+function loadHidden(win) {
   try {
     const raw = win.localStorage && win.localStorage.getItem(STORE_KEY);
-    const ids = raw ? JSON.parse(raw).filter((id) => GROUP_IDS.includes(id)) : [];
-    return new Set(ids.length > 0 ? ids : GROUP_IDS);
+    const ids = raw ? JSON.parse(raw) : [];
+    return new Set(Array.isArray(ids) ? ids.filter((id) => typeof id === 'string') : []);
   } catch {
-    return new Set(GROUP_IDS);
+    return new Set();
   }
 }
 
-function saveVisible(win, visible) {
+function saveHidden(win, hidden) {
   try {
-    if (win.localStorage) win.localStorage.setItem(STORE_KEY, JSON.stringify([...visible]));
+    if (win.localStorage) win.localStorage.setItem(STORE_KEY, JSON.stringify([...hidden]));
   } catch {
     // Storage can be blocked; the choice then simply lasts until the page closes.
   }
@@ -51,7 +51,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   const getClock = () => currentClock(now());
   const store = createStore(createApi(fetch), getClock);
   const registry = createRegistry();
-  let visible = loadVisible(win);
+  let hidden = loadHidden(win);
   let route = { id: 'week', param: null };
   let lastDay = getClock().today;
   let lastRouteId = null;
@@ -121,12 +121,16 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     open: (item) => drawer.open(item),
     add: addAt,
     toggleGroup(id) {
-      const next = new Set(visible);
+      const next = new Set(hidden);
       if (next.has(id)) next.delete(id);
       else next.add(id);
-      if (next.size === 0) return;
-      visible = next;
-      saveVisible(win, visible);
+      hidden = next;
+      saveHidden(win, hidden);
+      render();
+    },
+    showAll() {
+      hidden = new Set();
+      saveHidden(win, hidden);
       render();
     },
     go: (delta) => navigate(buildHash('week', addDays(currentWeek(), 7 * delta))),
@@ -155,11 +159,11 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     id: 'week', title: 'Week', group: 'views', description: 'Your plan for the week.', primary: true,
     render: (ctx) => {
       const s = ctx.s;
-      const model = weekModel(s.state, currentWeek(), visible, getClock().today, s.travel);
+      const model = weekModel(s.state, currentWeek(), hidden, getClock().today, s.travel);
       const { needsYou } = buildNudge(s.warnings);
       const places = s.state.places ?? [];
       const travelOff = places.length > 0 && !places.some((p) => p.kind === 'home');
-      return renderWeek(dom, { model, visible, needsYou, isEmpty: s.isEmpty, travelOff, hours: ui.hours(), nowMinutes: getClock().nowMinutes }, weekActions);
+      return renderWeek(dom, { model, hidden, needsYou, isEmpty: s.isEmpty, travelOff, hours: ui.hours(), nowMinutes: getClock().nowMinutes }, weekActions);
     },
   });
 
@@ -201,9 +205,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   registry.register({ id: 'preferences', title: 'Preferences', group: 'setup', description: 'Windows, breaks and days off.', render: setupPage('preferences') });
 
   const ui = createUiPrefs(win);
-  const colorTarget = document.documentElement;
-  applyColors(colorTarget, ui.colors());
-  const settings = createSettings(dom, { store, ui, keepFocus, colorTarget });
+  const settings = createSettings(dom, { store, ui, keepFocus });
   registry.register({
     id: 'settings', title: 'Settings', group: 'settings', description: 'Look, notifications and how I treat your evenings.',
     render: (ctx) => settings.render(ctx),

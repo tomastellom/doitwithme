@@ -1,4 +1,5 @@
-import { GROUPS, itemKey } from './model.js';
+import { itemKey } from './model.js';
+import { lookClass, paint } from './labels.js';
 import { duration, hhmm } from './time.js';
 import { DEFAULT_HOURS, axisEl, bodyEl, dayTileSize, hoursFor, topOf } from './timegrid.js';
 
@@ -21,10 +22,12 @@ export function renderDay(dom, view, actions) {
     }
     const item = asItem(r);
     const name = item.kind === 'travel' ? `Commute ${r.end - r.start}` : r.title;
-    return h('button', {
-      type: 'button', class: `dv-blk tile ${size} ${item.kind === 'travel' ? 'travel' : `g-${r.group}`}`, 'data-fk': `blk-${itemKey(item)}`,
+    const node = h('button', {
+      type: 'button', class: `dv-blk tile ${size} ${item.kind === 'travel' ? 'travel' : lookClass(r.look)}`, 'data-fk': `blk-${itemKey(item)}`,
       title: `${name}, ${timeOf(r)}`, 'aria-label': `${name}, ${timeOf(r)}, ${r.label}. Opens the editor.`, onclick: () => actions.open(item),
     }, lines(r, r.title, size));
+    if (item.kind !== 'travel') paint(node, r.color, r.look);
+    return node;
   };
 
   const status = needsYou > 0 ? h('span', {}, `${needsYou} need${needsYou === 1 ? 's' : ''} you`) : h('span', {}, 'All clear');
@@ -58,12 +61,13 @@ export function renderDay(dom, view, actions) {
   }
 
   const side = h('div', { class: 'dv-side' },
-    h('span', { class: 'mono h' }, isToday ? 'Today by group' : 'Day by group'),
-    GROUPS.map((g) =>
-      h('div', { class: 'dv-tot' },
-        h('i', { class: `sw g-${g.id}` }),
-        h('span', { class: 'nm' }, g.label),
-        h('span', { class: 'v' }, duration(model.totals[g.id])))),
+    h('span', { class: 'mono h' }, isToday ? 'Today by label' : 'Day by label'),
+    model.breakdown.map((g) => {
+      const sw = h('i', { class: `sw ${lookClass(g.look)}` });
+      paint(sw, g.color, g.look);
+      return h('div', { class: 'dv-tot' }, sw, h('span', { class: 'nm' }, g.name), h('span', { class: 'v' }, duration(g.minutes)));
+    }),
+    model.breakdown.length === 0 && h('span', { class: 'dv-cap' }, 'Nothing planned.'),
     h('span', { class: 'mono dv-cap' }, `Free in the ${hhmm(model.window.start)}–${hhmm(model.window.end)} window`),
     h('span', { class: 'dv-free' }, duration(model.free)));
 

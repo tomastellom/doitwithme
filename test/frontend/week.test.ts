@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDom } from '../../public/js/dom.js';
-import { GROUP_IDS, weekModel } from '../../public/js/model.js';
+import { weekModel } from '../../public/js/model.js';
 import { renderWeek } from '../../public/js/week.js';
 import { FakeDocument, byClass, byTag, findAll, textOf } from './fakedom.ts';
 
@@ -16,7 +16,7 @@ const state = (over: any = {}) => ({
     block('2026-10-12', 635, 665, 'Laundry', 'chores'),
   ], ...over,
 });
-const all = new Set(GROUP_IDS);
+const all = new Set<string>();
 
 function setup(over: any = {}, actionOver: any = {}) {
   const calls: any[] = [];
@@ -30,8 +30,8 @@ function setup(over: any = {}, actionOver: any = {}) {
     ...actionOver,
   };
   const s = over.state ?? state();
-  const visible = over.visible ?? all;
-  const el: any = renderWeek(dom, { model: weekModel(s, '2026-10-12', visible, '2026-10-13'), visible, needsYou: over.needsYou ?? 0, isEmpty: over.isEmpty ?? false, hours: over.hours, nowMinutes: over.nowMinutes }, actions);
+  const hidden = over.hidden ?? all;
+  const el: any = renderWeek(dom, { model: weekModel(s, '2026-10-12', hidden, '2026-10-13'), hidden, needsYou: over.needsYou ?? 0, isEmpty: over.isEmpty ?? false, hours: over.hours, nowMinutes: over.nowMinutes }, actions);
   return { el, calls };
 }
 
@@ -56,11 +56,18 @@ test('seven day columns with weekday, number, booked time and blocks in the boar
   assert.match(textOf(mon), /08:00–08:55/);
   assert.match(textOf(mon), /Chemistry/);
   const chem = byClass(mon, 'blk').find((b) => textOf(b).includes('Chemistry'))!;
-  assert.ok(chem.hasClass('g-study'));
-  assert.match(chem.getAttribute('aria-label'), /study/);
-  assert.ok(byClass(days[2], 'blk')[0].hasClass('g-outline'));
-  assert.match(byClass(days[2], 'blk')[0].getAttribute('aria-label'), /project/);
-  assert.ok(byClass(days[6], 'blk')[0].hasClass('g-fixed'));
+  assert.ok(chem.hasClass('is-fill'));
+  assert.equal(chem.style.background, '#FF4B1F', 'filled with the label color');
+  assert.equal(chem.style.color, '#111111', 'with readable text');
+  assert.match(chem.getAttribute('aria-label'), /Study/);
+  const project = byClass(days[2], 'blk')[0];
+  assert.ok(project.hasClass('is-outline'));
+  assert.equal(project.style.borderColor, '#111111');
+  assert.match(project.getAttribute('aria-label'), /Personal project/);
+  const mass = byClass(days[6], 'blk')[0];
+  assert.ok(mass.hasClass('is-fill'));
+  assert.equal(mass.style.background, '#111111');
+  assert.equal(mass.style.color, '#FFFFFF');
   assert.equal(days[1].hasClass('today'), true);
 });
 
@@ -71,10 +78,10 @@ test('a day with nothing visible is simply empty hours on the grid', () => {
   assert.equal(byClass(thu, 'cbody').length, 1);
 });
 
-test('the filter list shows counts, toggles groups and reflects pressed state', () => {
-  const { el, calls } = setup({ visible: new Set(['study']) });
+test('the filter list shows each label in use with its count, toggles it and reflects pressed state', () => {
+  const { el, calls } = setup({ hidden: new Set(['gym', 'mass', 'chores', 'personal project']) });
   const fl = byClass(el, 'fl');
-  assert.equal(fl.length, 5);
+  assert.equal(fl.length, 5, 'Study, Gym, Chores, Personal project and Mass: only labels in use');
   const study = fl.find((b) => textOf(b).includes('Study'))!;
   assert.equal(study.getAttribute('aria-pressed'), 'true');
   assert.equal(textOf(byClass(study, 'ct')[0]), '1');
@@ -83,7 +90,8 @@ test('the filter list shows counts, toggles groups and reflects pressed state', 
   gym.click();
   assert.deepEqual(calls, [['toggle', 'gym']]);
   assert.equal(findAll(el, (e) => e.hasClass('blk') && textOf(e).includes('Gym')).length, 0);
-  assert.equal(textOf(byClass(fl.find((b) => textOf(b).includes('Fixed'))!, 'ct')[0]), '1');
+  assert.equal(textOf(byClass(fl.find((b) => textOf(b).includes('Mass'))!, 'ct')[0]), '1');
+  assert.ok(byClass(el, 'fl-all').length === 1, 'Show all is offered while something is hidden');
 });
 
 test('week navigation buttons call the actions and the needs-you button focuses Nudge', () => {
@@ -142,13 +150,13 @@ test('controls carry stable focus keys', () => {
 test('a commute is a hatched entry with its length, and the week says when travel is off', () => {
   const travel = [{ date: '2026-10-13', start: 545, end: 600, fromName: 'Home', toName: 'Campus', estimated: true }];
   const model = weekModel(state(), '2026-10-12', all, '2026-10-12', travel);
-  const el: any = renderWeek(dom, { model, visible: all, needsYou: 0, isEmpty: false, travelOff: false }, { canAdd: false } as any);
+  const el: any = renderWeek(dom, { model, hidden: all, needsYou: 0, isEmpty: false, travelOff: false }, { canAdd: false } as any);
   const entry = byClass(el, 'travel')[0];
   assert.match(textOf(entry), /Commute 55/);
   assert.match(textOf(entry), /09:05–10:00/);
   assert.match(entry.getAttribute('aria-label'), /estimated/);
   assert.equal(byClass(el, 'travel-off').length, 0);
-  const off: any = renderWeek(dom, { model, visible: all, needsYou: 0, isEmpty: false, travelOff: true }, { canAdd: false } as any);
+  const off: any = renderWeek(dom, { model, hidden: all, needsYou: 0, isEmpty: false, travelOff: true }, { canAdd: false } as any);
   assert.match(textOf(byClass(off, 'travel-off')[0]), /Travel is off\. Add a Home place\./);
 });
 
@@ -157,7 +165,7 @@ test('every item in the week is a button that opens the editor, with a name for 
   const st = state({ commitments: [{ id: 'm', title: '<img src=x onerror=alert(1)>', category: 'mass', start: 1200, end: 1260, pattern: { kind: 'once', date: '2026-10-12' }, exceptions: [], bufferBefore: 0 }] });
   const travel = [{ date: '2026-10-12', start: 1100, end: 1130, fromName: 'Home', toName: 'Parish', estimated: true, placeId: 'p', commuteId: null }];
   const model = weekModel(st, '2026-10-12', all, '2026-10-12', travel);
-  const el: any = renderWeek(dom, { model, visible: all, needsYou: 0, isEmpty: false, travelOff: false }, { open: (item: any) => calls.push([item.kind, item.title]), canAdd: false } as any);
+  const el: any = renderWeek(dom, { model, hidden: all, needsYou: 0, isEmpty: false, travelOff: false }, { open: (item: any) => calls.push([item.kind, item.title]), canAdd: false } as any);
   const items = findAll(el, (e: any) => e.tag === 'button' && (e.getAttribute('data-fk') ?? '').startsWith('blk-'));
   assert.ok(items.length >= 6);
   for (const b of items) {

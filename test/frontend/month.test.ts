@@ -43,9 +43,11 @@ test('a month that needs six rows gets six rows, and February 2027 fits in four'
 test('each day carries one dot per planned item, in time order, tagged with its group', () => {
   const m = model();
   const day = (d: string) => m.cells.find((c: any) => c.date === d);
-  assert.deepEqual(day('2026-10-12').dots, ['study']);
-  assert.deepEqual(day('2026-10-13').dots, ['outline', 'gym']);
-  assert.deepEqual(day('2026-10-18').dots, ['fixed']);
+  const ids = (d: string) => day(d).dots.map((g: any) => g.id);
+  assert.deepEqual(ids('2026-10-12'), ['study']);
+  assert.deepEqual(ids('2026-10-13'), ['personal project', 'gym']);
+  assert.deepEqual(ids('2026-10-18'), ['mass']);
+  assert.deepEqual(day('2026-10-12').dots[0], { id: 'study', name: 'Study', color: '#FF4B1F', look: 'fill' });
   assert.deepEqual(day('2026-10-15').dots, []);
   assert.deepEqual(m.cells[0].dots, [], 'days of the neighbouring month stay empty');
 });

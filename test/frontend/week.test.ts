@@ -109,7 +109,7 @@ test('first run: lead text, Load the example, no filters or booked lines', () =>
   assert.equal(byClass(el, 'ghost').length, 7);
   byTag(el, 'button').find((b) => textOf(b).trim() === 'Load the example')!.click();
   assert.deepEqual(calls, [['example']]);
-  assert.equal(byTag(el, 'a').length, 0);
+  assert.equal(byTag(el, 'a').filter((a: any) => !a.hasClass('dh')).length, 0, 'only the day headers are links');
 });
 
 test('first run offers Add a commitment only when the setup section exists', () => {
@@ -170,4 +170,12 @@ test('every item in the week is a button that opens the editor, with a name for 
   trip.click();
   assert.equal(calls[1][0], 'travel');
   assert.equal(new Set(items.map((b: any) => b.getAttribute('data-fk'))).size, items.length, 'keys are unique');
+});
+
+test('each day header opens that day', () => {
+  const { el } = setup();
+  const heads = byClass(el, 'dh');
+  assert.equal(heads.length, 7);
+  assert.deepEqual(heads.map((h: any) => [h.tag, h.getAttribute('href')]).slice(0, 2), [['a', '#/day/2026-10-12'], ['a', '#/day/2026-10-13']]);
+  assert.match(heads[1].getAttribute('aria-label'), /Open Tue 13/);
 });

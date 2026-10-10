@@ -215,3 +215,33 @@ test('pressing Today on the week you are already on does not jump the page', asy
   app.navigate('#/week/2026-10-12');
   assert.equal(jumps.length, 1);
 });
+
+test('the Month tab shows the month, steps by month with the plan sliding, and a day opens the Day screen', async () => {
+  assert.equal((await put(await exampleState())).status, 200);
+  const { app, root, win } = boot();
+  await settled(app);
+  app.navigate('#/month');
+  assert.equal(textOf(byTag(root, 'h1')[0]), 'October');
+  assert.ok(byClass(root, 'cell').length >= 35);
+  const entering = () => findAll(root, (e: any) => e.hasAttribute('data-enter')).map((e: any) => e.getAttribute('data-enter'));
+  findAll(root, (e: any) => e.getAttribute('data-fk') === 'next')[0].click();
+  assert.match(win.location.hash, /^#\/month\/2026-11-01$/);
+  assert.equal(textOf(byTag(root, 'h1')[0]), 'November');
+  assert.deepEqual(entering(), ['step-fwd']);
+  findAll(root, (e: any) => e.getAttribute('data-fk') === 'today')[0].click();
+  assert.equal(textOf(byTag(root, 'h1')[0]), 'October');
+  assert.deepEqual(entering(), ['step-back']);
+  const cell = byClass(root, 'cell').find((c: any) => c.getAttribute('href') === '#/day/2026-10-06')!;
+  app.navigate(cell.getAttribute('href'));
+  assert.equal(textOf(byTag(root, 'h1')[0]), 'Tue 6');
+});
+
+test('a day header on the Week opens that day', async () => {
+  assert.equal((await put(await exampleState())).status, 200);
+  const { app, root } = boot();
+  await settled(app);
+  const head = findAll(root, (e: any) => e.tag === 'a' && e.getAttribute('href') === '#/day/2026-10-07')[0];
+  assert.ok(head);
+  app.navigate(head.getAttribute('href'));
+  assert.equal(textOf(byTag(root, 'h1')[0]), 'Wed 7');
+});

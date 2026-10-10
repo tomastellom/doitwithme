@@ -18,7 +18,7 @@ export function renderWeek(dom, view, actions) {
 
   const day = (d) =>
     h('div', { class: d.isToday ? 'day today' : 'day', role: 'group', 'aria-label': `${d.weekday} ${d.num}` },
-      h('div', { class: 'dh' }, h('span', { class: 'mono' }, d.weekday), h('span', { class: 'dd' }, d.num)),
+      h('a', { class: 'dh', href: `#/day/${d.date}`, 'data-fk': `dh-${d.date}`, 'aria-label': `Open ${d.weekday} ${d.num}` }, h('span', { class: 'mono' }, d.weekday), h('span', { class: 'dd' }, d.num)),
       !isEmpty && h('p', { class: 'booked mono' }, `Booked ${duration(d.booked)}`),
       d.items.length > 0 ? d.items.map(block) : h('div', { class: 'ghost mono' }, 'Nothing planned'));
 

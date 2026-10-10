@@ -8,6 +8,8 @@ import { createDrawer } from './drawer.js';
 import { replacingLink, startFavicon } from './favicon.js';
 import { createFocusKeeper, findByKey } from './focus.js';
 import { createMenu } from './menu.js';
+import { addMonths, monthModel, monthStart } from './month-model.js';
+import { renderMonth } from './month.js';
 import { GROUP_IDS, weekModel } from './model.js';
 import { createNotifier, startHiddenRefresh } from './notify.js';
 import { createNudge } from './nudge.js';
@@ -97,6 +99,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
 
   const currentWeek = () => weekStart(weekParam(route.param, getClock().today));
   const currentDay = () => dateParam(route.param, getClock().today);
+  const currentMonth = () => monthStart(dateParam(route.param, getClock().today));
 
   const dayActions = {
     open: (item) => drawer.open(item),
@@ -150,6 +153,24 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       const places = s.state.places ?? [];
       const travelOff = places.length > 0 && !places.some((p) => p.kind === 'home');
       return renderWeek(dom, { model, visible, needsYou, isEmpty: s.isEmpty, travelOff }, weekActions);
+    },
+  });
+
+  const monthActions = {
+    go: (delta) => navigate(buildHash('month', addMonths(currentMonth(), delta))),
+    today: () => navigate(buildHash('month', null)),
+    loadExample: () => store.loadExample(),
+    get canAdd() {
+      return registry.find('setup') !== null;
+    },
+  };
+
+  registry.register({
+    id: 'month', title: 'Month', group: 'views', description: 'The whole month, one dot per planned item.', primary: true,
+    render: (ctx) => {
+      const model = monthModel(ctx.s.state, currentMonth(), getClock().today, ctx.s.travel);
+      const { needsYou } = buildNudge(ctx.s.warnings);
+      return renderMonth(dom, { model, needsYou, isEmpty: ctx.s.isEmpty }, monthActions);
     },
   });
 
@@ -257,7 +278,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     renderBar();
     const screen = renderMain(s);
     // Changing tab, or stepping a day or a week, slides the old screen out and the new one in, towards the side you moved.
-    const where = route.id === 'day' ? dateParam(route.param, getClock().today) : route.id === 'week' ? weekParam(route.param, getClock().today) : null;
+    const where = route.id === 'day' ? dateParam(route.param, getClock().today) : route.id === 'week' ? weekParam(route.param, getClock().today) : route.id === 'month' ? currentMonth() : null;
     let way = null;
     if (lastRouteId !== null && screen && typeof screen.setAttribute === 'function') {
       if (route.id !== lastRouteId) {

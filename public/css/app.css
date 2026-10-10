@@ -333,12 +333,12 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 @keyframes enter-fwd { from { opacity: 0; transform: translateX(14px); } }
 @keyframes enter-back { from { opacity: 0; transform: translateX(-14px); } }
 @keyframes enter-fade { from { opacity: 0; } }
-[data-enter="fwd"] { animation: enter-fwd .22s cubic-bezier(.2, .7, .2, 1) backwards; }
-[data-enter="back"] { animation: enter-back .22s cubic-bezier(.2, .7, .2, 1) backwards; }
-[data-enter="fade"] { animation: enter-fade .18s ease-out backwards; }
+[data-enter="fwd"] { animation: enter-fwd .32s cubic-bezier(.2, .7, .2, 1) backwards; }
+[data-enter="back"] { animation: enter-back .32s cubic-bezier(.2, .7, .2, 1) backwards; }
+[data-enter="fade"] { animation: enter-fade .28s ease-out backwards; }
 .tab, .btn, .fl, button { transition: background-color .12s ease-out, color .12s ease-out, border-color .12s ease-out; }
 .tab:active, .btn:active, .btns button:active, .acts button:active { transform: translateY(1px); }
 @keyframes face-in { from { opacity: 0; } }
 @keyframes face-out { to { opacity: 0; } }
-.mascot-face.in { animation: face-in .2s ease-out backwards; }
-.mascot-face.out { animation: face-out .2s ease-in forwards; }
+.mascot-face.in { animation: face-in .3s ease-out backwards; }
+.mascot-face.out { animation: face-out .3s ease-in forwards; }

@@ -37,7 +37,7 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 .nudge[data-state="resting"] .nudge-body { transform: translateY(calc(100% + 40px)); }
 .nudge[data-state="resting"]:hover .nudge-body, .nudge[data-state="resting"]:focus-within .nudge-body { transform: none; }
 .nudge[data-state="resting"] .quiet { display: none; }
-.nudge[data-state="resting"]:hover .quiet { display: flex; }
+.nudge[data-state="resting"]:hover .quiet, .nudge[data-state="resting"]:focus-within .quiet { display: flex; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .notice { color: var(--paper); font-family: var(--font-mono); font-size: 12px; }
 .say { width: 430px; max-width: calc(100vw - 200px); background: var(--ink); color: var(--paper); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
@@ -347,3 +347,21 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 
 .hero-right { display: flex; align-items: flex-end; gap: 24px; }
 .hero-add { padding: 14px 20px; border: 2px solid var(--ink); background: var(--study); color: var(--on-study); font-weight: 600; text-decoration: none; margin-bottom: 4px; }
+
+/* Quiet bubble: a short line and a text box. */
+.quiet { width: 300px; max-width: calc(100vw - 200px); gap: 8px; }
+.quiet .ask { margin-top: 4px; }
+.quiet .reply { margin: 0; font-size: 13px; color: var(--paper); }
+.quiet .reply:empty { display: none; }
+[data-enter="fwd"].say, [data-enter="back"].say { animation-duration: .24s; }
+
+/* Small buttons answer the pointer: they fill on hover and press down on click. */
+.step button, .pg button, .addbtn, .estbtns button, .skip button, .cta .btn, .hero-add { transition: background-color .12s ease-out, color .12s ease-out, transform .06s ease-out; }
+.step button:hover, .tab:hover:not([aria-current="page"]), .btn:hover:not(:disabled), .btns button:hover:not(:disabled), .estbtns button:hover, .drawer .dbtns button:hover:not(:disabled), .drawer .skip button:hover, .addbtn:hover { background: var(--ink); color: var(--paper); }
+.btn.go:hover:not(:disabled), .btns button.y:hover:not(:disabled), .estbtns button.y:hover, .drawer .dbtns button.y:hover:not(:disabled), .hero-add:hover { background: var(--ink); color: var(--paper); }
+.acts button:hover:not(:disabled), .pg button:hover { background: var(--paper); color: var(--ink); }
+.acts button.y:hover:not(:disabled) { background: var(--paper); border-color: var(--paper); color: var(--ink); }
+.step button:active, .pg button:active, .addbtn:active, .estbtns button:active, .skip button:active, .hero-add:active, .drawer .dbtns button:active { transform: translateY(1px); }
+.step button:focus-visible, .pg button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.say .pg button:focus-visible { outline-color: var(--paper); }
+.btn.dark:hover:not(:disabled) { background: #3A3D40; }

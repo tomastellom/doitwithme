@@ -52,6 +52,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   let route = { id: 'week', param: null };
   let lastDay = getClock().today;
   let lastRouteId = null;
+  let lastWhere = null;
 
   const nudge = createNudge(dom, {
     approve: (date) => store.approve(date),
@@ -204,14 +205,22 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     const s = store.get();
     renderBar();
     const screen = renderMain(s);
-    // Changing tab slides the new screen in from the side its tab sits on; redraws on the same screen stay still.
-    if (lastRouteId !== null && route.id !== lastRouteId && screen && typeof screen.setAttribute === 'function') {
-      const order = registry.primary().map((x) => x.id);
-      const from = order.indexOf(lastRouteId);
-      const to = order.indexOf(route.id);
-      screen.setAttribute('data-enter', from < 0 || to < 0 ? 'fade' : to > from ? 'fwd' : 'back');
+    // Changing tab, or stepping a day or a week, slides the new screen in from the side you moved towards; plain redraws stay still.
+    const where = route.id === 'day' ? dateParam(route.param, getClock().today) : route.id === 'week' ? weekParam(route.param, getClock().today) : null;
+    if (lastRouteId !== null && screen && typeof screen.setAttribute === 'function') {
+      let way = null;
+      if (route.id !== lastRouteId) {
+        const order = registry.primary().map((x) => x.id);
+        const from = order.indexOf(lastRouteId);
+        const to = order.indexOf(route.id);
+        way = from < 0 || to < 0 ? 'fade' : to > from ? 'fwd' : 'back';
+      } else if (where !== null && lastWhere !== null && where !== lastWhere) {
+        way = where > lastWhere ? 'fwd' : 'back';
+      }
+      if (way) screen.setAttribute('data-enter', way);
     }
     lastRouteId = route.id;
+    lastWhere = where;
     clear(main, screen);
     nudge.update({
       status: s.status,

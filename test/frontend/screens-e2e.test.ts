@@ -123,3 +123,15 @@ test('moving between tabs marks the new screen with the way it came in; staying 
   app.navigate('#/deadlines');
   assert.deepEqual(entering(), []);
 });
+
+test('stepping through days slides the same way you step', async () => {
+  await put(baseState());
+  const { app, root } = boot();
+  await settled(app);
+  const entering = () => findAll(root, (e: any) => e.hasAttribute('data-enter')).map((e: any) => e.getAttribute('data-enter'));
+  app.navigate('#/day/2026-10-06');
+  app.navigate('#/day/2026-10-07');
+  assert.deepEqual(entering(), ['fwd']);
+  app.navigate('#/day/2026-10-06');
+  assert.deepEqual(entering(), ['back']);
+});

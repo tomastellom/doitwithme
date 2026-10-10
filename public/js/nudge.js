@@ -188,6 +188,8 @@ export function createNudge(dom, handlers, env = {}) {
   let wasAttention = false;
   let holding = false;
   let mascot = null;
+  let askInput = null;
+  let pageDir = null;
   let mascotKey = '';
   // Timers are optional: without them Nudge simply keeps one face for each situation.
   const animated = typeof env.setTimer === 'function' && !env.reduceMotion;
@@ -201,14 +203,14 @@ export function createNudge(dom, handlers, env = {}) {
 
   const say = (...children) => h('div', { class: 'say' }, ...children);
 
-  function speaking() {
-    const item = view.items[index];
-    const many = view.items.length > 1;
+  // The text box is the same in every state, so you can talk to him even when nothing is wrong.
+  function askForm() {
     const reply = h('p', { class: 'reply' }, askMessage);
     const input = h('input', {
       type: 'text', 'aria-label': 'Ask Nudge', placeholder: 'Ask me to move something', 'data-fk': 'nudge-ask', value: draft,
       oninput: (e) => { draft = e.target.value; },
     });
+    askInput = input;
     const form = h('form', { class: 'ask', onsubmit: (e) => {
       e.preventDefault();
       askMessage = ASK_REPLY;
@@ -216,12 +218,19 @@ export function createNudge(dom, handlers, env = {}) {
       draft = '';
       input.value = '';
     } }, input);
+    return { form, reply };
+  }
+
+  function speaking() {
+    const item = view.items[index];
+    const many = view.items.length > 1;
+    const { form, reply } = askForm();
     return say(
       h('div', { class: 'pager' },
         h('span', { class: 'mono k' }, many ? `Nudge / ${index + 1} of ${view.items.length}` : 'Nudge'),
         many && h('div', { class: 'pg' },
-          h('button', { type: 'button', 'data-fk': 'nudge-prev', 'aria-label': 'Previous warning', onclick: () => { index = (index + view.items.length - 1) % view.items.length; render(); } }, '<'),
-          h('button', { type: 'button', 'data-fk': 'nudge-next', 'aria-label': 'Next warning', onclick: () => { index = (index + 1) % view.items.length; render(); } }, '>')),
+          h('button', { type: 'button', 'data-fk': 'nudge-prev', 'aria-label': 'Previous warning', onclick: () => { index = (index + view.items.length - 1) % view.items.length; pageDir = 'back'; render(); } }, '<'),
+          h('button', { type: 'button', 'data-fk': 'nudge-next', 'aria-label': 'Next warning', onclick: () => { index = (index + 1) % view.items.length; pageDir = 'fwd'; render(); } }, '>')),
       ),
       h('b', {}, item.headline),
       item.offer && h('p', {}, item.offer.line),
@@ -270,18 +279,19 @@ export function createNudge(dom, handlers, env = {}) {
     } else if (view.status === 'loading') {
       bubble = h('div', { class: 'quiet' }, h('span', { class: 'mono' }, 'Loading'));
     } else {
-      bubble = h('div', { class: 'quiet' }, h('b', {}, 'All clear.'), h('span', { class: 'mono' }, 'No open warnings'));
+      const { form, reply } = askForm();
+      bubble = h('div', { class: 'quiet' }, h('b', {}, 'All clear.'), h('span', { class: 'mono' }, 'No open warnings'), form, reply);
     }
     // With nothing to say Nudge rests out of sight; it comes out on its own for anything that needs you.
     const attention = view.status === 'offline' || view.status === 'error' || Boolean(view.confirm) || view.items.length > 0 || Boolean(view.notice);
     el.setAttribute('data-state', attention ? 'alert' : 'resting');
-    if (attention) body.removeAttribute('aria-hidden');
-    else body.setAttribute('aria-hidden', 'true');
     const spoken = spokenFor(view, item);
     if (spoken !== lastSpoken) {
       lastSpoken = spoken;
       live.textContent = spoken;
     }
+    if (pageDir && bubble) bubble.setAttribute('data-enter', pageDir);
+    pageDir = null;
     // While he slides out of sight he keeps the face and words he had; the calm ones come after.
     if (holding && !attention) return;
     holding = false;
@@ -290,11 +300,21 @@ export function createNudge(dom, handlers, env = {}) {
     if (mascot === null || key !== mascotKey) {
       mascot = createMascot(dom, { face, badge, width });
       mascotKey = key;
+      // Clicking him is an invitation to talk: the text box takes the keyboard.
+      mascot.addEventListener('click', () => { if (askInput && typeof askInput.focus === 'function') askInput.focus(); });
     } else {
-      mascot.setFace(face, animated && env.raf ? { raf: env.raf, cancel: env.cancelRaf, setTimer: env.setTimer, clearTimer: env.clearTimer } : null);
+      mascot.setFace(face, motion());
       if (badge !== null) mascot.setBadge(badge);
     }
     clear(body, bubble, mascot);
+  }
+
+  const motion = () => (animated && env.raf ? { raf: env.raf, cancel: env.cancelRaf, setTimer: env.setTimer, clearTimer: env.clearTimer } : null);
+
+  // Idle looks and the startle only move his eyes. The bubble, and any text you are typing in it, stay as they are.
+  function updateFace() {
+    if (mascot === null || holding) return render();
+    mascot.setFace(faceFor({ ...view, glance, surprised }), motion());
   }
 
   function release() {
@@ -305,7 +325,8 @@ export function createNudge(dom, handlers, env = {}) {
   body.addEventListener('transitionend', release);
   // Pressing on him while he rests must not give the corner keyboard focus, or he would stay up until you click elsewhere.
   el.addEventListener('mousedown', (e) => {
-    if (el.getAttribute('data-state') === 'resting') e.preventDefault();
+    const tag = ((e.target && (e.target.tagName || e.target.tag)) || '').toLowerCase();
+    if (el.getAttribute('data-state') === 'resting' && tag !== 'input') e.preventDefault();
   });
 
   function stopGlance() {
@@ -319,11 +340,11 @@ export function createNudge(dom, handlers, env = {}) {
     if (!animated || glanceTimer !== null) return;
     glanceTimer = env.setTimer(() => {
       glance = env.random() < 0.5 ? 'left' : 'right';
-      render();
+      updateFace();
       glanceTimer = env.setTimer(() => {
         glanceTimer = null;
         glance = null;
-        render();
+        updateFace();
         armGlance();
       }, 1200);
     }, 4000 + env.random() * 5000);
@@ -336,7 +357,7 @@ export function createNudge(dom, handlers, env = {}) {
       surpriseTimer = env.setTimer(() => {
         surprised = false;
         surpriseTimer = null;
-        render();
+        updateFace();
       }, 2500);
     }
     prevKeys = keys;

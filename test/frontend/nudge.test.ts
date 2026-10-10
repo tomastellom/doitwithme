@@ -199,7 +199,7 @@ test('Nudge rests out of sight when there is nothing to say, and comes out when 
   const state = () => nudge.el.getAttribute('data-state');
   nudge.update({ ...base });
   assert.equal(state(), 'resting');
-  assert.equal(byClass(nudge.el, 'nudge-body')[0].getAttribute('aria-hidden'), 'true');
+  assert.equal(byClass(nudge.el, 'nudge-body')[0].hasAttribute('aria-hidden'), false, 'he holds a text box now, so he stays reachable');
   nudge.update({ ...base, status: 'loading' });
   assert.equal(state(), 'resting');
   nudge.update({ ...base, items: [item()] });
@@ -456,4 +456,44 @@ test('the nudge keeps one mascot while the face changes, so the picture does not
   nudge.update({ ...base, items: [item()], busy: true });
   assert.equal(byClass(nudge.el, 'mascot')[0], first);
   assert.equal(first.getAttribute('data-face'), 'working');
+});
+
+test('even when nothing is wrong you can bring him up and type to him', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base });
+  assert.equal(nudge.el.getAttribute('data-state'), 'resting');
+  const input = findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === 'nudge-ask')[0];
+  assert.ok(input, 'the calm bubble has a text box');
+  input.value = 'move gym to friday';
+  input.dispatch('input');
+  byTag(nudge.el, 'form')[0].dispatch('submit');
+  assert.match(textOf(byClass(nudge.el, 'reply')[0]), /AI phase/);
+});
+
+test('pressing inside his text box while he rests is allowed, so you can click in and type', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base });
+  const input = findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === 'nudge-ask')[0];
+  assert.equal(nudge.el.dispatch('mousedown', { target: input }).defaultPrevented, false);
+  assert.equal(nudge.el.dispatch('mousedown').defaultPrevented, true);
+});
+
+test('his idle glances only move the eyes, so the text box you are typing in is not rebuilt', () => {
+  const { nudge, fire } = timed();
+  nudge.update({ ...base });
+  const input = () => findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === 'nudge-ask')[0];
+  const before = input();
+  fire();
+  assert.equal(byClass(nudge.el, 'mascot')[0].getAttribute('data-face'), 'glance-right');
+  assert.equal(input(), before);
+});
+
+test('paging through warnings slides the next one in from the side you paged towards', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base, items: [item(), item({ key: 'b|2', headline: 'Second' })] });
+  assert.equal(byClass(nudge.el, 'say')[0].hasAttribute('data-enter'), false);
+  findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === 'nudge-next')[0].click();
+  assert.equal(byClass(nudge.el, 'say')[0].getAttribute('data-enter'), 'fwd');
+  findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === 'nudge-prev')[0].click();
+  assert.equal(byClass(nudge.el, 'say')[0].getAttribute('data-enter'), 'back');
 });

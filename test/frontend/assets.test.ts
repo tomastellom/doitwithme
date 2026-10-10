@@ -193,3 +193,9 @@ test('deadline rows are links that keep the board look', () => {
   assert.match(css, /^\.dl:hover \{/m);
   assert.match(css, /^\.hero-add \{/m);
 });
+
+test('while screens slide, the old one is lifted out so it cannot stretch the new one', () => {
+  const css = readFileSync('public/css/app.css', 'utf8');
+  assert.match(css, /main\[data-sliding\] > \[class\*="-out-"\] \{[^}]*position: absolute/);
+  assert.doesNotMatch(css, /main\[data-sliding\] \{[^}]*display: grid/);
+});

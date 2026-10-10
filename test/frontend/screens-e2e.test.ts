@@ -184,3 +184,17 @@ test('opening another screen or another record starts at the top; redrawing the 
   app.render();
   assert.equal(jumps.length, 2, 'a plain redraw keeps the scroll');
 });
+
+test('moving between Setup pages keeps the Setup title row and buttons still', async () => {
+  await put(baseState());
+  const { app, root } = boot();
+  await settled(app);
+  const entering = () => findAll(root, (e: any) => e.hasAttribute('data-enter')).map((e: any) => e.getAttribute('data-enter'));
+  app.navigate('#/tasks');
+  app.navigate('#/due-dates');
+  assert.deepEqual(entering(), ['step-fwd']);
+  app.navigate('#/tasks');
+  assert.deepEqual(entering(), ['step-back']);
+  app.navigate('#/week');
+  assert.deepEqual(entering(), ['back'], 'leaving Setup for another tab slides the whole screen');
+});

@@ -363,8 +363,10 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 .say[data-enter="page-back"] { animation: step-back .34s cubic-bezier(.2, .7, .2, 1) backwards; }
 .week, .dayv { overflow-x: clip; }
 
-main[data-sliding] { display: grid; overflow: clip; }
-main[data-sliding] > * { grid-area: 1 / 1; min-width: 0; }
+/* The new screen keeps its own layout; the old one is lifted out beside it, so neither can stretch the other. */
+main[data-sliding] { position: relative; overflow: clip; }
+main[data-sliding] > [class*="-out-"] { position: absolute; top: 0; left: 0; width: 100%; pointer-events: none; }
+.slide-in-fwd, .slide-in-back, .slide-out-fwd, .slide-out-back, .step-in-fwd > :not(.hero):not(.foot), .step-in-back > :not(.hero):not(.foot), .step-out-fwd > :not(.hero):not(.foot), .step-out-back > :not(.hero):not(.foot) { will-change: transform; backface-visibility: hidden; }
 @keyframes in-fwd { from { transform: translateX(100%); } }
 @keyframes out-fwd { to { transform: translateX(-100%); } }
 @keyframes in-back { from { transform: translateX(-100%); } }

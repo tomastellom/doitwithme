@@ -247,10 +247,17 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     let way = null;
     if (lastRouteId !== null && screen && typeof screen.setAttribute === 'function') {
       if (route.id !== lastRouteId) {
-        const order = registry.primary().map((x) => x.id);
-        const from = order.indexOf(lastRouteId);
-        const to = order.indexOf(route.id);
-        way = to > from ? 'fwd' : from < 0 || to < 0 ? 'fwd' : 'back';
+        const tabOf = (id) => registry.primary().find((x) => x.id === id || x.activeFor.includes(id))?.id ?? null;
+        if (tabOf(lastRouteId) !== null && tabOf(lastRouteId) === tabOf(route.id)) {
+          // Moving inside one tab (Tasks to Due dates in Setup): its title row and buttons stay, only the page below slides.
+          const ids = registry.ids();
+          way = ids.indexOf(route.id) > ids.indexOf(lastRouteId) ? 'step-fwd' : 'step-back';
+        } else {
+          const order = registry.primary().map((x) => x.id);
+          const from = order.indexOf(tabOf(lastRouteId));
+          const to = order.indexOf(tabOf(route.id));
+          way = to > from ? 'fwd' : from < 0 || to < 0 ? 'fwd' : 'back';
+        }
       } else if (where !== null && lastWhere !== null && where !== lastWhere) {
         way = where > lastWhere ? 'step-fwd' : 'step-back';
       }

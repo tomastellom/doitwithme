@@ -85,3 +85,16 @@ test('a missing address and a trip that does not fit become plain items that nee
   const gone = buildNudge([{ ...missing, dismissed: true }] as any);
   assert.equal(gone.items.length, 0);
 });
+
+test('every warning says where to go to fix it by hand, and a missing id falls back to the whole list', () => {
+  const trip = (kind: string, d: any = {}) => w(kind, { placeName: 'Anna', date: '2026-10-14', titles: ['Lesson'], minutes: 30, ...d });
+  const fix = (warnings: any[]) => buildNudge(warnings).items.map((i: any) => i.fix);
+  assert.deepEqual(fix([exam({ deadlineId: 'exam-1', taskId: 'chem' })]), [{ label: 'Fix it myself', hash: '#/due-dates/exam-1' }]);
+  assert.deepEqual(fix([exam()]), [{ label: 'Fix it myself', hash: '#/due-dates' }]);
+  assert.deepEqual(fix([weekly({ taskId: 'gym a/b' })]), [{ label: 'Fix it myself', hash: '#/tasks/gym%20a%2Fb' }]);
+  assert.deepEqual(fix([weekly()]), [{ label: 'Fix it myself', hash: '#/tasks' }]);
+  assert.deepEqual(fix([trip('address-missing', { placeId: 'anna' })]), [{ label: 'Fix it myself', hash: '#/places/anna' }]);
+  assert.deepEqual(fix([trip('address-missing')]), [{ label: 'Fix it myself', hash: '#/places' }]);
+  assert.deepEqual(fix([trip('travel-tight')]), [{ label: 'Fix it myself', hash: '#/day/2026-10-14' }]);
+  assert.deepEqual(fix([offer()]), [{ label: 'Fix it myself', hash: '#/day/2026-10-09' }], 'a lone offer leads to the day it is about');
+});

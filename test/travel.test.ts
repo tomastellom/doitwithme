@@ -99,7 +99,7 @@ test('going from one place to another uses the allowance when no route joins the
   ]);
   assert.deepEqual(r.warnings.map((w) => w.kind), ['address-missing', 'travel-tight']);
   const tight = r.warnings[1];
-  assert.deepEqual(tight.detail, { placeName: 'Anna', date: MON, titles: ['Lesson Anna'] });
+  assert.deepEqual(tight.detail, { placeId: 'anna', placeName: 'Anna', date: MON, titles: ['Lesson Anna'] });
 });
 
 test('a route works in both directions', () => {

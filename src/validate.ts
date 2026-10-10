@@ -1,5 +1,6 @@
 import { defaultPreferences } from './defaults.ts';
 import type {
+  Label,
   Block, Commitment, Commute, Course, Deadline, Pattern, Place, PlaceKind, Preferences, Repeats, SoftWindow, State, Task,
   TravelMode, TravelSource, Window,
 } from './types.ts';
@@ -201,6 +202,15 @@ function block(v: unknown, path: string): Block {
   };
 }
 
+function label(v: unknown, path: string): Label {
+  const o = obj(v, path);
+  const name = str(o.name, `${path}.name`).trim();
+  if (name.length < 1 || name.length > 40) fail(`${path}.name must be 1 to 40 characters`);
+  if (typeof o.color !== 'string' || !/^#[0-9A-Fa-f]{6}$/.test(o.color)) fail(`${path}.color must look like #FF4B1F`);
+  if (o.style !== 'fill' && o.style !== 'outline') fail(`${path}.style must be "fill" or "outline"`);
+  return { id: str(o.id, `${path}.id`), name, color: (o.color as string).toUpperCase(), style: o.style as 'fill' | 'outline' };
+}
+
 function softMode(v: unknown, path: string): 'ask' | 'auto' {
   if (v !== 'ask' && v !== 'auto') fail(`${path} must be "ask" or "auto"`);
   return v as 'ask' | 'auto';
@@ -281,12 +291,21 @@ export function validateState(x: unknown): State {
   deadlines.forEach((d, i) => {
     if (!tasks.some((t) => t.id === d.taskId)) fail(`deadlines[${i}].taskId does not match any task`);
   });
+  let labels: Label[] | undefined;
+  if (o.labels !== undefined) {
+    if (!Array.isArray(o.labels)) fail('labels must be a list');
+    if (o.labels.length > 100) fail('labels must have at most 100 entries');
+    labels = o.labels.map((l, i) => label(l, `labels[${i}]`));
+    unique(labels.map((l) => l.id), 'labels');
+    if (new Set(labels.map((l) => l.name.toLowerCase())).size !== labels.length) fail('labels cannot have the same name twice');
+  }
   return {
     commitments,
     tasks,
     deadlines,
     places,
     commutes,
+    ...(labels === undefined ? {} : { labels }),
     preferences: preferences(o.preferences ?? defaultPreferences, 'preferences'),
     blocks: arr(o.blocks ?? [], 'blocks').map((b, i) => block(b, `blocks[${i}]`)),
     approvedSoft: approvedSoft(o.approvedSoft),

@@ -120,6 +120,9 @@ export interface Block {
 }
 
 export interface WarningDetail {
+  taskId?: string;
+  deadlineId?: string;
+  placeId?: string;
   taskTitle?: string;
   category?: string;
   kind?: string;
@@ -158,12 +161,20 @@ export interface PlanResult {
   travel: Leg[];
 }
 
+export interface Label {
+  id: string;
+  name: string;
+  color: string;
+  style: 'fill' | 'outline';
+}
+
 export interface State {
   commitments: Commitment[];
   tasks: Task[];
   deadlines: Deadline[];
   places: Place[];
   commutes: Commute[];
+  labels?: Label[];
   preferences: Preferences;
   blocks: Block[];
   approvedSoft: DateStr[];

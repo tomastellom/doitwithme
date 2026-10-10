@@ -26,7 +26,7 @@ test('an unmeetable deadline is reported with the exact shortfall', () => {
     {
       kind: 'deadline-short',
       message: 'Study exam due 2026-10-07 is short by 420 min',
-      detail: { taskTitle: 'Study', category: 'study', kind: 'exam', dueDate: '2026-10-07', minutes: 420 },
+      detail: { taskId: 't1', deadlineId: 'd1', taskTitle: 'Study', category: 'study', kind: 'exam', dueDate: '2026-10-07', minutes: 420 },
     },
   ]);
 });
@@ -48,7 +48,7 @@ test('a weekly target that cannot fit is reported', () => {
     {
       kind: 'weekly-short',
       message: 'Study is short by 180 min in the week of 2026-10-05',
-      detail: { taskTitle: 'Study', category: 'study', weekStart: '2026-10-05', minutes: 180 },
+      detail: { taskId: 't1', taskTitle: 'Study', category: 'study', weekStart: '2026-10-05', minutes: 180 },
     },
   ]);
 });
@@ -76,7 +76,7 @@ test('an overdue deadline with work left is reported, not ignored', () => {
     {
       kind: 'deadline-short',
       message: 'Study exam due 2026-10-01 is short by 60 min',
-      detail: { taskTitle: 'Study', category: 'study', kind: 'exam', dueDate: '2026-10-01', minutes: 60 },
+      detail: { taskId: 't1', deadlineId: 'd1', taskTitle: 'Study', category: 'study', kind: 'exam', dueDate: '2026-10-01', minutes: 60 },
     },
   ]);
 });

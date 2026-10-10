@@ -243,3 +243,28 @@ test('an estimate request needs a title and a valid course', () => {
   assert.throws(() => validateEstimateRequest({ ...ok, syllabus: 'x'.repeat(20001) }), /syllabus/);
   assert.throws(() => validateEstimateRequest(null), /request/);
 });
+
+test('labels are optional, and a good list round-trips', () => {
+  const s = sample();
+  assert.equal('labels' in validateState(s), false, 'an older file with no labels stays without them');
+  s.labels = [
+    { id: 'study', name: 'Studying', color: '#FF4B1F', style: 'fill' },
+    { id: 'label-piano', name: 'Piano', color: '#00a3a3', style: 'outline' },
+  ];
+  assert.deepEqual(validateState(s).labels, [
+    { id: 'study', name: 'Studying', color: '#FF4B1F', style: 'fill' },
+    { id: 'label-piano', name: 'Piano', color: '#00A3A3', style: 'outline' },
+  ]);
+});
+
+test('bad labels are refused with a message that names the problem', () => {
+  const good = { id: 'a', name: 'A', color: '#111111', style: 'fill' };
+  rejects((s) => { s.labels = 'nope'; }, /labels must be a list/);
+  rejects((s) => { s.labels = [{ ...good, name: '   ' }]; }, /labels\[0\]\.name/);
+  rejects((s) => { s.labels = [{ ...good, name: 'x'.repeat(41) }]; }, /labels\[0\]\.name/);
+  rejects((s) => { s.labels = [{ ...good, color: 'red' }]; }, /labels\[0\]\.color/);
+  rejects((s) => { s.labels = [{ ...good, style: 'dotted' }]; }, /labels\[0\]\.style/);
+  rejects((s) => { s.labels = [good, { ...good, name: 'B' }]; }, /duplicate id/);
+  rejects((s) => { s.labels = [good, { ...good, id: 'b', name: 'a' }]; }, /same name/);
+  rejects((s) => { s.labels = Array.from({ length: 101 }, (_, i) => ({ ...good, id: `l${i}`, name: `L${i}` })); }, /at most 100/);
+});

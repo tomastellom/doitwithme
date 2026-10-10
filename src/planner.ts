@@ -136,7 +136,7 @@ export function shortfalls(input: PlanInput, all: Block[]): Shortfall[] {
         warning: {
           kind: 'deadline-short',
           message: `${task.title} ${dl.kind} due ${dl.dueDate} is short by ${rem} min`,
-          detail: { taskTitle: task.title, category: task.category, kind: dl.kind, dueDate: dl.dueDate, minutes: rem },
+          detail: { taskId: task.id, deadlineId: dl.id, taskTitle: task.title, category: task.category, kind: dl.kind, dueDate: dl.dueDate, minutes: rem },
         },
       });
     }
@@ -155,7 +155,7 @@ export function shortfalls(input: PlanInput, all: Block[]): Shortfall[] {
           warning: {
             kind: 'weekly-short',
             message: `${task.title} is short by ${task.weeklyMinutes - done} min in the week of ${ws}`,
-            detail: { taskTitle: task.title, category: task.category, weekStart: ws, minutes: task.weeklyMinutes - done },
+            detail: { taskId: task.id, taskTitle: task.title, category: task.category, weekStart: ws, minutes: task.weeklyMinutes - done },
           },
         });
       }

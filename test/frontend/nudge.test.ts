@@ -507,3 +507,16 @@ test('asking for the face he already has does not restart a fade in progress', (
   assert.equal(byClass(m, 'mascot-face').length, 2, 'the first fade is still running, untouched');
   assert.equal(timers.length, 1);
 });
+
+test('besides his offer and Leave it, a warning has a Fix it myself button that goes to the right place', () => {
+  const went: string[] = [];
+  const handlers = { approve() {}, undo() {}, dismiss() {}, okay() {}, retry() {}, fix: (hash: string) => went.push(hash) };
+  const nudge: any = createNudge(dom, handlers, {});
+  nudge.update({ ...base, items: [item({ fix: { label: 'Fix it myself', hash: '#/due-dates/exam-1' } })] });
+  const labels = byTag(byClass(nudge.el, 'acts')[0], 'button').map((b: any) => textOf(b));
+  assert.deepEqual(labels, ['Use Friday evening', 'Fix it myself', 'Leave it']);
+  findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === 'nudge-fix')[0].click();
+  assert.deepEqual(went, ['#/due-dates/exam-1']);
+  nudge.update({ ...base, items: [item({ offer: null, fix: { label: 'Fix it myself', hash: '#/tasks/gym' } })] });
+  assert.deepEqual(byTag(byClass(nudge.el, 'acts')[0], 'button').map((b: any) => textOf(b)), ['Fix it myself', 'Leave it'], 'it is there even when there is no offer');
+});

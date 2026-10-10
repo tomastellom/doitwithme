@@ -40,6 +40,19 @@ function offerOf(w) {
   };
 }
 
+// Where to go to sort a warning out by hand, never a guess: a missing id falls back to the whole list.
+function fixOf(w) {
+  const d = w.detail;
+  const enc = encodeURIComponent;
+  switch (w.kind) {
+    case 'deadline-short': return { label: 'Fix it myself', hash: d.deadlineId ? `#/due-dates/${enc(d.deadlineId)}` : '#/due-dates' };
+    case 'weekly-short': return { label: 'Fix it myself', hash: d.taskId ? `#/tasks/${enc(d.taskId)}` : '#/tasks' };
+    case 'address-missing': return { label: 'Fix it myself', hash: d.placeId ? `#/places/${enc(d.placeId)}` : '#/places' };
+    case 'travel-tight': return { label: 'Fix it myself', hash: d.date ? `#/day/${d.date}` : '#/week' };
+    default: return { label: 'Fix it myself', hash: d.date ? `#/day/${d.date}` : '#/week' };
+  }
+}
+
 export function buildNudge(warnings) {
   const open = warnings.filter((w) => !w.dismissed && w.detail);
   const shortfalls = open.filter((w) => SHORTFALLS.includes(w.kind)).sort(order);
@@ -50,9 +63,10 @@ export function buildNudge(warnings) {
     minutes: w.detail.minutes,
     category: w.detail.category,
     offer: null,
+    fix: fixOf(w),
   }));
   const trips = open.filter((w) => TRAVEL.includes(w.kind));
-  items.push(...trips.map((w) => ({ key: w.key, headline: travelHeadline(w), minutes: 0, category: 'travel', offer: null })));
+  items.push(...trips.map((w) => ({ key: w.key, headline: travelHeadline(w), minutes: 0, category: 'travel', offer: null, fix: fixOf(w) })));
   if (offerWarning) {
     const offer = offerOf(offerWarning);
     const target = items.find((item) => item.category === 'study');
@@ -65,6 +79,7 @@ export function buildNudge(warnings) {
         minutes: 0,
         category: 'study',
         offer,
+        fix: fixOf(offerWarning),
       });
     }
   }

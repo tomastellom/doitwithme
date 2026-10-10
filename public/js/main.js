@@ -64,6 +64,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     dismiss: (keys) => store.dismiss(keys),
     okay: () => store.clearConfirm(),
     retry: () => store.load(),
+    fix: (hash) => navigate(hash),
   }, typeof win.setTimeout === 'function'
     ? {
         setTimer: (fn, ms) => win.setTimeout(fn, ms),

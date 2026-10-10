@@ -82,7 +82,7 @@ export function legsOn(date: DateStr, commitments: Commitment[], ctx: TravelCont
         warnings.push({
           kind: 'address-missing',
           message: `${place.name} has no address and no commute, so I used ${ctx.allowance} minutes of travel`,
-          detail: { placeName: place.name, minutes: ctx.allowance },
+          detail: { placeId: place.id, placeName: place.name, minutes: ctx.allowance },
         });
       }
       const end = o.start - o.bufferBefore;
@@ -95,7 +95,7 @@ export function legsOn(date: DateStr, commitments: Commitment[], ctx: TravelCont
           warnings.push({
             kind: 'travel-tight',
             message: `Not enough time to get to ${o.title} on ${date}`,
-            detail: { placeName: place.name, date, titles: [o.title] },
+            detail: { placeId: place.id, placeName: place.name, date, titles: [o.title] },
           });
         }
       }

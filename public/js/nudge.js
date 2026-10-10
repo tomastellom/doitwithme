@@ -237,6 +237,7 @@ export function createNudge(dom, handlers, env = {}) {
       view.notice && h('p', { class: 'notice' }, view.notice),
       h('div', { class: 'acts' },
         item.offer && button(item.offer.button, () => handlers.approve(item.offer.date), 'y', 'nudge-use'),
+        item.fix && handlers.fix && button(item.fix.label, () => handlers.fix(item.fix.hash), '', 'nudge-fix'),
         button('Leave it', () => handlers.dismiss(keysOf(item)), '', 'nudge-leave'),
       ),
       form,

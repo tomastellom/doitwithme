@@ -31,7 +31,7 @@ function setup(over: any = {}, actionOver: any = {}) {
   };
   const s = over.state ?? state();
   const visible = over.visible ?? all;
-  const el: any = renderWeek(dom, { model: weekModel(s, '2026-10-12', visible, '2026-10-13'), visible, needsYou: over.needsYou ?? 0, isEmpty: over.isEmpty ?? false }, actions);
+  const el: any = renderWeek(dom, { model: weekModel(s, '2026-10-12', visible, '2026-10-13'), visible, needsYou: over.needsYou ?? 0, isEmpty: over.isEmpty ?? false, hours: over.hours, nowMinutes: over.nowMinutes }, actions);
   return { el, calls };
 }
 
@@ -57,16 +57,18 @@ test('seven day columns with weekday, number, booked time and blocks in the boar
   assert.match(textOf(mon), /Chemistry/);
   const chem = byClass(mon, 'blk').find((b) => textOf(b).includes('Chemistry'))!;
   assert.ok(chem.hasClass('g-study'));
-  assert.equal(textOf(byClass(chem, 'k')[0]), 'study');
+  assert.match(chem.getAttribute('aria-label'), /study/);
   assert.ok(byClass(days[2], 'blk')[0].hasClass('g-outline'));
-  assert.equal(textOf(byClass(byClass(days[2], 'blk')[0], 'k')[0]), 'project');
+  assert.match(byClass(days[2], 'blk')[0].getAttribute('aria-label'), /project/);
   assert.ok(byClass(days[6], 'blk')[0].hasClass('g-fixed'));
   assert.equal(days[1].hasClass('today'), true);
 });
 
-test('days with nothing visible show the dashed placeholder', () => {
+test('a day with nothing visible is simply empty hours on the grid', () => {
   const { el } = setup();
-  assert.match(textOf(byClass(byClass(el, 'day')[3], 'ghost')[0]), /Nothing planned/);
+  const thu = byClass(el, 'day')[3];
+  assert.equal(byClass(thu, 'blk').length, 0);
+  assert.equal(byClass(thu, 'cbody').length, 1);
 });
 
 test('the filter list shows counts, toggles groups and reflects pressed state', () => {
@@ -106,7 +108,7 @@ test('first run: lead text, Load the example, no filters or booked lines', () =>
   assert.match(textOf(el), /Nothing planned yet\. Start with what is fixed: classes, work, lessons\. I plan everything else around it\./);
   assert.equal(byClass(el, 'fl').length, 0);
   assert.doesNotMatch(textOf(el), /Booked/);
-  assert.equal(byClass(el, 'ghost').length, 7);
+  assert.equal(byClass(el, 'cbody').length, 7);
   byTag(el, 'button').find((b) => textOf(b).trim() === 'Load the example')!.click();
   assert.deepEqual(calls, [['example']]);
   assert.equal(byTag(el, 'a').filter((a: any) => !a.hasClass('dh')).length, 0, 'only the day headers are links');
@@ -144,7 +146,7 @@ test('a commute is a hatched entry with its length, and the week says when trave
   const entry = byClass(el, 'travel')[0];
   assert.match(textOf(entry), /Commute 55/);
   assert.match(textOf(entry), /09:05–10:00/);
-  assert.match(textOf(entry), /estimated/);
+  assert.match(entry.getAttribute('aria-label'), /estimated/);
   assert.equal(byClass(el, 'travel-off').length, 0);
   const off: any = renderWeek(dom, { model, visible: all, needsYou: 0, isEmpty: false, travelOff: true }, { canAdd: false } as any);
   assert.match(textOf(byClass(off, 'travel-off')[0]), /Travel is off\. Add a Home place\./);
@@ -178,4 +180,49 @@ test('each day header opens that day', () => {
   assert.equal(heads.length, 7);
   assert.deepEqual(heads.map((h: any) => [h.tag, h.getAttribute('href')]).slice(0, 2), [['a', '#/day/2026-10-12'], ['a', '#/day/2026-10-13']]);
   assert.match(heads[1].getAttribute('aria-label'), /Open Tue 13/);
+});
+
+test('tiles sit at their real time: an hour axis, heights from lengths, and the text shrinks to fit', () => {
+  const lecture = { id: 'l', title: 'Chemistry lecture', category: 'class', start: 600, end: 720, pattern: { kind: 'once', date: '2026-10-13' }, exceptions: [], bufferBefore: 0 };
+  const quick = block('2026-10-13', 540, 570, 'Email', 'chores');
+  const s = state({ commitments: [lecture], blocks: [quick] });
+  const { el } = setup({ state: s });
+  const axis = byClass(el, 'axis')[0];
+  assert.equal(byClass(axis, 'mono').length, 16, '07:00 to 22:00, one label an hour');
+  assert.equal(textOf(byClass(axis, 'mono')[0]), '07:00');
+  const tue = byClass(el, 'day')[1];
+  const tiles = byClass(tue, 'blk');
+  const long = tiles.find((t: any) => textOf(t).includes('lecture'))!;
+  const short = tiles.find((t: any) => textOf(t).includes('Email'))!;
+  assert.equal(long.style.top, `${(600 - 420) * 56 / 60}px`);
+  assert.equal(long.style.height, `${120 * 56 / 60 - 2}px`);
+  assert.ok(long.hasClass('full') && byClass(long, 'k').length === 1, 'a long tile has room for its label');
+  assert.ok(short.hasClass('one') && byClass(short, 'k').length === 0, 'a short tile keeps just the name and the start');
+  assert.equal(textOf(byClass(short, 'n')[0]), 'Email');
+  assert.match(short.getAttribute('title'), /Email, 09:00–09:30/);
+  assert.equal(byClass(tue, 'cbody')[0].style.height, `${15 * 56}px`);
+});
+
+test('the chosen hours decide the axis, and a tile outside them stretches it so nothing is hidden', () => {
+  const { el } = setup({ hours: { from: 9, to: 13 } });
+  const labels = byClass(byClass(el, 'axis')[0], 'mono').map(textOf);
+  assert.equal(labels[0], '08:00', 'the 08:00 chemistry block is before 09:00');
+  assert.equal(labels.at(-1), '21:00', 'Mass runs to 21:00');
+});
+
+test('overlapping tiles share the width instead of covering each other', () => {
+  const s = state({ blocks: [block('2026-10-13', 600, 660, 'A', 'study'), block('2026-10-13', 630, 690, 'B', 'gym')] });
+  const { el } = setup({ state: s });
+  const [a, b] = byClass(byClass(el, 'day')[1], 'blk').filter((t: any) => /^(A|B)/.test(textOf(t).trim().replace(/^[a-z]+/, '')) || true).slice(-2);
+  assert.equal(a.style.width, '50%');
+  assert.equal(b.style.width, '50%');
+  assert.notEqual(a.style.left, b.style.left);
+});
+
+test('today shows a now line only when the time is inside the hours', () => {
+  const inside = setup({ nowMinutes: 11 * 60 + 20 });
+  assert.equal(byClass(byClass(inside.el, 'day')[1], 'now').length, 1);
+  assert.equal(byClass(byClass(inside.el, 'day')[0], 'now').length, 0);
+  const outside = setup({ nowMinutes: 3 * 60 });
+  assert.equal(byClass(outside.el, 'now').length, 0);
 });

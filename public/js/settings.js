@@ -21,6 +21,10 @@ export const SETTINGS = [
     write: null,
   },
   {
+    id: 'hours', group: 'appearance', title: 'Calendar hours', hours: true,
+    description: 'The hours the Week and the Day show, from the first line to the last. Something planned outside them still appears, and the range stretches to hold it.',
+  },
+  {
     id: 'notifications', group: 'notifications', title: 'System notifications',
     description: 'A browser notification when a new warning appears while this tab is hidden. Nothing is sent when the app is closed.',
     options: [{ value: 'off', label: 'Off' }, { value: 'on', label: 'On' }],
@@ -61,7 +65,27 @@ export function createSettings(dom, deps) {
     rerender();
   }
 
+  const clock = (hr) => `${String(hr % 24).padStart(2, '0')}:00`;
+
+  function hoursRow(row) {
+    const range = ui.hours();
+    const make = (id, label, lo, hi, value, apply) => {
+      const options = [];
+      for (let hr = lo; hr <= hi; hr++) options.push(h('option', { value: String(hr) }, clock(hr)));
+      const select = h('select', { 'aria-label': label, 'data-fk': `set-hours-${id}`, onchange: () => { apply(Number(select.value)); rerender(); } }, options);
+      select.value = String(value);
+      return h('label', { class: 'hrs' }, h('span', { class: 'mono' }, label), select);
+    };
+    return h('div', { class: 'st' },
+      h('b', {}, row.title),
+      h('p', {}, row.description),
+      h('div', { class: 'hrs-row' },
+        make('from', 'From', 0, range.to - 4, range.from, (v) => ui.setHours(v, range.to)),
+        make('to', 'To', range.from + 4, 24, range.to, (v) => ui.setHours(range.from, v))));
+  }
+
   function rowEl(row) {
+    if (row.hours) return hoursRow(row);
     const ctx = ctxOf();
     const value = row.read(ctx);
     const off = row.disabledValues ? row.disabledValues(ctx) : [];

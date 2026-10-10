@@ -199,3 +199,17 @@ test('while screens slide, the old one is lifted out so it cannot stretch the ne
   assert.match(css, /main\[data-sliding\] > \[class\*="-out-"\] \{[^}]*position: absolute/);
   assert.doesNotMatch(css, /main\[data-sliding\] \{[^}]*display: grid/);
 });
+
+test('the time grid CSS uses the same hour height as timegrid.js and styles every tile size', () => {
+  const css = readFileSync('public/css/app.css', 'utf8');
+  const js = readFileSync('public/js/timegrid.js', 'utf8');
+  const hour = js.match(/HOUR_PX = (\d+)/)![1];
+  assert.match(js, new RegExp(`\\* HOUR_PX`), 'positions are multiples of the hour height');
+  assert.equal(hour, '56');
+  assert.match(css, /^\.hline \{[^}]*border-top: 1px solid/m);
+  for (const size of ['one', 'two', 'full']) assert.match(css, new RegExp(`\\.tile\\.${size}\\b`), size);
+  assert.match(css, /^\.tile \{[^}]*position: absolute/m);
+  assert.match(css, /^\.tile \.n, \.tile \.t, \.tile \.k \{[^}]*text-overflow: ellipsis/m);
+  assert.match(css, /^\.now \{/m);
+  assert.match(css, /^\.grid \{[^}]*grid-template-columns: 56px repeat\(7/m);
+});

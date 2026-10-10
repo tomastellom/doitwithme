@@ -1,5 +1,6 @@
 import { GROUPS, itemKey } from './model.js';
 import { duration, hhmm } from './time.js';
+import { DEFAULT_HOURS, axisEl, bodyEl, hoursFor } from './timegrid.js';
 
 export function renderWeek(dom, view, actions) {
   const { h } = dom;
@@ -7,20 +8,25 @@ export function renderWeek(dom, view, actions) {
 
   const label = (item) => `${item.kind === 'travel' ? `Commute ${item.end - item.start}` : item.title}, ${hhmm(item.start)}–${hhmm(item.end)}, ${item.label}. Opens the editor.`;
   const open = (item) => ({ type: 'button', 'data-fk': `blk-${itemKey(item)}`, 'aria-label': label(item), onclick: () => actions.open(item) });
-  const block = (item) =>
-    item.kind === 'travel'
-      ? h('button', { ...open(item), class: 'blk travel', title: item.title },
-          h('span', { class: 'top' }, h('span', { class: 't' }, `${hhmm(item.start)}–${hhmm(item.end)}`), h('span', { class: 'k' }, item.label)),
-          h('span', { class: 'n' }, `Commute ${item.end - item.start}`))
-      : h('button', { ...open(item), class: `blk g-${item.group}` },
-          h('span', { class: 'top' }, h('span', { class: 't' }, `${hhmm(item.start)}–${hhmm(item.end)}`), h('span', { class: 'k' }, item.label)),
-          h('span', { class: 'n' }, item.title));
+  // A tile says as much as its height allows, and always the full text on hover and to screen readers.
+  const block = (item, size) => {
+    const travel = item.kind === 'travel';
+    const name = travel ? `Commute ${item.end - item.start}` : item.title;
+    const time = `${hhmm(item.start)}–${hhmm(item.end)}`;
+    const lines = size === 'one'
+      ? [h('span', { class: 'n' }, name), h('span', { class: 't' }, hhmm(item.start))]
+      : size === 'two'
+        ? [h('span', { class: 'n' }, name), h('span', { class: 't' }, time)]
+        : [h('span', { class: 'k' }, item.label), h('span', { class: 'n' }, name), h('span', { class: 't' }, time)];
+    return h('button', { ...open(item), class: `blk tile ${size} ${travel ? 'travel' : `g-${item.group}`}`, title: `${name}, ${time}` }, lines);
+  };
 
+  const hours = hoursFor(view.hours ?? DEFAULT_HOURS, model.days.flatMap((d) => d.items));
   const day = (d) =>
     h('div', { class: d.isToday ? 'day today' : 'day', role: 'group', 'aria-label': `${d.weekday} ${d.num}` },
       h('a', { class: 'dh', href: `#/day/${d.date}`, 'data-fk': `dh-${d.date}`, 'aria-label': `Open ${d.weekday} ${d.num}` }, h('span', { class: 'mono' }, d.weekday), h('span', { class: 'dd' }, d.num)),
-      !isEmpty && h('p', { class: 'booked mono' }, `Booked ${duration(d.booked)}`),
-      d.items.length > 0 ? d.items.map(block) : h('div', { class: 'ghost mono' }, 'Nothing planned'));
+      h('p', { class: 'booked mono' }, isEmpty ? '' : `Booked ${duration(d.booked)}`),
+      bodyEl(dom, { items: d.items, hours, nowMinutes: d.isToday ? view.nowMinutes ?? null : null, tileFor: block }));
 
   const status = needsYou > 0
     ? h('button', { type: 'button', class: 'needs mono', 'data-fk': 'needs', onclick: () => actions.focusNudge() }, `${needsYou} need${needsYou === 1 ? 's' : ''} you`)
@@ -44,7 +50,7 @@ export function renderWeek(dom, view, actions) {
         h('button', { type: 'button', 'data-fk': 'next', 'aria-label': 'Next week', onclick: () => actions.go(1) }, 'Next')),
       h('div', { class: 'meta mono' }, h('span', {}, `Week ${model.week} / ${model.year}`), h('span', {}, '7 days'), status)));
 
-  const grid = h('div', { class: 'grid' }, model.days.map(day));
+  const grid = h('div', { class: 'grid' }, axisEl(dom, hours), model.days.map(day));
 
   if (isEmpty) {
     return h('section', { class: 'week' }, hero,

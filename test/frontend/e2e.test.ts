@@ -76,7 +76,7 @@ test('boots, draws the week, and walks the whole approve, undo and dismiss story
   assert.match(textOf(root), /Week 41 \/ 2026/);
   assert.equal(byClass(root, 'day').length, 7);
   assert.match(textOf(byClass(root, 'day')[0]), /18:00–20:00/);
-  assert.match(textOf(fridayColumn(root)), /Nothing planned/);
+  assert.equal(byClass(fridayColumn(root), 'blk').filter((b: any) => /18:00/.test(textOf(b))).length, 0, 'the evening is empty again');
   assert.equal(byTag(root, 'nav').length, 1);
   assert.deepEqual(findAll(root, (e) => e.tag === 'a' && e.hasClass('tab')).map(textOf), ['Day', 'Week', 'Month', 'Deadlines', 'Setup']);
 
@@ -95,7 +95,7 @@ test('boots, draws the week, and walks the whole approve, undo and dismiss story
   // undo
   click(byClass(root, 'nudge')[0], 'Undo');
   await app.store.idle();
-  assert.match(textOf(fridayColumn(root)), /Nothing planned/);
+  assert.equal(byClass(fridayColumn(root), 'blk').filter((b: any) => /18:00/.test(textOf(b))).length, 0, 'the evening is empty again');
 
   // dismiss ("Leave it") clears the warnings and Nudge goes quiet
   for (let i = 0; i < 5 && /Leave it/.test(textOf(byClass(root, 'nudge')[0])); i++) {

@@ -8,6 +8,13 @@ export function createDom(doc) {
       if (value === undefined || value === null || value === false) continue;
       if (key.startsWith('on') && typeof value === 'function') el.addEventListener(key.slice(2).toLowerCase(), value);
       else if (key === 'value') el.value = value;
+      // Positions are set through the style object, which the page's content policy allows (a style attribute it does not).
+      else if (key === 'style' && typeof value === 'object') {
+        for (const [name, v] of Object.entries(value)) {
+          if (name.startsWith('--')) el.style.setProperty(name, String(v));
+          else el.style[name] = String(v);
+        }
+      }
       else if (value === true) el.setAttribute(key, '');
       else el.setAttribute(key, String(value));
     }

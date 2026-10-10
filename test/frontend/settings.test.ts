@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDom } from '../../public/js/dom.js';
 import { SETTINGS, SETTINGS_GROUPS, createSettings } from '../../public/js/settings.js';
+import { createUiPrefs } from '../../public/js/ui-prefs.js';
 import { FakeDocument, byClass, byTag, findAll, textOf } from './fakedom.ts';
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
@@ -11,6 +12,7 @@ function setup(opts: any = {}) {
   const saves: any[] = [];
   let softMode = opts.softMode ?? 'ask';
   let notify = false;
+  let range = { from: 7, to: 22 };
   const permission = opts.permission ?? 'default';
   const store: any = {
     get: () => ({ state: { preferences: { softMode } }, busy: opts.busy ?? false, formError: opts.formError ?? null, status: 'ready' }),
@@ -26,6 +28,8 @@ function setup(opts: any = {}) {
     notify: () => notify,
     enableNotify: async () => { if (opts.answer === 'granted') notify = true; return opts.answer ?? 'denied'; },
     disableNotify: () => { notify = false; },
+    hours: () => ({ ...range }),
+    setHours: (from: number, to: number) => { range = { from, to }; return true; },
   };
   const dom = createDom(new FakeDocument() as any);
   const settings = createSettings(dom, { store, ui, keepFocus: (fn: Function) => fn() });
@@ -106,7 +110,7 @@ test('a refusal or an unsupported browser is explained and the switch stays Off'
 
 test('every declared row has a title, a sentence and options, and writes through one function', () => {
   for (const row of SETTINGS) {
-    assert.ok(row.title && row.description.endsWith('.') && row.options.length >= 2, row.id);
+    assert.ok(row.title && row.description.endsWith('.') && (row.hours || row.options.length >= 2), row.id);
     assert.ok(SETTINGS_GROUPS.some((g) => g.id === row.group), row.id);
   }
 });
@@ -117,4 +121,32 @@ test('the hint says when notifications are already allowed, and the sub-links ke
   assert.doesNotMatch(textOf(allowed.draw()), /will ask for permission/);
   const links = byClass(allowed.draw(), 'sub')[0].children.filter((c: any) => c.tag === 'a');
   assert.deepEqual(links.map((l: any) => l.getAttribute('data-fk')), ['set-link-appearance', 'set-link-notifications', 'set-link-planner']);
+});
+
+test('Calendar hours: two pickers that can never leave less than four hours, saved in this browser', () => {
+  const store: Record<string, string> = {};
+  const win: any = { localStorage: { getItem: (k: string) => store[k] ?? null, setItem: (k: string, v: string) => { store[k] = v; } } };
+  const ui = createUiPrefs(win);
+  assert.deepEqual(ui.hours(), { from: 7, to: 22 });
+  assert.equal(ui.setHours(8, 20), true);
+  assert.equal(ui.setHours(10, 12), false, 'too short');
+  assert.equal(ui.setHours(-1, 20), false);
+  assert.equal(ui.setHours(6, 25), false);
+  assert.deepEqual(createUiPrefs(win).hours(), { from: 8, to: 20 }, 'remembered');
+  store['doitwithme.hours'] = 'banana';
+  assert.deepEqual(createUiPrefs(win).hours(), { from: 7, to: 22 }, 'a damaged value falls back');
+});
+
+test('the Calendar hours pickers show the saved range and change it', () => {
+  const { draw, ui } = setup();
+  const el = draw();
+  const from = key(el, 'set-hours-from');
+  const to = key(el, 'set-hours-to');
+  assert.equal(from.value, '7');
+  assert.equal(to.value, '22');
+  assert.equal(byTag(from, 'option').length, 19, 'From runs 00:00 to 18:00 so four hours always remain');
+  assert.equal(textOf(byTag(to, 'option')[0]), '11:00');
+  from.value = '9';
+  from.dispatch('change');
+  assert.deepEqual(ui.hours(), { from: 9, to: 22 });
 });

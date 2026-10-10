@@ -1,5 +1,6 @@
 import { GROUPS, itemKey } from './model.js';
 import { duration, hhmm } from './time.js';
+import { DEFAULT_HOURS, axisEl, bodyEl, hoursFor, topOf } from './timegrid.js';
 
 export function renderDay(dom, view, actions) {
   const { h } = dom;
@@ -7,35 +8,23 @@ export function renderDay(dom, view, actions) {
 
   const range = (r) => `${hhmm(r.start)}–${hhmm(r.end)}`;
 
-  const rowOf = (r) => {
-    if (r.kind === 'gap') {
-      return h('div', { class: 'dv-gap mono' }, h('span'), h('span', { class: 'line' }, `Free ${range(r)} / ${duration(r.end - r.start)}`), h('span'));
-    }
-    const length = `${r.end - r.start} min`;
+  const timeOf = (r) => `${hhmm(r.start)}–${hhmm(r.end)}`;
+  // Day rows call commitments and blocks "item"; the editor wants to know which is which.
+  const asItem = (r) => ({ ...r, kind: r.kind === 'travel' ? 'travel' : r.commitmentId ? 'commitment' : 'block' });
+  const lines = (r, shown, size) => {
+    const when = `${timeOf(r)} · ${r.end - r.start} min`;
+    return size === 'one' ? [h('span', { class: 'n' }, shown), h('span', { class: 't' }, when)] : [h('span', { class: 'k' }, r.label), h('span', { class: 'n' }, shown), h('span', { class: 't' }, when)];
+  };
+  const tileFor = (r, size) => {
     if (r.kind === 'buffer') {
-      return h('div', { class: 'dv-row' },
-        h('span', { class: 'dv-rt dashed' }, range(r)),
-        h('div', { class: 'dv-blk dv-buf' }, h('span', { class: 'k' }, r.title), h('span', { class: 'k' }, 'Travel and setup')),
-        h('span', { class: 'dv-dur' }, length));
+      return h('div', { class: `tile dv-buf ${size}`, title: `${r.title}, ${timeOf(r)}` }, h('span', { class: 'n' }, r.title), h('span', { class: 't' }, `Travel and setup · ${r.end - r.start} min`));
     }
-    // Day rows call commitments and blocks "item"; the editor wants to know which is which.
-    const item = { ...r, kind: r.kind === 'travel' ? 'travel' : r.commitmentId ? 'commitment' : 'block' };
+    const item = asItem(r);
     const name = item.kind === 'travel' ? `Commute ${r.end - r.start}` : r.title;
-    const button = (cls, ...kids) =>
-      h('button', {
-        type: 'button', class: cls, 'data-fk': `blk-${itemKey(item)}`,
-        'aria-label': `${name}, ${range(r)}, ${r.label}. Opens the editor.`, onclick: () => actions.open(item),
-      }, ...kids);
-    if (r.kind === 'travel') {
-      return h('div', { class: 'dv-row' },
-        h('span', { class: 'dv-rt' }, range(r)),
-        button('dv-blk travel', h('span', { class: 'k' }, r.label), h('span', { class: 'n' }, r.title)),
-        h('span', { class: 'dv-dur' }, length));
-    }
-    return h('div', { class: 'dv-row' },
-      h('span', { class: 'dv-rt' }, range(r)),
-      button(`dv-blk g-${r.group}`, h('span', { class: 'k' }, r.label), h('span', { class: 'n' }, r.title)),
-      h('span', { class: 'dv-dur' }, length));
+    return h('button', {
+      type: 'button', class: `dv-blk tile ${size} ${item.kind === 'travel' ? 'travel' : `g-${r.group}`}`, 'data-fk': `blk-${itemKey(item)}`,
+      title: `${name}, ${timeOf(r)}`, 'aria-label': `${name}, ${timeOf(r)}, ${r.label}. Opens the editor.`, onclick: () => actions.open(item),
+    }, lines(r, r.title, size));
   };
 
   const status = needsYou > 0 ? h('span', {}, `${needsYou} need${needsYou === 1 ? 's' : ''} you`) : h('span', {}, 'All clear');
@@ -77,6 +66,15 @@ export function renderDay(dom, view, actions) {
     h('span', { class: 'mono dv-cap' }, `Free in the ${hhmm(model.window.start)}–${hhmm(model.window.end)} window`),
     h('span', { class: 'dv-free' }, duration(model.free)));
 
-  return h('section', { class: 'dayv' }, hero,
-    h('div', { class: 'dv-body' }, h('div', { class: 'dv-list' }, model.rows.map(rowOf)), side));
+  const entries = model.rows.filter((r) => r.kind !== 'gap');
+  const hours = hoursFor(view.hours ?? DEFAULT_HOURS, entries);
+  // A long free stretch says so in the middle of it; shorter ones are just space.
+  const gapLabels = model.rows
+    .filter((r) => r.kind === 'gap' && r.end - r.start >= 90)
+    .map((r) => h('div', { class: 'gaplabel mono', style: { top: `${topOf((r.start + r.end) / 2, hours) - 8}px` } }, `Free ${hhmm(r.start)}–${hhmm(r.end)} / ${duration(r.end - r.start)}`));
+  const grid = h('div', { class: 'dv-grid' },
+    axisEl(dom, hours),
+    h('div', { class: 'dv-col' }, bodyEl(dom, { items: entries, hours, nowMinutes: isToday ? view.nowMinutes ?? null : null, tileFor, extras: gapLabels })));
+
+  return h('section', { class: 'dayv' }, hero, h('div', { class: 'dv-body' }, grid, side));
 }

@@ -8,7 +8,15 @@ export class FakeText {
   }
 }
 
+export class FakeStyle {
+  [k: string]: any;
+  setProperty(k: string, v: string): void {
+    this[k] = v;
+  }
+}
+
 export class FakeElement {
+  style = new FakeStyle();
   tag: string;
   ns: string | null;
   doc: FakeDocument;

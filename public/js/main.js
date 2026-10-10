@@ -138,7 +138,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       const model = dayModel(ctx.s.state, date, ctx.s.travel);
       const { needsYou } = buildNudge(ctx.s.warnings);
       return renderDay(dom, {
-        model, needsYou, isEmpty: ctx.s.isEmpty,
+        model, needsYou, isEmpty: ctx.s.isEmpty, hours: ui.hours(), nowMinutes: getClock().nowMinutes,
         isToday: date === getClock().today, prevLabel: WEEKDAYS[weekdayOf(addDays(date, -1))], nextLabel: WEEKDAYS[weekdayOf(addDays(date, 1))],
       }, dayActions);
     },
@@ -152,7 +152,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       const { needsYou } = buildNudge(s.warnings);
       const places = s.state.places ?? [];
       const travelOff = places.length > 0 && !places.some((p) => p.kind === 'home');
-      return renderWeek(dom, { model, visible, needsYou, isEmpty: s.isEmpty, travelOff }, weekActions);
+      return renderWeek(dom, { model, visible, needsYou, isEmpty: s.isEmpty, travelOff, hours: ui.hours(), nowMinutes: getClock().nowMinutes }, weekActions);
     },
   });
 

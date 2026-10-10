@@ -479,3 +479,20 @@ a.dh:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
   .grid { grid-template-columns: 44px repeat(7, minmax(120px, 1fr)); overflow-x: auto; }
   .dv-grid { width: 100%; }
 }
+
+/* Adding: blank time is clickable, every Month day has a plus, and the Day's wide tiles keep one line. */
+.cbody.addable { cursor: copy; }
+.cw { position: relative; min-width: 0; display: flex; }
+.cw .cell { flex: 1; min-width: 0; }
+.plus { position: absolute; right: 6px; bottom: 6px; width: 30px; height: 30px; padding: 0; border: 2px solid var(--ink); background: var(--paper); color: var(--ink); font-size: 20px; line-height: 1; opacity: 0; transition: opacity .15s ease-out, background-color .15s ease-out; }
+.plus.on-ink { border-color: var(--paper); background: var(--ink); color: var(--paper); }
+.cw:hover .plus, .cw:focus-within .plus, .plus:focus-visible { opacity: 1; }
+.plus:hover { background: var(--ink); color: var(--paper); }
+.plus.on-ink:hover { background: var(--paper); color: var(--ink); }
+.dv-blk.tile.one { flex-direction: row; justify-content: flex-start; align-items: center; gap: 14px; padding: 0 14px; }
+.dv-blk.tile.one .n { font-size: 17px; flex: 0 1 auto; }
+.dv-blk.tile.one .t { flex: none; }
+.dv-blk.tile.full { padding: 8px 14px; }
+.dv-buf.tile { gap: 12px; justify-content: flex-start; }
+.dv-buf.tile .t { flex: none; font-size: 12px; color: var(--muted); }
+@media (hover: none) { .plus { opacity: 1; } }

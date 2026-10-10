@@ -1,6 +1,6 @@
 import { renderField } from './form.js';
 import { FIELDS } from './setup.js';
-import { WEEK_ORDER, applyItem, commitmentKind, removeItem } from './setup-model.js';
+import { WEEK_ORDER, applyItem, commitmentKind, newId, removeItem } from './setup-model.js';
 import { itemKey } from './model.js';
 import { WEEKDAYS, hhmm, longDate } from './time.js';
 
@@ -60,7 +60,7 @@ export function createDrawer(dom, deps) {
     if (!opened) return;
     opened = false;
     el.setAttribute('hidden', '');
-    const key = item ? `blk-${itemKey(item)}` : null;
+    const key = item ? (item.kind === 'new' ? item.returnKey ?? null : `blk-${itemKey(item)}`) : null;
     item = null;
     if (returnFocus && key) focusKey(key);
   }
@@ -161,6 +161,46 @@ export function createDrawer(dom, deps) {
     ];
   }
 
+  // Adding: the same fields as editing a commitment, started on the day and time that was clicked.
+  async function saveNew() {
+    const state = store.get().state;
+    const result = commitmentKind.fromDraft(draft, newId('c'), state);
+    if (result.error) {
+      error = result.error;
+      draw();
+      return;
+    }
+    error = null;
+    await store.saveState((fresh) => applyItem(fresh, 'commitments', result.item));
+    const after = store.get();
+    if (after.formError) {
+      error = after.formError;
+      draw();
+      return;
+    }
+    close();
+  }
+
+  function newPanel() {
+    const state = store.get().state;
+    const busy = store.get().busy;
+    const ctx = { state, scratch, rerender: draw };
+    const fields = FIELDS.commitments
+      .filter((f) => SHOWN.includes(f.name) && (!f.show || f.show(draft)))
+      .map((f) => renderField(dom, f, draft, ctx))
+      .filter(Boolean);
+    return [
+      head('New / one time', 'Add something', longDate(item.date)),
+      error && h('div', { class: 'err', role: 'alert' }, h('b', {}, 'Nothing was saved.'), h('span', { class: 'mono msg' }, error)),
+      h('form', { class: 'dfg', novalidate: true, onsubmit: (e) => { e.preventDefault(); saveNew(); } }, ...fields),
+      h('span', { class: 'note2' }, 'It happens once, on this day. For something that repeats every week, ',
+        h('a', { href: '#/commitments/new', onclick: () => close(false) }, 'use Setup.')),
+      h('div', { class: 'dbtns' },
+        h('button', { type: 'button', class: 'y mono', 'data-fk': 'drawer-save', disabled: busy, onclick: () => saveNew() }, 'Add'),
+        h('button', { type: 'button', class: 'mono', 'data-fk': 'drawer-discard', onclick: () => close() }, 'Cancel')),
+    ];
+  }
+
   function blockPanel() {
     const state = store.get().state;
     const task = state.tasks.find((t) => t.id === item.taskId);
@@ -199,8 +239,8 @@ export function createDrawer(dom, deps) {
 
   function draw() {
     if (!item) return;
-    panel.setAttribute('aria-label', item.kind === 'travel' ? `Commute ${item.end - item.start}` : item.title);
-    const body = item.kind === 'commitment' ? commitmentPanel() : item.kind === 'block' ? blockPanel() : travelPanel();
+    panel.setAttribute('aria-label', item.kind === 'new' ? 'New commitment' : item.kind === 'travel' ? `Commute ${item.end - item.start}` : item.title);
+    const body = item.kind === 'new' ? newPanel() : item.kind === 'commitment' ? commitmentPanel() : item.kind === 'block' ? blockPanel() : travelPanel();
     clear(panel, body);
   }
 
@@ -218,6 +258,19 @@ export function createDrawer(dom, deps) {
         const c = store.get().state.commitments.find((x) => x.id === item.commitmentId);
         if (c) draft = commitmentKind.toDraft(c);
       }
+      draw();
+      el.removeAttribute('hidden');
+      const first = focusables()[0];
+      if (first) first.focus();
+    },
+    openNew({ date, start, returnKey = null }) {
+      const end = Math.min(start + 60, 24 * 60 - 1);
+      item = { kind: 'new', date, start, end, returnKey };
+      opened = true;
+      error = null;
+      confirm = false;
+      scratch = {};
+      draft = { ...commitmentKind.blank(date), title: '', category: 'other', repeats: 'once', date, start: hhmm(start), end: hhmm(end) };
       draw();
       el.removeAttribute('hidden');
       const first = focusables()[0];

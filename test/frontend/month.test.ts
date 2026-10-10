@@ -104,3 +104,15 @@ test('with nothing planned the month points at the example, and the grid still s
   assert.deepEqual(calls, [['example']]);
   assert.equal(byClass(el, 'cell').length, 35);
 });
+
+test('every day has its own Add button next to its link, so a link never holds a button', () => {
+  const adds: string[] = [];
+  const { el } = draw({}, { add: (date: string) => adds.push(date) });
+  const plus = findAll(el, (e: any) => e.tag === 'button' && (e.getAttribute('data-fk') ?? '').startsWith('plus-'));
+  assert.equal(plus.length, 35);
+  const tue = plus.find((b: any) => b.getAttribute('data-fk') === 'plus-2026-10-13')!;
+  assert.match(tue.getAttribute('aria-label'), /Add to Tuesday 13 October/);
+  tue.click();
+  assert.deepEqual(adds, ['2026-10-13']);
+  assert.ok(byClass(el, 'cell').every((c: any) => byTag(c, 'button').length === 0), 'no button inside a link');
+});

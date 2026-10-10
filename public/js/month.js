@@ -7,16 +7,21 @@ export function renderMonth(dom, view, actions) {
   const { model, needsYou, isEmpty } = view;
 
   const cell = (c) =>
-    h('a', {
-      class: ['cell', c.inMonth ? '' : 'out', c.isPast ? 'past' : '', c.isToday ? 'today' : ''].filter(Boolean).join(' '),
-      href: `#/day/${c.date}`,
-      'data-fk': `cell-${c.date}`,
-      'aria-label': `${c.weekday} ${c.num} ${c.monthName}, ${c.planned} planned${c.due ? ', something is due' : ''}. Opens the day.`,
-    },
-      h('span', { class: 'cn' }, h('span', { class: 'dn' }, c.num), c.due && h('span', { class: 'due mono' }, 'Due')),
-      c.dots.length > 0 && h('span', { class: 'dots', 'aria-hidden': 'true' },
-        c.dots.map((g) => h('i', { class: `dot g-${g}`, 'aria-hidden': 'true' })),
-        c.more > 0 && h('span', { class: 'more mono' }, `+${c.more}`)));
+    h('div', { class: 'cw' },
+      h('a', {
+        class: ['cell', c.inMonth ? '' : 'out', c.isPast ? 'past' : '', c.isToday ? 'today' : ''].filter(Boolean).join(' '),
+        href: `#/day/${c.date}`,
+        'data-fk': `cell-${c.date}`,
+        'aria-label': `${c.weekday} ${c.num} ${c.monthName}, ${c.planned} planned${c.due ? ', something is due' : ''}. Opens the day.`,
+      },
+        h('span', { class: 'cn' }, h('span', { class: 'dn' }, c.num), c.due && h('span', { class: 'due mono' }, 'Due')),
+        c.dots.length > 0 && h('span', { class: 'dots', 'aria-hidden': 'true' },
+          c.dots.map((g) => h('i', { class: `dot g-${g}`, 'aria-hidden': 'true' })),
+          c.more > 0 && h('span', { class: 'more mono' }, `+${c.more}`))),
+      actions.add && h('button', {
+        type: 'button', class: `plus${c.isToday ? ' on-ink' : ''}`, 'data-fk': `plus-${c.date}`,
+        'aria-label': `Add to ${c.weekday} ${c.num} ${c.monthName}`, onclick: () => actions.add(c.date),
+      }, '+'));
 
   const status = needsYou > 0 ? `${needsYou} need${needsYou === 1 ? 's' : ''} you` : 'All clear';
   const hero = h('div', { class: 'hero' },
@@ -31,6 +36,7 @@ export function renderMonth(dom, view, actions) {
       },
     }, model.title),
     h('div', { class: 'right' },
+      actions.add && h('button', { type: 'button', class: 'hero-add', 'data-fk': 'add', onclick: () => actions.add(model.cells.find((c) => c.isToday)?.date ?? model.first) }, '+ Add'),
       h('div', { class: 'step mono' },
         h('button', { type: 'button', 'data-fk': 'prev', 'aria-label': 'Previous month', onclick: () => actions.go(-1) }, 'Prev'),
         h('button', { type: 'button', 'data-fk': 'today', onclick: () => actions.today() }, 'Today'),

@@ -253,3 +253,29 @@ test('after Save or Skip, keyboard focus is handed back instead of being dropped
   await tick();
   assert.match(b.focused.at(-1) ?? '', /^blk-commitment:chem-lecture:/);
 });
+
+test('a new item: the panel opens on the chosen day and time, and Add saves a one-off commitment', async () => {
+  const r = rig();
+  r.drawer.openNew({ date: '2026-10-15', start: 9 * 60 + 15, returnKey: 'plus-2026-10-15' });
+  assert.equal(r.drawer.isOpen(), true);
+  assert.equal(key(r.drawer.el, 'f-start').value, '09:15');
+  assert.equal(key(r.drawer.el, 'f-end').value, '10:15');
+  assert.equal(key(r.drawer.el, 'f-date').value, '2026-10-15');
+  key(r.drawer.el, 'drawer-save').click();
+  await tick();
+  assert.equal(r.saves.length, 0, 'a title is required');
+  assert.match(textOf(r.drawer.el), /Give it a title/);
+  type(r.drawer.el, 'f-title', 'Dentist');
+  key(r.drawer.el, 'drawer-save').click();
+  await tick();
+  const added = r.saves[0].commitments.find((c: any) => c.title === 'Dentist');
+  assert.deepEqual([added.start, added.end, added.pattern], [555, 615, { kind: 'once', date: '2026-10-15' }]);
+  assert.equal(r.drawer.isOpen(), false);
+  assert.equal(r.focused.at(-1), 'plus-2026-10-15');
+});
+
+test('a new item near midnight still ends the same day', () => {
+  const r = rig();
+  r.drawer.openNew({ date: '2026-10-15', start: 23 * 60 + 30 });
+  assert.equal(key(r.drawer.el, 'f-end').value, '23:59');
+});

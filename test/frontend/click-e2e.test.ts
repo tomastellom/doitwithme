@@ -132,3 +132,31 @@ test('the Deadlines page adds and edits through the existing form', async () => 
   app.navigate(byClass(root, 'dl')[0].getAttribute('href'));
   assert.match(win.location.hash, /^#\/due-dates\/.+/);
 });
+
+test('click empty space on a day, name it, and it is saved on the server and shown on the week', async () => {
+  assert.equal((await put(await exampleState())).status, 200);
+  const { app, root } = boot();
+  await settled(app);
+  const fri = byClass(root, 'day')[4];
+  const body = byClass(fri, 'cbody')[0];
+  body.dispatch('click', { target: body, clientY: 8 * 56 });
+  assert.equal(key(root, 'f-date').value, '2026-10-09');
+  assert.equal(key(root, 'f-start').value, '15:00');
+  type(root, 'f-title', 'Dentist');
+  key(root, 'drawer-save').click();
+  await app.store.idle();
+  await tick(60);
+  const saved = (await serverState()).commitments.find((c: any) => c.title === 'Dentist');
+  assert.deepEqual([saved.start, saved.pattern], [900, { kind: 'once', date: saved.pattern.date }]);
+  assert.match(textOf(byClass(root, 'day')[4]), /Dentist/);
+});
+
+test('the plus on a Month day opens the same panel for that day', async () => {
+  assert.equal((await put(await exampleState())).status, 200);
+  const { app, root } = boot();
+  await settled(app);
+  app.navigate('#/month');
+  key(root, 'plus-2026-10-20').click();
+  assert.equal(key(root, 'f-date').value, '2026-10-20');
+  assert.equal(key(root, 'f-start').value, '09:00');
+});

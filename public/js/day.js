@@ -1,6 +1,6 @@
 import { GROUPS, itemKey } from './model.js';
 import { duration, hhmm } from './time.js';
-import { DEFAULT_HOURS, axisEl, bodyEl, hoursFor, topOf } from './timegrid.js';
+import { DEFAULT_HOURS, axisEl, bodyEl, dayTileSize, hoursFor, topOf } from './timegrid.js';
 
 export function renderDay(dom, view, actions) {
   const { h } = dom;
@@ -41,6 +41,7 @@ export function renderDay(dom, view, actions) {
       },
     }, model.label),
     h('div', { class: 'right' },
+      actions.add && h('button', { type: 'button', class: 'hero-add', 'data-fk': 'add', onclick: () => actions.add(view.date, 9 * 60) }, '+ Add'),
       h('div', { class: 'step mono' },
         h('button', { type: 'button', 'data-fk': 'prev', 'aria-label': `Previous day, ${prevLabel}`, onclick: () => actions.go(-1) }, prevLabel),
         h('button', { type: 'button', 'data-fk': 'today', onclick: () => actions.today() }, 'Today'),
@@ -74,7 +75,7 @@ export function renderDay(dom, view, actions) {
     .map((r) => h('div', { class: 'gaplabel mono', style: { top: `${topOf((r.start + r.end) / 2, hours) - 8}px` } }, `Free ${hhmm(r.start)}–${hhmm(r.end)} / ${duration(r.end - r.start)}`));
   const grid = h('div', { class: 'dv-grid' },
     axisEl(dom, hours),
-    h('div', { class: 'dv-col' }, bodyEl(dom, { items: entries, hours, nowMinutes: isToday ? view.nowMinutes ?? null : null, tileFor, extras: gapLabels })));
+    h('div', { class: 'dv-col' }, bodyEl(dom, { items: entries, hours, nowMinutes: isToday ? view.nowMinutes ?? null : null, tileFor, extras: gapLabels, sizeFor: dayTileSize, onBlank: actions.add ? (minutes) => actions.add(view.date, minutes) : null })));
 
   return h('section', { class: 'dayv' }, hero, h('div', { class: 'dv-body' }, grid, side));
 }

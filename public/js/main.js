@@ -101,8 +101,12 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   const currentDay = () => dateParam(route.param, getClock().today);
   const currentMonth = () => monthStart(dateParam(route.param, getClock().today));
 
+  // Adding starts at the day, and the time if one was clicked; focus comes back to what was pressed.
+  const addAt = (date, start = 9 * 60) => drawer.openNew({ date, start, returnKey: `plus-${date}` });
+
   const dayActions = {
     open: (item) => drawer.open(item),
+    add: addAt,
     go: (delta) => navigate(buildHash('day', addDays(currentDay(), delta))),
     today: () => navigate(buildHash('day', null)),
     loadExample: () => store.loadExample(),
@@ -113,6 +117,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
 
   const weekActions = {
     open: (item) => drawer.open(item),
+    add: addAt,
     toggleGroup(id) {
       const next = new Set(visible);
       if (next.has(id)) next.delete(id);
@@ -138,7 +143,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       const model = dayModel(ctx.s.state, date, ctx.s.travel);
       const { needsYou } = buildNudge(ctx.s.warnings);
       return renderDay(dom, {
-        model, needsYou, isEmpty: ctx.s.isEmpty, hours: ui.hours(), nowMinutes: getClock().nowMinutes,
+        model, needsYou, isEmpty: ctx.s.isEmpty, hours: ui.hours(), nowMinutes: getClock().nowMinutes, date,
         isToday: date === getClock().today, prevLabel: WEEKDAYS[weekdayOf(addDays(date, -1))], nextLabel: WEEKDAYS[weekdayOf(addDays(date, 1))],
       }, dayActions);
     },
@@ -157,6 +162,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   });
 
   const monthActions = {
+    add: (date) => addAt(date),
     go: (delta) => navigate(buildHash('month', addMonths(currentMonth(), delta))),
     today: () => navigate(buildHash('month', null)),
     loadExample: () => store.loadExample(),

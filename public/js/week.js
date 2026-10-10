@@ -26,12 +26,13 @@ export function renderWeek(dom, view, actions) {
     h('div', { class: d.isToday ? 'day today' : 'day', role: 'group', 'aria-label': `${d.weekday} ${d.num}` },
       h('a', { class: 'dh', href: `#/day/${d.date}`, 'data-fk': `dh-${d.date}`, 'aria-label': `Open ${d.weekday} ${d.num}` }, h('span', { class: 'mono' }, d.weekday), h('span', { class: 'dd' }, d.num)),
       h('p', { class: 'booked mono' }, isEmpty ? '' : `Booked ${duration(d.booked)}`),
-      bodyEl(dom, { items: d.items, hours, nowMinutes: d.isToday ? view.nowMinutes ?? null : null, tileFor: block }));
+      bodyEl(dom, { items: d.items, hours, nowMinutes: d.isToday ? view.nowMinutes ?? null : null, tileFor: block, onBlank: actions.add ? (minutes) => actions.add(d.date, minutes) : null }));
 
   const status = needsYou > 0
     ? h('button', { type: 'button', class: 'needs mono', 'data-fk': 'needs', onclick: () => actions.focusNudge() }, `${needsYou} need${needsYou === 1 ? 's' : ''} you`)
     : h('span', {}, 'All clear');
 
+  const addDate = (model.days.find((d) => d.isToday) ?? model.days[0]).date;
   const hero = h('div', { class: 'hero' },
     h('h1', {
       tabindex: '0',
@@ -44,6 +45,7 @@ export function renderWeek(dom, view, actions) {
       },
     }, model.title),
     h('div', { class: 'right' },
+      actions.add && h('button', { type: 'button', class: 'hero-add', 'data-fk': 'add', onclick: () => actions.add(addDate, 9 * 60) }, '+ Add'),
       h('div', { class: 'step mono' },
         h('button', { type: 'button', 'data-fk': 'prev', 'aria-label': 'Previous week', onclick: () => actions.go(-1) }, 'Prev'),
         h('button', { type: 'button', 'data-fk': 'today', onclick: () => actions.today() }, 'Today'),

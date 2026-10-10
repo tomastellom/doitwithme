@@ -31,6 +31,9 @@ export class FakeElement {
     this.ns = ns;
     this.doc = doc;
   }
+  getBoundingClientRect(): { top: number; left: number } {
+    return { top: 0, left: 0 };
+  }
   setAttribute(k: string, v: unknown): void {
     this.attrs[k] = String(v);
   }

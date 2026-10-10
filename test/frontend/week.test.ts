@@ -226,3 +226,25 @@ test('today shows a now line only when the time is inside the hours', () => {
   const outside = setup({ nowMinutes: 3 * 60 });
   assert.equal(byClass(outside.el, 'now').length, 0);
 });
+
+test('clicking empty space on a day offers to add something at that time, snapped to a quarter hour', () => {
+  const adds: any[] = [];
+  const { el } = setup({}, { add: (date: string, start: number) => adds.push([date, start]) });
+  const thu = byClass(el, 'day')[3];
+  const body = byClass(thu, 'cbody')[0];
+  body.dispatch('click', { target: body, clientY: 2 * 56 + 20 });
+  assert.deepEqual(adds, [['2026-10-15', 9 * 60 + 15]], 'two hours and twenty minutes after 07:00 is 09:20, snapped down to 09:15');
+  const tile = byClass(byClass(el, 'day')[0], 'blk')[0];
+  const before = adds.length;
+  byClass(byClass(el, 'day')[0], 'cbody')[0].dispatch('click', { target: tile, clientY: 5 });
+  assert.equal(adds.length, before, 'a click that lands on a tile is for the tile');
+});
+
+test('the hero has a plain Add button for keyboard users, defaulting to today when it is in view', () => {
+  const adds: any[] = [];
+  const { el } = setup({}, { add: (date: string, start: number) => adds.push([date, start]) });
+  const add = findAll(el, (e: any) => e.getAttribute('data-fk') === 'add')[0];
+  assert.match(textOf(add), /\+ Add/);
+  add.click();
+  assert.deepEqual(adds, [['2026-10-13', 9 * 60]]);
+});

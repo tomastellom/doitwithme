@@ -46,7 +46,7 @@ export const FACES = {
 const LEGACY_EYES = { center: 'resting', side: 'glance-left', sleepy: 'sleepy' };
 
 const MORPH_MS = 260;
-const FADE_MS = 300;
+const FADE_MS = 360;
 const ease = (t) => 1 - (1 - t) ** 3;
 const isEye = (n) => n.getAttribute('class') === 'mascot-eye';
 // Two plain bars can glide into each other; anything else (arcs, dots, confetti) cross-fades.

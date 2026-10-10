@@ -131,7 +131,7 @@ test('stepping through days slides the same way you step', async () => {
   const entering = () => findAll(root, (e: any) => e.hasAttribute('data-enter')).map((e: any) => e.getAttribute('data-enter'));
   app.navigate('#/day/2026-10-06');
   app.navigate('#/day/2026-10-07');
-  assert.deepEqual(entering(), ['fwd']);
+  assert.deepEqual(entering(), ['step-fwd']);
   app.navigate('#/day/2026-10-06');
-  assert.deepEqual(entering(), ['back']);
+  assert.deepEqual(entering(), ['step-back']);
 });

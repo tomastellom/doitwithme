@@ -215,7 +215,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
         const to = order.indexOf(route.id);
         way = from < 0 || to < 0 ? 'fade' : to > from ? 'fwd' : 'back';
       } else if (where !== null && lastWhere !== null && where !== lastWhere) {
-        way = where > lastWhere ? 'fwd' : 'back';
+        way = where > lastWhere ? 'step-fwd' : 'step-back';
       }
       if (way) screen.setAttribute('data-enter', way);
     }

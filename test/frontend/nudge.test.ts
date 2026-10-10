@@ -493,7 +493,7 @@ test('paging through warnings slides the next one in from the side you paged tow
   nudge.update({ ...base, items: [item(), item({ key: 'b|2', headline: 'Second' })] });
   assert.equal(byClass(nudge.el, 'say')[0].hasAttribute('data-enter'), false);
   findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === 'nudge-next')[0].click();
-  assert.equal(byClass(nudge.el, 'say')[0].getAttribute('data-enter'), 'fwd');
+  assert.equal(byClass(nudge.el, 'say')[0].getAttribute('data-enter'), 'page-fwd');
   findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === 'nudge-prev')[0].click();
-  assert.equal(byClass(nudge.el, 'say')[0].getAttribute('data-enter'), 'back');
+  assert.equal(byClass(nudge.el, 'say')[0].getAttribute('data-enter'), 'page-back');
 });

@@ -353,7 +353,6 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 .quiet .ask { margin-top: 4px; }
 .quiet .reply { margin: 0; font-size: 13px; color: var(--paper); }
 .quiet .reply:empty { display: none; }
-[data-enter="fwd"].say, [data-enter="back"].say { animation-duration: .24s; }
 
 /* Small buttons answer the pointer: they fill on hover and press down on click. */
 .step button, .pg button, .addbtn, .estbtns button, .skip button, .cta .btn, .hero-add { transition: background-color .18s ease-out, color .18s ease-out, transform .08s ease-out; }
@@ -365,3 +364,12 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 .step button:focus-visible, .pg button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .say .pg button:focus-visible { outline-color: var(--paper); }
 .btn.dark:hover:not(:disabled) { background: #3A3D40; }
+
+/* Stepping a day or a week keeps the page still and slides only the content, with no fading, so nothing flickers. */
+@keyframes step-fwd { from { transform: translateX(32px); } }
+@keyframes step-back { from { transform: translateX(-32px); } }
+[data-enter="step-fwd"] > :not(.hero) { animation: step-fwd .4s cubic-bezier(.2, .7, .2, 1) backwards; }
+[data-enter="step-back"] > :not(.hero) { animation: step-back .4s cubic-bezier(.2, .7, .2, 1) backwards; }
+.say[data-enter="page-fwd"] { animation: step-fwd .34s cubic-bezier(.2, .7, .2, 1) backwards; }
+.say[data-enter="page-back"] { animation: step-back .34s cubic-bezier(.2, .7, .2, 1) backwards; }
+.week, .dayv { overflow-x: clip; }

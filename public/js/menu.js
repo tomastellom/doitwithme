@@ -70,8 +70,15 @@ export function createMenu(dom, registry, handlers) {
   function close() {
     if (!open) return;
     open = false;
-    el.setAttribute('hidden', '');
     if (opener) opener.focus();
+    // With motion allowed the menu eases away first, then is hidden; opening it again in between cancels the hiding.
+    const hide = () => {
+      if (open) return;
+      el.setAttribute('class', 'menu');
+      el.setAttribute('hidden', '');
+    };
+    el.setAttribute('class', 'menu closing');
+    if (!(handlers.defer && handlers.defer(hide, 260))) hide();
   }
 
   renderColumns();
@@ -83,6 +90,7 @@ export function createMenu(dom, registry, handlers) {
     open(from) {
       opener = from ?? null;
       open = true;
+      el.setAttribute('class', 'menu');
       query = '';
       input.value = '';
       renderColumns();

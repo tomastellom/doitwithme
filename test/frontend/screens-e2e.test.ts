@@ -151,7 +151,9 @@ test('with timers the old screen slides out while the new one slides in, then is
   assert.match(view.children[0].getAttribute('class'), /slide-in-back/);
   assert.match(view.children[1].getAttribute('class'), /slide-out-back/);
   assert.equal(view.getAttribute('data-sliding'), 'back');
-  timers.filter((t) => t.ms === 460).forEach((t) => t.fn());
+  app.render();
+  assert.equal(view.children.length, 2, 'a redraw during the slide waits, so it cannot cut the slide short');
+  timers.filter((t) => t.ms === 640).forEach((t) => t.fn());
   assert.equal(view.children.length, 1);
   assert.equal(view.hasAttribute('data-sliding'), false);
   app.navigate('#/week');

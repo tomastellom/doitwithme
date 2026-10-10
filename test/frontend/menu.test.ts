@@ -117,3 +117,24 @@ test('a section registered later appears after refresh', () => {
   menu.refresh();
   assert.deepEqual(byClass(menu.el, 'it').map((l: any) => l.getAttribute('href')), ['#/week', '#/notifications']);
 });
+
+test('with motion the Menu eases away before it is hidden, and opening it again cancels the hiding', () => {
+  const doc: any = new FakeDocument();
+  const dom = createDom(doc);
+  const registry = createRegistry();
+  registry.register({ id: 'week', title: 'Week', group: 'views', description: 'Your plan for the week.', primary: true });
+  const pending: Function[] = [];
+  const menu: any = createMenu(dom, registry, { navigate() {}, current: () => 'week', defer: (fn: Function) => { pending.push(fn); return true; } });
+  menu.open(null);
+  menu.close();
+  assert.equal(menu.el.getAttribute('class'), 'menu closing');
+  assert.equal(menu.el.hasAttribute('hidden'), false, 'still on screen while it eases away');
+  pending.shift()!();
+  assert.equal(menu.el.hasAttribute('hidden'), true);
+  menu.open(null);
+  menu.close();
+  menu.open(null);
+  pending.shift()!();
+  assert.equal(menu.el.hasAttribute('hidden'), false, 'opened again before the hiding ran');
+  assert.equal(menu.el.getAttribute('class'), 'menu');
+});

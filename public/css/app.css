@@ -369,9 +369,23 @@ main[data-sliding] > * { grid-area: 1 / 1; min-width: 0; }
 @keyframes out-fwd { to { transform: translateX(-100%); } }
 @keyframes in-back { from { transform: translateX(-100%); } }
 @keyframes out-back { to { transform: translateX(100%); } }
-.slide-in-fwd { position: relative; z-index: 1; background: var(--paper); animation: in-fwd .44s cubic-bezier(.4, 0, .15, 1) backwards; }
-.slide-in-back { position: relative; z-index: 1; background: var(--paper); animation: in-back .44s cubic-bezier(.4, 0, .15, 1) backwards; }
-.slide-out-fwd { animation: out-fwd .44s cubic-bezier(.4, 0, .15, 1) forwards; }
-.slide-out-back { animation: out-back .44s cubic-bezier(.4, 0, .15, 1) forwards; }
+.slide-in-fwd { position: relative; z-index: 1; background: var(--paper); animation: in-fwd .6s cubic-bezier(.32, .72, 0, 1) backwards; }
+.slide-in-back { position: relative; z-index: 1; background: var(--paper); animation: in-back .6s cubic-bezier(.32, .72, 0, 1) backwards; }
+.slide-out-fwd { animation: out-fwd .6s cubic-bezier(.32, .72, 0, 1) forwards; }
+.slide-out-back { animation: out-back .6s cubic-bezier(.32, .72, 0, 1) forwards; }
 @keyframes step-fwd { from { transform: translateX(32px); } }
 @keyframes step-back { from { transform: translateX(-32px); } }
+
+/* Menu: it settles in from slightly larger, group by group, and eases back out. */
+@keyframes menu-in { from { opacity: 0; transform: scale(1.025); } }
+@keyframes menu-out { to { opacity: 0; transform: scale(1.025); } }
+@keyframes menu-rise { from { opacity: 0; transform: translateY(14px); } }
+.menu { animation: menu-in .5s cubic-bezier(.32, .72, 0, 1) backwards; }
+.menu.closing { animation: menu-out .26s cubic-bezier(.4, 0, 1, 1) forwards; pointer-events: none; }
+.menu .bar, .menu .jump, .menu .grp, .menu .foot-note { animation: menu-rise .6s cubic-bezier(.32, .72, 0, 1) backwards; }
+.menu .jump { animation-delay: .04s; }
+.menu .grp:nth-child(1) { animation-delay: .08s; }
+.menu .grp:nth-child(2) { animation-delay: .12s; }
+.menu .grp:nth-child(3) { animation-delay: .16s; }
+.menu .grp:nth-child(4) { animation-delay: .2s; }
+.menu .foot-note { animation-delay: .24s; }

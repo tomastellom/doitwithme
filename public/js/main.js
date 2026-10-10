@@ -74,6 +74,8 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   const menu = createMenu(dom, registry, {
     navigate: (id) => navigate(buildHash(id, null)),
     current: () => route.id,
+    // With motion allowed the Menu eases away before it is hidden.
+    defer: (fn, ms) => (canSlide() ? (win.setTimeout(fn, ms), true) : false),
   });
   const main = h('main', { class: 'view', id: 'view' });
   const bar = h('header', { class: 'bar' });
@@ -203,6 +205,8 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
 
   // Sliding keeps the old screen in place beside the new one for a moment; any redraw settles it first.
   let slideTimer = null;
+  let redrawAfterSlide = false;
+  let slideKey = '';
   const canSlide = () => typeof win.setTimeout === 'function' && !(win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches);
   function settleSlide() {
     if (slideTimer === null) return;
@@ -215,6 +219,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     const tag = (node, name) => node.setAttribute('class', `${node.getAttribute('class') ?? ''} ${name}-${dir}`.trim());
     tag(entering, 'slide-in');
     tag(leaving, 'slide-out');
+    slideKey = `${route.id}|${route.param ?? ''}`;
     main.setAttribute('data-sliding', dir);
     // The new screen comes first so focus lookups find it before the old one.
     clear(main, entering, leaving);
@@ -223,7 +228,11 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       main.removeAttribute('data-sliding');
       entering.setAttribute('class', (entering.getAttribute('class') ?? '').replace(` slide-in-${dir}`, '').trim());
       clear(main, entering);
-    }, 460);
+      if (redrawAfterSlide) {
+        redrawAfterSlide = false;
+        render();
+      }
+    }, 640);
   }
 
   function draw() {
@@ -250,6 +259,12 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     lastRouteId = route.id;
     lastWhere = where;
     lastParam = route.param;
+    const here = `${route.id}|${route.param ?? ''}`;
+    if (slideTimer !== null && !way && here === slideKey) {
+      // Something redrew while the screens are sliding: wait for the slide to finish, then redraw once.
+      redrawAfterSlide = true;
+      return;
+    }
     settleSlide();
     const leaving = main.children[0];
     if (way && leaving && canSlide()) startSlide(leaving, screen, way.endsWith('back') ? 'back' : 'fwd');

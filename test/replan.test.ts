@@ -141,3 +141,9 @@ test('a dismissed warning stays dismissed while its minutes drift during the day
   assert.notEqual(w1.message, w2.message);
   assert.deepEqual(later.state.dismissed, [key]);
 });
+
+test('labels survive a replan untouched', () => {
+  const labels = [{ id: 'study', name: 'Learning', color: '#FF4B1F', style: 'fill' as const }];
+  const { state } = replan({ ...stateWith([]), labels }, '2026-10-05');
+  assert.deepEqual(state.labels, labels);
+});

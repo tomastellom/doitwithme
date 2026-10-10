@@ -174,3 +174,11 @@ test('buttons and tabs use the sans face, and no text is oversized', () => {
   assert.ok(Math.max(...sizes) <= 84, `largest text ${Math.max(...sizes)}px`);
   assert.ok(sizes.filter((n) => n > 56).length <= 2, 'only the page titles are bigger than 56px');
 });
+
+test('screens slide in from the side of their tab, faces cross-fade, and reduced motion still wins', () => {
+  const css = readFileSync('public/css/app.css', 'utf8');
+  for (const dir of ['fwd', 'back', 'fade']) assert.match(css, new RegExp(`\\[data-enter="${dir}"\\] \\{[^}]*animation: enter-${dir} \\.?\\d*\\.?\\d+s`));
+  assert.match(css, /\.mascot-face\.in \{[^}]*face-in/);
+  assert.match(css, /\.mascot-face\.out \{[^}]*face-out/);
+  assert.ok(css.indexOf('prefers-reduced-motion') < css.indexOf('[data-enter="fwd"]'), 'the reduced-motion rule is declared first and uses !important');
+});

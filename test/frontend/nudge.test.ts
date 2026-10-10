@@ -407,3 +407,53 @@ test('he thinks while an estimate runs, unless trouble or news outranks it', () 
   assert.equal(faceFor(view({ estimating: true, busy: true })), 'working');
   assert.equal(faceFor(view({ estimating: true, celebrate: true })), 'thinking');
 });
+
+test('the mascot changes face in place, and its badge text can change without redrawing it', () => {
+  const m: any = createMascot(dom, { face: 'resting', badge: '2', width: 124 });
+  const body = byClass(m, 'mascot-body')[0];
+  m.setFace('happy');
+  assert.equal(m.getAttribute('data-face'), 'happy');
+  assert.equal(byClass(m, 'mascot-eye').length, 0);
+  assert.equal(byClass(m, 'mascot-arc').length, 2);
+  assert.equal(byClass(m, 'mascot-body')[0], body);
+  m.setBadge('3');
+  assert.equal(textOf(byClass(m, 'mascot-badge-text')[0]), '3');
+  assert.equal(byClass(m, 'mascot-face').length, 1, 'only one face is left drawn');
+});
+
+test('with a frame clock the eyes glide to the next face instead of jumping', () => {
+  const frames: Function[] = [];
+  const motion = { raf: (fn: Function) => frames.push(fn), cancel: () => {} };
+  const m: any = createMascot(dom, { face: 'resting' });
+  m.setFace('glance-left', motion);
+  const x = () => Number(byClass(m, 'mascot-eye')[0].getAttribute('x'));
+  assert.equal(m.getAttribute('data-face'), 'glance-left');
+  assert.equal(x(), 36.5, 'nothing has moved before the first frame');
+  frames.shift()!(1000);
+  frames.shift()!(1090);
+  assert.ok(x() < 36.5 && x() > 26, `in between: ${x()}`);
+  while (frames.length) frames.shift()!(1500);
+  assert.equal(x(), 26);
+  assert.equal(byClass(m, 'mascot-face').length, 1);
+});
+
+test('faces that are not just two eyes fade into each other', () => {
+  const timers: Array<{ fn: Function; ms: number }> = [];
+  const motion = { raf: () => 0, cancel: () => {}, setTimer: (fn: Function, ms: number) => timers.push({ fn, ms }) };
+  const m: any = createMascot(dom, { face: 'resting' });
+  m.setFace('happy', motion);
+  assert.equal(byClass(m, 'mascot-face').length, 2, 'old and new overlap while they cross-fade');
+  assert.equal(byClass(m, 'mascot-arc').length, 2);
+  timers.forEach((t) => t.fn());
+  assert.equal(byClass(m, 'mascot-face').length, 1);
+  assert.equal(byClass(m, 'mascot-eye').length, 0);
+});
+
+test('the nudge keeps one mascot while the face changes, so the picture does not blink', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base, items: [item()] });
+  const first = byClass(nudge.el, 'mascot')[0];
+  nudge.update({ ...base, items: [item()], busy: true });
+  assert.equal(byClass(nudge.el, 'mascot')[0], first);
+  assert.equal(first.getAttribute('data-face'), 'working');
+});

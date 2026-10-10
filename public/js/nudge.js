@@ -45,17 +45,95 @@ export const FACES = {
 
 const LEGACY_EYES = { center: 'resting', side: 'glance-left', sleepy: 'sleepy' };
 
+const MORPH_MS = 170;
+const FADE_MS = 200;
+const ease = (t) => 1 - (1 - t) ** 3;
+const isEye = (n) => n.getAttribute('class') === 'mascot-eye';
+// Two plain bars can glide into each other; anything else (arcs, dots, confetti) cross-fades.
+const barsOnly = (nodes) => nodes.length === 2 && nodes.every(isEye);
+const poseOf = (n) => {
+  const turn = /rotate\((-?[\d.]+)/.exec(n.getAttribute('transform') ?? '');
+  return { x: +n.getAttribute('x'), y: +n.getAttribute('y'), w: +n.getAttribute('width'), h: +n.getAttribute('height'), a: turn ? +turn[1] : 0 };
+};
+
 export function createMascot(dom, { face, eyes = 'center', badge = null, width = 96 } = {}) {
   const { svg } = dom;
-  const name = face && FACES[face] ? face : LEGACY_EYES[eyes] ?? 'resting';
+  let name = face && FACES[face] ? face : LEGACY_EYES[eyes] ?? 'resting';
+  const body = svg('path', { class: 'mascot-body', d: 'M6 160V62C6 28 32 4 60 4s54 24 54 58v98Z' });
+  const badgeParts = badge === null ? [] : [
+    svg('circle', { class: 'mascot-badge', cx: 100, cy: 22, r: 15 }),
+    svg('text', { class: 'mascot-badge-text', x: 100, y: 28, 'text-anchor': 'middle' }, badge),
+  ];
+  const nodes0 = FACES[name](svg);
+  let shown = { group: svg('g', { class: 'mascot-face' }, ...nodes0), nodes: nodes0 };
+  let stopMotion = null;
   const root = svg(
     'svg',
     { class: 'mascot', 'data-face': name, width, height: Math.round((width * 4) / 3), viewBox: '0 0 120 160', role: 'img', 'aria-label': 'Nudge, the planner assistant' },
-    svg('path', { class: 'mascot-body', d: 'M6 160V62C6 28 32 4 60 4s54 24 54 58v98Z' }),
-    ...FACES[name](svg),
-    badge !== null && svg('circle', { class: 'mascot-badge', cx: 100, cy: 22, r: 15 }),
-    badge !== null && svg('text', { class: 'mascot-badge-text', x: 100, y: 28, 'text-anchor': 'middle' }, badge),
+    body, shown.group, ...badgeParts,
   );
+  const redraw = (...groups) => root.replaceChildren(body, ...groups, ...badgeParts);
+  const settle = () => { if (stopMotion) stopMotion(); stopMotion = null; };
+
+  // Changing face never rebuilds the picture: the same bar eyes glide, anything else cross-fades.
+  root.setFace = (next, motion = null) => {
+    if (!FACES[next] || (next === name && !stopMotion)) return;
+    settle();
+    name = next;
+    root.setAttribute('data-face', next);
+    const nodes = FACES[next](svg);
+    const group = svg('g', { class: 'mascot-face' }, ...nodes);
+    const old = shown;
+    if (motion && motion.raf && barsOnly(old.nodes) && barsOnly(nodes)) {
+      const from = old.nodes.map(poseOf);
+      const to = nodes.map(poseOf);
+      let t0 = null;
+      let id = null;
+      const frame = (ts) => {
+        if (t0 === null) t0 = ts;
+        const t = Math.min(1, (ts - t0) / MORPH_MS);
+        if (t >= 1) {
+          stopMotion = null;
+          shown = { group, nodes };
+          redraw(group);
+          return;
+        }
+        const k = ease(t);
+        old.nodes.forEach((n, i) => {
+          const f = from[i];
+          const g = to[i];
+          const at = (a, b) => a + (b - a) * k;
+          const [x, y, w, h, a] = [at(f.x, g.x), at(f.y, g.y), at(f.w, g.w), at(f.h, g.h), at(f.a, g.a)];
+          n.setAttribute('x', x);
+          n.setAttribute('y', y);
+          n.setAttribute('width', w);
+          n.setAttribute('height', h);
+          n.setAttribute('rx', Math.min(w, h) / 2);
+          if (a) n.setAttribute('transform', `rotate(${a} ${x + w / 2} ${y + h / 2})`);
+          else n.removeAttribute('transform');
+        });
+        id = motion.raf(frame);
+      };
+      stopMotion = () => { if (motion.cancel && id !== null) motion.cancel(id); };
+      id = motion.raf(frame);
+      return;
+    }
+    shown = { group, nodes };
+    if (motion && motion.setTimer) {
+      old.group.setAttribute('class', 'mascot-face out');
+      group.setAttribute('class', 'mascot-face in');
+      redraw(old.group, group);
+      const done = () => { stopMotion = null; group.setAttribute('class', 'mascot-face'); redraw(group); };
+      const timer = motion.setTimer(done, FADE_MS);
+      stopMotion = () => { if (motion.clearTimer) motion.clearTimer(timer); done(); };
+      return;
+    }
+    redraw(group);
+  };
+  root.setBadge = (text) => {
+    const label = badgeParts[1];
+    if (label && text !== null) label.textContent = String(text);
+  };
   // A click makes it blink once; the animation clears the class when it ends.
   root.addEventListener('click', () => root.setAttribute('class', 'mascot blinking'));
   root.addEventListener('animationend', () => root.setAttribute('class', 'mascot'));
@@ -109,6 +187,8 @@ export function createNudge(dom, handlers, env = {}) {
   let surpriseTimer = null;
   let wasAttention = false;
   let holding = false;
+  let mascot = null;
+  let mascotKey = '';
   // Timers are optional: without them Nudge simply keeps one face for each situation.
   const animated = typeof env.setTimer === 'function' && !env.reduceMotion;
   let askMessage = null;
@@ -205,7 +285,16 @@ export function createNudge(dom, handlers, env = {}) {
     // While he slides out of sight he keeps the face and words he had; the calm ones come after.
     if (holding && !attention) return;
     holding = false;
-    clear(body, bubble, createMascot(dom, { face: faceFor({ ...view, glance, surprised }), badge, width }));
+    const face = faceFor({ ...view, glance, surprised });
+    const key = `${width}|${badge !== null}`;
+    if (mascot === null || key !== mascotKey) {
+      mascot = createMascot(dom, { face, badge, width });
+      mascotKey = key;
+    } else {
+      mascot.setFace(face, animated && env.raf ? { raf: env.raf, cancel: env.cancelRaf, setTimer: env.setTimer, clearTimer: env.clearTimer } : null);
+      if (badge !== null) mascot.setBadge(badge);
+    }
+    clear(body, bubble, mascot);
   }
 
   function release() {

@@ -109,3 +109,17 @@ test('the Menu offers Settings, and the Settings sub-links open each group', asy
   const current = findAll(root, (e: any) => e.tag === 'a' && e.getAttribute('aria-current') === 'page' && e.getAttribute('href')?.startsWith('#/settings/'));
   assert.equal(textOf(current[0]), 'Planner');
 });
+
+test('moving between tabs marks the new screen with the way it came in; staying put does not', async () => {
+  await put(baseState());
+  const { app, root } = boot();
+  await settled(app);
+  const entering = () => findAll(root, (e: any) => e.hasAttribute('data-enter')).map((e: any) => e.getAttribute('data-enter'));
+  assert.deepEqual(entering(), [], 'the first screen just appears');
+  app.navigate('#/day');
+  assert.deepEqual(entering(), ['back']);
+  app.navigate('#/deadlines');
+  assert.deepEqual(entering(), ['fwd']);
+  app.navigate('#/deadlines');
+  assert.deepEqual(entering(), []);
+});

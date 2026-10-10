@@ -50,6 +50,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   let visible = loadVisible(win);
   let route = { id: 'week', param: null };
   let lastDay = getClock().today;
+  let lastRouteId = null;
 
   const nudge = createNudge(dom, {
     approve: (date) => store.approve(date),
@@ -62,6 +63,8 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
         setTimer: (fn, ms) => win.setTimeout(fn, ms),
         clearTimer: (id) => win.clearTimeout(id),
         random: Math.random,
+        raf: typeof win.requestAnimationFrame === 'function' ? (fn) => win.requestAnimationFrame(fn) : undefined,
+        cancelRaf: (id) => win.cancelAnimationFrame && win.cancelAnimationFrame(id),
         reduceMotion: Boolean(win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches),
       }
     : {});
@@ -192,7 +195,16 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     route = resolveRoute(win.location.hash, registry.ids());
     const s = store.get();
     renderBar();
-    clear(main, renderMain(s));
+    const screen = renderMain(s);
+    // Changing tab slides the new screen in from the side its tab sits on; redraws on the same screen stay still.
+    if (lastRouteId !== null && route.id !== lastRouteId && screen && typeof screen.setAttribute === 'function') {
+      const order = registry.primary().map((x) => x.id);
+      const from = order.indexOf(lastRouteId);
+      const to = order.indexOf(route.id);
+      screen.setAttribute('data-enter', from < 0 || to < 0 ? 'fade' : to > from ? 'fwd' : 'back');
+    }
+    lastRouteId = route.id;
+    clear(main, screen);
     nudge.update({
       status: s.status,
       items: s.isEmpty || !s.state ? [] : buildNudge(s.warnings).items,

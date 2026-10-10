@@ -497,3 +497,13 @@ test('paging through warnings slides the next one in from the side you paged tow
   findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === 'nudge-prev')[0].click();
   assert.equal(byClass(nudge.el, 'say')[0].getAttribute('data-enter'), 'page-back');
 });
+
+test('asking for the face he already has does not restart a fade in progress', () => {
+  const timers: Function[] = [];
+  const motion = { raf: () => 0, cancel: () => {}, setTimer: (fn: Function) => timers.push(fn) };
+  const m: any = createMascot(dom, { face: 'resting' });
+  m.setFace('happy', motion);
+  m.setFace('happy', motion);
+  assert.equal(byClass(m, 'mascot-face').length, 2, 'the first fade is still running, untouched');
+  assert.equal(timers.length, 1);
+});

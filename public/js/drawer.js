@@ -97,8 +97,7 @@ export function createDrawer(dom, deps) {
       draw();
       return;
     }
-    close(false);
-    focusKey(`blk-${itemKey({ ...item ?? {}, kind: 'commitment' })}`);
+    close();
   }
 
   async function remove(c) {
@@ -110,7 +109,7 @@ export function createDrawer(dom, deps) {
       draw();
       return;
     }
-    close(false);
+    close();
   }
 
   async function skip(c) {
@@ -126,7 +125,7 @@ export function createDrawer(dom, deps) {
       draw();
       return;
     }
-    close(false);
+    close();
   }
 
   function commitmentPanel() {

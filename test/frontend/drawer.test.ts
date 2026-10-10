@@ -240,3 +240,16 @@ test('Tab stays inside the panel, and typing "/" in a field is not swallowed', (
   assert.equal(slash.defaultPrevented, false);
   assert.ok(ev);
 });
+
+test('after Save or Skip, keyboard focus is handed back instead of being dropped', async () => {
+  const a = rig();
+  a.drawer.open(a.itemOf('commitment', TUE, (i) => i.commitmentId === 'chem-lecture'));
+  key(a.drawer.el, 'drawer-save').click();
+  await tick();
+  assert.match(a.focused.at(-1) ?? '', /^blk-commitment:chem-lecture:/);
+  const b = rig();
+  b.drawer.open(b.itemOf('commitment', TUE, (i) => i.commitmentId === 'chem-lecture'));
+  key(b.drawer.el, 'drawer-skip').click();
+  await tick();
+  assert.match(b.focused.at(-1) ?? '', /^blk-commitment:chem-lecture:/);
+});

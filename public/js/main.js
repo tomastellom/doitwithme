@@ -77,13 +77,14 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     // With motion allowed the Menu eases away before it is hidden.
     defer: (fn, ms) => (canSlide() ? (win.setTimeout(fn, ms), true) : false),
   });
-  const main = h('main', { class: 'view', id: 'view' });
+  const main = h('main', { class: 'view', id: 'view', tabindex: '-1' });
   const bar = h('header', { class: 'bar' });
   const menuButton = h('button', { type: 'button', class: 'btn dark mono', 'data-fk': 'menu', onclick: () => menu.open(menuButton) }, 'Menu');
   const drawer = createDrawer(dom, {
     store,
     navigate: (hash) => navigate(hash),
-    focusKey: (key) => { const target = findByKey(root, key); if (target) target.focus(); },
+    // If the block is gone (deleted, skipped) focus falls back to the page itself, never to nothing.
+    focusKey: (key) => { const target = findByKey(root, key) ?? main; if (typeof target.focus === 'function') target.focus(); },
   });
   root.append(h('div', { class: 'app' }, bar, main), nudge.el, menu.el, drawer.el);
 
@@ -208,12 +209,20 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   let redrawAfterSlide = false;
   let slideKey = '';
   const canSlide = () => typeof win.setTimeout === 'function' && !(win.matchMedia && win.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const MOTION_CLASS = /\s*\b(slide|step)-(in|out)-(fwd|back)\b/g;
+  const stripMotion = (node) => node.setAttribute('class', (node.getAttribute('class') ?? '').replace(MOTION_CLASS, '').trim());
+  let slideSeq = 0;
+  let slideView = null;
   function settleSlide() {
     if (slideTimer === null) return;
+    slideSeq += 1;
     if (typeof win.clearTimeout === 'function') win.clearTimeout(slideTimer);
     slideTimer = null;
     main.removeAttribute('data-sliding');
-    if (main.children[0]) clear(main, main.children[0]);
+    if (main.children[0]) {
+      stripMotion(main.children[0]);
+      clear(main, main.children[0]);
+    }
   }
   // Stepping a day or a week keeps the title row, its buttons and the filters where they are; only the plan itself slides.
   function startSlide(leaving, entering, dir, step) {
@@ -221,14 +230,19 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     const tag = (node, name) => node.setAttribute('class', `${node.getAttribute('class') ?? ''} ${name}-${dir}`.trim());
     tag(entering, `${kind}-in`);
     tag(leaving, `${kind}-out`);
+    // The old copy is for the eyes only: no focus, no screen reader.
+    leaving.setAttribute('inert', '');
+    leaving.setAttribute('aria-hidden', 'true');
     slideKey = `${route.id}|${route.param ?? ''}`;
     main.setAttribute('data-sliding', dir);
     // The new screen comes first so focus lookups find it before the old one.
     clear(main, entering, leaving);
+    const mine = ++slideSeq;
     slideTimer = win.setTimeout(() => {
+      if (mine !== slideSeq) return;
       slideTimer = null;
       main.removeAttribute('data-sliding');
-      entering.setAttribute('class', (entering.getAttribute('class') ?? '').replace(` ${kind}-in-${dir}`, '').trim());
+      stripMotion(entering);
       clear(main, entering);
       if (redrawAfterSlide) {
         redrawAfterSlide = false;
@@ -264,20 +278,22 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       if (way) screen.setAttribute('data-enter', way);
     }
     // A different screen or record is a new page: it starts at the top, not where the last one was scrolled to.
-    if (lastRouteId !== null && (route.id !== lastRouteId || route.param !== lastParam) && typeof win.scrollTo === 'function') win.scrollTo(0, 0);
+    if (lastRouteId !== null && (route.id !== lastRouteId || (where !== null ? where !== lastWhere : route.param !== lastParam)) && typeof win.scrollTo === 'function') win.scrollTo(0, 0);
     lastRouteId = route.id;
     lastWhere = where;
     lastParam = route.param;
     const here = `${route.id}|${route.param ?? ''}`;
+    const view = [s.state, s.status, s.busy, s.notice, s.formError, s.confirm, s.estimating];
     if (slideTimer !== null && !way && here === slideKey) {
-      // Something redrew while the screens are sliding: wait for the slide to finish, then redraw once.
-      redrawAfterSlide = true;
-      return;
+      // Something redrew while the screens are sliding: if the data changed, redraw once the slide is done.
+      if (slideView && view.some((v, i) => v !== slideView[i])) redrawAfterSlide = true;
+    } else {
+      settleSlide();
+      const leaving = main.children[0];
+      if (way && leaving && canSlide()) startSlide(leaving, screen, way.endsWith('back') ? 'back' : 'fwd', way.startsWith('step'));
+      else clear(main, screen);
+      slideView = view;
     }
-    settleSlide();
-    const leaving = main.children[0];
-    if (way && leaving && canSlide()) startSlide(leaving, screen, way.endsWith('back') ? 'back' : 'fwd', way.startsWith('step'));
-    else clear(main, screen);
     nudge.update({
       status: s.status,
       items: s.isEmpty || !s.state ? [] : buildNudge(s.warnings).items,

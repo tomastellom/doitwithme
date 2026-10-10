@@ -150,18 +150,20 @@ test('with timers the old screen slides out while the new one slides in, then is
   assert.equal(view.children.length, 2, 'old and new are both there while they slide');
   assert.match(view.children[0].getAttribute('class'), /slide-in-back/);
   assert.match(view.children[1].getAttribute('class'), /slide-out-back/);
+  assert.equal(view.children[1].hasAttribute('inert'), true, 'the old copy cannot be tabbed into');
+  assert.equal(view.children[1].getAttribute('aria-hidden'), 'true');
   assert.equal(view.getAttribute('data-sliding'), 'back');
   app.render();
   assert.equal(view.children.length, 2, 'a redraw during the slide waits, so it cannot cut the slide short');
-  timers.filter((t) => t.ms === 520).forEach((t) => t.fn());
+  timers.splice(0).filter((t) => t.ms === 520).forEach((t) => t.fn());
   assert.equal(view.children.length, 1);
   assert.equal(view.hasAttribute('data-sliding'), false);
   app.navigate('#/week');
   app.navigate('#/deadlines');
   assert.equal(view.children.length, 2, 'a new move while sliding settles the first one');
-  timers.filter((t) => t.ms === 520).forEach((t) => t.fn());
+  timers.splice(0).filter((t) => t.ms === 520).forEach((t) => t.fn());
   app.navigate('#/day/2026-10-06');
-  timers.filter((t) => t.ms === 520).forEach((t) => t.fn());
+  timers.splice(0).filter((t) => t.ms === 520).forEach((t) => t.fn());
   app.navigate('#/day/2026-10-07');
   assert.match(view.children[0].getAttribute('class'), /step-in-fwd/, 'stepping keeps the title row and buttons still');
   assert.match(view.children[1].getAttribute('class'), /step-out-fwd/);
@@ -197,4 +199,19 @@ test('moving between Setup pages keeps the Setup title row and buttons still', a
   assert.deepEqual(entering(), ['step-back']);
   app.navigate('#/week');
   assert.deepEqual(entering(), ['back'], 'leaving Setup for another tab slides the whole screen');
+});
+
+test('pressing Today on the week you are already on does not jump the page', async () => {
+  await put(await exampleState());
+  const document: any = new FakeDocument();
+  const root = document.createElement('div');
+  const jumps: any[] = [];
+  const win: any = { location: { hash: '' }, localStorage: undefined, listeners: {}, addEventListener(t: string, f: Function) { (this.listeners[t] ??= []).push(f); }, scrollTo: (...a: any[]) => jumps.push(a) };
+  const app: any = startApp({ root, document, fetch: (p: string, i: any) => fetch(base + p, i), win, now });
+  await settled(app);
+  app.navigate('#/week/2026-10-05');
+  app.navigate('#/week');
+  assert.equal(jumps.length, 0, 'the same week is not a new page');
+  app.navigate('#/week/2026-10-12');
+  assert.equal(jumps.length, 1);
 });

@@ -77,7 +77,7 @@ export function createMascot(dom, { face, eyes = 'center', badge = null, width =
 
   // Changing face never rebuilds the picture: the same bar eyes glide, anything else cross-fades.
   root.setFace = (next, motion = null) => {
-    if (!FACES[next] || (next === name && !stopMotion)) return;
+    if (!FACES[next] || next === name) return;
     settle();
     name = next;
     root.setAttribute('data-face', next);
@@ -322,7 +322,11 @@ export function createNudge(dom, handlers, env = {}) {
     holding = false;
     render();
   }
-  body.addEventListener('transitionend', release);
+  body.addEventListener('transitionend', (e) => {
+    // Only the slide itself ends the hold, not a button or the bubble finishing a colour fade.
+    if (e && ((e.target && e.target !== body) || (e.propertyName && e.propertyName !== 'transform'))) return;
+    release();
+  });
   // Pressing on him while he rests must not give the corner keyboard focus, or he would stay up until you click elsewhere.
   el.addEventListener('mousedown', (e) => {
     const tag = ((e.target && (e.target.tagName || e.target.tag)) || '').toLowerCase();

@@ -4,8 +4,9 @@ import { renderDay } from './day.js';
 import { coveredThisWeek, deadlinesModel } from './deadlines-model.js';
 import { renderDeadlines } from './deadlines.js';
 import { createDom } from './dom.js';
+import { createDrawer } from './drawer.js';
 import { replacingLink, startFavicon } from './favicon.js';
-import { createFocusKeeper } from './focus.js';
+import { createFocusKeeper, findByKey } from './focus.js';
 import { createMenu } from './menu.js';
 import { GROUP_IDS, weekModel } from './model.js';
 import { createNotifier, startHiddenRefresh } from './notify.js';
@@ -75,7 +76,12 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   const main = h('main', { class: 'view', id: 'view' });
   const bar = h('header', { class: 'bar' });
   const menuButton = h('button', { type: 'button', class: 'btn dark mono', 'data-fk': 'menu', onclick: () => menu.open(menuButton) }, 'Menu');
-  root.append(h('div', { class: 'app' }, bar, main), nudge.el, menu.el);
+  const drawer = createDrawer(dom, {
+    store,
+    navigate: (hash) => navigate(hash),
+    focusKey: (key) => { const target = findByKey(root, key); if (target) target.focus(); },
+  });
+  root.append(h('div', { class: 'app' }, bar, main), nudge.el, menu.el, drawer.el);
 
   const focus = createFocusKeeper({ document, getRoot: () => root, fallback: () => nudge.focus() });
   const keepFocus = (fn) => {
@@ -88,6 +94,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   const currentDay = () => dateParam(route.param, getClock().today);
 
   const dayActions = {
+    open: (item) => drawer.open(item),
     go: (delta) => navigate(buildHash('day', addDays(currentDay(), delta))),
     today: () => navigate(buildHash('day', null)),
     loadExample: () => store.loadExample(),
@@ -97,6 +104,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   };
 
   const weekActions = {
+    open: (item) => drawer.open(item),
     toggleGroup(id) {
       const next = new Set(visible);
       if (next.has(id)) next.delete(id);
@@ -235,7 +243,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
 
   document.addEventListener('keydown', (e) => {
     const tag = ((e.target && (e.target.tagName || e.target.tag)) || '').toLowerCase();
-    if (e.key === '/' && !['input', 'textarea', 'select'].includes(tag) && !menu.isOpen()) {
+    if (e.key === '/' && !['input', 'textarea', 'select'].includes(tag) && !menu.isOpen() && !drawer.isOpen()) {
       e.preventDefault();
       menu.open(menuButton);
     }
@@ -264,7 +272,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   render();
   store.load();
 
-  return { store, render, navigate, menu, nudge };
+  return { store, render, navigate, menu, nudge, drawer };
 }
 
 if (typeof document !== 'undefined' && document.getElementById('app')) {

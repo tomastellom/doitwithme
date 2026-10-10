@@ -182,3 +182,10 @@ test('screens slide in from the side of their tab, faces cross-fade, and reduced
   assert.match(css, /\.mascot-face\.out \{[^}]*face-out/);
   assert.ok(css.indexOf('prefers-reduced-motion') < css.indexOf('[data-enter="fwd"]'), 'the reduced-motion rule is declared first and uses !important');
 });
+
+test('deadline rows are links that keep the board look', () => {
+  const css = readFileSync('public/css/app.css', 'utf8');
+  assert.match(css, /^\.dl \{[^}]*text-decoration: none;[^}]*color: inherit;[^}]*cursor: pointer;/m);
+  assert.match(css, /^\.dl:hover \{/m);
+  assert.match(css, /^\.hero-add \{/m);
+});

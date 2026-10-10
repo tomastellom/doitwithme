@@ -16,7 +16,7 @@ export function renderDeadlines(dom, view) {
         : h('span', { class: 'dl-chip ok mono' }, 'Covered');
 
   const row = (r) =>
-    h('div', { class: 'dl' },
+    h('a', { class: 'dl', href: `#/due-dates/${encodeURIComponent(r.id)}`, 'data-fk': `dl-${r.id}` },
       h('div', { class: 'dl-when' }, h('span', { class: 'dl-big' }, r.day), h('span', { class: 'mono' }, `${r.month} / ${r.weekday}`, h('br'), r.daysLabel)),
       h('div', {}, h('div', { class: 'dl-tt' }, r.title), h('div', { class: 'dl-sub mono' }, r.sub)),
       h('div', {},
@@ -29,7 +29,12 @@ export function renderDeadlines(dom, view) {
 
   const hero = h('div', { class: 'hero' },
     h('h1', {}, 'Deadlines'),
-    h('div', { class: 'meta mono' }, h('span', {}, `${model.open} open`), model.shorts > 0 && h('span', { class: 'dl-bad' }, `${model.shorts} short`)));
+    h('div', { class: 'hero-right' },
+      h('a', { class: 'hero-add', href: '#/due-dates/new', 'data-fk': 'add-due' }, '+ Add a due date'),
+      h('div', { class: 'meta mono' },
+        h('span', {}, `${model.open} open`),
+        model.shorts > 0 && h('span', { class: 'dl-bad' }, `${model.shorts} short`),
+        model.rows.length > 0 && h('span', {}, 'Click a row to edit it'))));
 
   if (model.rows.length === 0) {
     return h('section', { class: 'deadlines' }, hero,

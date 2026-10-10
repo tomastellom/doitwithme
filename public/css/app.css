@@ -235,7 +235,9 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 
 /* Deadlines */
 .dl-list { margin: 36px 40px 0; display: flex; flex-direction: column; }
-.dl { display: grid; grid-template-columns: 200px 360px 1fr 210px; gap: 28px; align-items: center; border-top: 4px solid var(--ink); padding: 16px 0 18px; }
+.dl { display: grid; grid-template-columns: 200px 360px 1fr 210px; gap: 28px; align-items: center; border-top: 4px solid var(--ink); padding: 16px 0 18px; text-decoration: none; color: inherit; cursor: pointer; }
+.dl:hover { background: #F4F4F2; }
+.dl:focus-visible { outline: 3px solid var(--ink); outline-offset: -3px; }
 .dl:last-child { border-bottom: 4px solid var(--ink); }
 .dl-when { display: flex; align-items: baseline; gap: 10px; }
 .dl-big { font-size: 56px; font-weight: 800; letter-spacing: -.03em; line-height: .85; }
@@ -342,3 +344,6 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 @keyframes face-out { to { opacity: 0; } }
 .mascot-face.in { animation: face-in .3s ease-out backwards; }
 .mascot-face.out { animation: face-out .3s ease-in forwards; }
+
+.hero-right { display: flex; align-items: flex-end; gap: 24px; }
+.hero-add { padding: 14px 20px; border: 2px solid var(--ink); background: var(--study); color: var(--on-study); font-weight: 600; text-decoration: none; margin-bottom: 4px; }

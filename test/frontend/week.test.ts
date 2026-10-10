@@ -286,7 +286,8 @@ test('a done tile is faded with its box ticked; a not-done tile is dashed with a
   const mon = byClass(el, 'day')[0];
   const find = (name: string) => byClass(mon, 'blk').find((b: any) => textOf(b).includes(name))!;
   assert.ok(find('Chemistry').hasClass('is-done'));
-  assert.equal(find('Chemistry').style.background, '#FF4B1F', 'a done tile keeps its color and is only faded');
+  assert.equal(find('Chemistry').style.background, '#FFBBAA', 'a done tile is its own color washed pale and solid, so the hour lines never show through');
+  assert.equal(find('Chemistry').style.color, '#2B2E31');
   assert.match(find('Chemistry').getAttribute('aria-label'), /done/);
   const done = byClass(mon, 'tick').find((b: any) => b.getAttribute('aria-pressed') === 'true')!;
   assert.match(done.getAttribute('aria-label'), /Chemistry is done/);
@@ -296,4 +297,12 @@ test('a done tile is faded with its box ticked; a not-done tile is dashed with a
   assert.equal(textOf(byClass(find('Laundry'), 'tag')[0]), 'Taken off');
   assert.match(find('Gym').getAttribute('aria-label'), /not done/);
   assert.equal(find('Gym').style.top, find('Gym').style.top, 'still at its time');
+});
+
+test('a very short tile and the one after it never draw on top of each other', () => {
+  const s = state({ blocks: [block('2026-10-13', 790, 795, 'Quick', 'study'), block('2026-10-13', 805, 835, 'Laundry', 'chores')] });
+  const { el } = setup({ state: s });
+  const tiles = byClass(byClass(el, 'day')[1], 'blk').filter((t: any) => /Quick|Laundry/.test(textOf(t)));
+  assert.equal(tiles.length, 2);
+  assert.ok(tiles.every((t: any) => t.style.width === '50%'), 'the 5 minute tile is drawn 30 px tall, so they share the width');
 });

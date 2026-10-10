@@ -15,6 +15,9 @@ export function hoursFor(pref, items) {
 }
 
 // Side-by-side lanes for items that overlap in time, like any calendar.
+// A tile is never drawn shorter than MIN_TILE, so for lanes a short item counts as the length it is drawn.
+const drawnEnd = (item) => Math.max(item.end, item.start + (MIN_TILE * 60) / HOUR_PX);
+
 export function assignLanes(items) {
   const sorted = [...items].sort((a, b) => a.start - b.start || a.end - b.end);
   const out = [];
@@ -25,7 +28,7 @@ export function assignLanes(items) {
     const placed = cluster.map((item) => {
       let lane = ends.findIndex((e) => e <= item.start);
       if (lane < 0) lane = ends.length;
-      ends[lane] = item.end;
+      ends[lane] = drawnEnd(item);
       return { item, lane };
     });
     for (const p of placed) out.push({ ...p, lanes: ends.length });
@@ -34,7 +37,7 @@ export function assignLanes(items) {
   for (const item of sorted) {
     if (cluster.length > 0 && item.start >= clusterEnd) flush();
     cluster.push(item);
-    clusterEnd = Math.max(clusterEnd, item.end);
+    clusterEnd = Math.max(clusterEnd, drawnEnd(item));
   }
   if (cluster.length > 0) flush();
   return out;

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_LABELS, LOCKED_IDS, labelFor, labelOptions, labelsOf, lookClass, paint } from '../../public/js/labels.js';
+import { DEFAULT_LABELS, LOCKED_IDS, labelFor, labelOptions, labelsOf, lookClass, paint, wash } from '../../public/js/labels.js';
 import { KINDS, applyItem, itemsOf, labelKind, removeItem } from '../../public/js/setup-model.js';
 import { FakeElement } from './fakedom.ts';
 
@@ -79,4 +79,15 @@ test('deleting a label moves what used it to Other, planned blocks included, and
   assert.match(KINDS.labels.confirmNote(s, 'label-p'), /2 items using it move to Other/);
   assert.match(KINDS.labels.keep({ id: 'study', name: 'Study' }), /built in/);
   assert.equal(KINDS.labels.keep({ id: 'label-p', name: 'Piano' }), null);
+});
+
+test('a done item is its color washed pale and solid, never see-through', () => {
+  const el: any = new FakeElement('i', null, null as any);
+  assert.equal(wash('#FF4B1F'), '#FFBBAA');
+  assert.equal(wash('#111111'), '#A5A5A5');
+  paint(el, '#1746F0', 'fill', { done: true });
+  assert.equal(el.style.background, wash('#1746F0'));
+  assert.equal(el.style.color, '#2B2E31');
+  paint(el, '#00A3A3', 'outline', { done: true });
+  assert.deepEqual([el.style.borderColor, el.style.background], [wash('#00A3A3'), '#FFFFFF']);
 });

@@ -23,7 +23,7 @@ export function renderWeek(dom, view, actions) {
       : [h('span', { class: 'k' }, item.label), h('span', { class: 'n' }, name), when];
     const classes = ['blk', 'tile', size, travel ? 'travel' : lookClass(item.look), travel ? '' : 'has-tick', statusClass(item.status)].filter(Boolean).join(' ');
     const node = h('button', { ...open(item), class: classes, title: `${name}, ${time}` }, lines);
-    if (!travel && !off) paint(node, item.color, item.look);
+    if (!travel && !off) paint(node, item.color, item.look, { done: item.status === 'done' });
     return node;
   };
 

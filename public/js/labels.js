@@ -35,7 +35,26 @@ export const labelOptions = (state) => labelsOf(state).map((l) => ({ value: l.id
 const INK = '#111111';
 const PAPER = '#FFFFFF';
 // Gives an element its label's look: filled with readable text, or an outline on paper.
-export function paint(node, color, style, { onInk = false } = {}) {
+// A done item is drawn pale and solid (never see-through, so the hour lines cannot show through it).
+const WASHED = 0.62;
+export const wash = (hex) => {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = (c) => Math.round(c + (255 - c) * WASHED).toString(16).padStart(2, '0');
+  return `#${mix((n >> 16) & 255)}${mix((n >> 8) & 255)}${mix(n & 255)}`.toUpperCase();
+};
+
+export function paint(node, color, style, { onInk = false, done = false } = {}) {
+  if (done) {
+    if (style === 'outline') {
+      node.style.borderColor = wash(color);
+      node.style.background = PAPER;
+      node.style.color = '#55585C';
+    } else {
+      node.style.background = wash(color);
+      node.style.color = '#2B2E31';
+    }
+    return;
+  }
   if (style === 'outline') {
     node.style.borderColor = onInk ? PAPER : color;
     node.style.background = onInk ? INK : PAPER;

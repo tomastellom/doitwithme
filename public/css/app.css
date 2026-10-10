@@ -529,8 +529,7 @@ a.dh:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 @media (max-width: 1100px) { .st-two { grid-template-columns: 1fr; } }
 
 /* Done and not done. */
-.tile.has-tick { padding-left: 38px; }
-.tile.is-done { opacity: .45; }
+.tile.has-tick, .dv-blk.tile.has-tick, .dv-blk.tile.one.has-tick, .tile.one.has-tick { padding-left: 40px; }
 .tile.is-done .n, .drow.is-done .dname b { text-decoration: line-through; text-decoration-thickness: 2px; }
 .tile.is-missed { background: var(--paper); color: var(--ink); border: 2px dashed var(--ink); }
 .tile.is-missed .n, .drow.is-missed .dname b { text-decoration: line-through; }

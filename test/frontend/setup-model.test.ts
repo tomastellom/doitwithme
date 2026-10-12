@@ -416,3 +416,30 @@ test('removing a course task, or saving it without course details, unlinks its c
   assert.equal(kept.commitments.find((c: any) => c.id === 'chem-lecture').courseId, 'chem');
   assert.equal(s.commitments.find((c: any) => c.id === 'chem-lecture').courseId, 'chem', 'the input is not changed');
 });
+
+test('saving a class on a fresher state drops a course link that is gone there', () => {
+  const fresh: any = st();
+  const c = { ...fresh.commitments.find((x: any) => x.id === 'chem-lecture'), courseId: 'chem' };
+  const saved = applyItem(fresh, 'commitments', c);
+  assert.equal('courseId' in saved.commitments.find((x: any) => x.id === 'chem-lecture'), false);
+  const withCourse = { ...fresh, tasks: [...fresh.tasks, courseTask()] };
+  assert.equal(applyItem(withCourse, 'commitments', c).commitments.find((x: any) => x.id === 'chem-lecture').courseId, 'chem');
+});
+
+test('deleting the Class label moves classes to Other and drops their course link', () => {
+  const s: any = { ...st(), tasks: [...st().tasks, courseTask()] };
+  s.commitments = s.commitments.map((c: any) => (c.id === 'chem-lecture' ? { ...c, courseId: 'chem' } : c));
+  const lecture = removeItem(s, 'labels', 'class').commitments.find((c: any) => c.id === 'chem-lecture');
+  assert.equal(lecture.category, 'other');
+  assert.equal('courseId' in lecture, false);
+});
+
+test('attendance details typed without credits are refused instead of dropped', () => {
+  const draft = { ...taskKind.blank(), title: 'Chemistry', category: 'study' };
+  const err = (over: any) => taskKind.fromDraft({ ...draft, ...over }, 'chem', example).error;
+  assert.match(err({ attendance: '0' }), /credits/);
+  assert.match(err({ examShare: '60' }), /credits/);
+  assert.match(err({ recorded: 'yes' }), /credits/);
+  assert.equal(err({}), undefined);
+  assert.equal(err({ recorded: 'unknown' }), undefined);
+});

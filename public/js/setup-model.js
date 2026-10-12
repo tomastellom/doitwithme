@@ -161,7 +161,8 @@ export const taskKind = {
     let course;
     if (d.category === 'study') {
       if (String(d.credits).trim() === '') {
-        if (d.syllabus.trim() !== '') return { error: 'Add the credits to keep course details.' };
+        const typed = d.syllabus.trim() !== '' || String(d.attendance ?? '').trim() !== '' || String(d.examShare ?? '').trim() !== '' || d.recorded === 'yes' || d.recorded === 'no';
+        if (typed) return { error: 'Add the credits to keep course details.' };
       } else {
         const credits = parseDecimal(d.credits, 0.5, 100);
         if (credits === null) return { error: 'Credits must be a number from 0.5 to 100, like 3.' };
@@ -444,7 +445,13 @@ export function applyItem(state, kindId, item) {
   if (spec.single) return { ...state, preferences: item };
   const list = listOf(state, spec);
   const exists = list.some((x) => x.id === item.id);
-  const next = { ...state, [spec.list]: exists ? list.map((x) => (x.id === item.id ? item : x)) : [...list, item] };
+  // A class whose course is gone on this fresher state (deleted in another tab) is saved without the link.
+  let saved = item;
+  if (kindId === 'commitments' && item.courseId && !(state.tasks ?? []).some((t) => t.id === item.courseId && t.course)) {
+    const { courseId, ...rest } = item;
+    saved = rest;
+  }
+  const next = { ...state, [spec.list]: exists ? list.map((x) => (x.id === item.id ? saved : x)) : [...list, saved] };
   return kindId === 'tasks' && !item.course ? unlinkCourse(next, item.id) : next;
 }
 
@@ -454,7 +461,13 @@ export function removeItem(state, kindId, id) {
   if (kindId === 'labels') {
     // Whatever used the label moves to Other, planned blocks included, so nothing keeps pointing at a label that is gone.
     const move = (x) => (x.category === id ? { ...x, category: 'other' } : x);
-    next.commitments = state.commitments.map(move);
+    // Only a class may point at a course, so a class that moves to Other loses that link.
+    next.commitments = state.commitments.map((c) => {
+      const moved = move(c);
+      if (moved === c || moved.courseId === undefined) return moved;
+      const { courseId, ...rest } = moved;
+      return rest;
+    });
     next.tasks = state.tasks.map(move);
     next.blocks = (state.blocks ?? []).map(move);
   }

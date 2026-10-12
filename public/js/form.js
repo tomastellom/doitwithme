@@ -34,7 +34,7 @@ export function renderField(dom, def, draft, ctx) {
       const all = known ? options : [{ value: current, label: current }, ...options];
       return wrap(label(def.label), h('select', {
         id, 'data-fk': id,
-        onchange: (e) => { draft[def.name] = e.target.value; if (def.redraw) ctx.rerender(); },
+        onchange: (e) => { draft[def.name] = e.target.value; if (def.redraw && !ctx.noSelectRedraw) ctx.rerender(); },
       }, all.map((o) => h('option', { value: o.value, selected: o.value === current }, o.label))));
     }
 

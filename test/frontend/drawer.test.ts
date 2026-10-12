@@ -403,3 +403,12 @@ test('a class with advice shows it above Skip this day, and a class without show
   assert.ok(text.indexOf('Skippable') < text.indexOf('Skip this day'), 'the advice comes first');
   assert.ok(key(drawer.el, 'drawer-skip'), 'the existing skip button is still there');
 });
+
+test('changing the label in the drawer keeps the same field, so keyboard focus stays', () => {
+  const { drawer, itemOf } = rig();
+  drawer.open(itemOf('commitment', TUE, (i) => i.commitmentId === 'chem-lecture'));
+  const select = key(drawer.el, 'f-category');
+  select.value = 'lesson';
+  select.dispatch('change');
+  assert.equal(key(drawer.el, 'f-category'), select, 'the select was not replaced');
+});

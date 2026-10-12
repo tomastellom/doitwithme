@@ -139,7 +139,8 @@ export function createDrawer(dom, deps) {
     const busy = store.get().busy;
     const advice = (store.get().attendance ?? []).find((a) => a.commitmentId === c.id && a.date === item.date);
     const weekly = c.pattern.kind === 'weekly';
-    const ctx = { state, scratch, rerender: draw };
+    // The drawer shows no field that depends on a select, so a select change must not rebuild it and drop keyboard focus.
+    const ctx = { state, scratch, rerender: draw, noSelectRedraw: true };
     const fields = FIELDS.commitments
       .filter((f) => SHOWN.includes(f.name) && (!f.show || f.show(draft)))
       .map((f) => renderField(dom, f, draft, ctx))
@@ -191,7 +192,8 @@ export function createDrawer(dom, deps) {
   function newPanel() {
     const state = store.get().state;
     const busy = store.get().busy;
-    const ctx = { state, scratch, rerender: draw };
+    // The drawer shows no field that depends on a select, so a select change must not rebuild it and drop keyboard focus.
+    const ctx = { state, scratch, rerender: draw, noSelectRedraw: true };
     const fields = FIELDS.commitments
       .filter((f) => SHOWN.includes(f.name) && (!f.show || f.show(draft)))
       .map((f) => renderField(dom, f, draft, ctx))

@@ -37,6 +37,8 @@ export function createApi(fetchFn) {
     approve: (date, clock) => call('POST', '/api/soft/approve', { ...clock, date }),
     undo: (date, clock) => call('POST', '/api/soft/undo', { ...clock, date }),
     dismiss: (key, clock) => call('POST', '/api/warnings/dismiss', { ...clock, key }),
+    lookupCommute: (commuteId, clock) => call('POST', '/api/commute/lookup', { today: clock.today, commuteId }),
+    refreshCommutes: (clock) => call('POST', '/api/commute/refresh', { today: clock.today }),
     checkIn: (mood, clock) => call('POST', '/api/checkin', { ...clock, mood }),
   };
 }

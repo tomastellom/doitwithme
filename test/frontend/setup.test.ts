@@ -14,6 +14,7 @@ const named = (root: any, text: string) => byTag(root, 'button').find((b: any) =
 function setup(state: any = stateWith(), opts: any = {}) {
   const calls: any[] = [];
   const estimates: any[] = [];
+  const lookups: any[] = [];
   const navs: string[] = [];
   let current: any = { state, busy: false, formError: null, status: 'ready', ...opts.storeState };
   const store = {
@@ -23,6 +24,7 @@ function setup(state: any = stateWith(), opts: any = {}) {
       if (opts.rejectWith) current = { ...current, formError: opts.rejectWith };
       else current = { ...current, state: payload, formError: null };
     },
+    lookupCommute: async (id: string) => { lookups.push(id); },
     estimate: async (body: any) => {
       estimates.push(body);
       if (opts.estimateFails) throw new Error(opts.estimateFails);
@@ -34,7 +36,7 @@ function setup(state: any = stateWith(), opts: any = {}) {
   const dom = createDom(doc);
   const ctl: any = createSetup(dom, { store, getClock: () => ({ today: '2026-10-05', nowMinutes: 540, horizonDays: 14 }), navigate: (h: string) => navs.push(h), keepFocus: (fn: Function) => fn() });
   const render = (kindId: string, param: string | null = null) => ctl.render(kindId, { s: store.get(), route: { id: kindId, param } });
-  return { ctl, render, calls, estimates, navs, store, setStore: (patch: any) => { current = { ...current, ...patch }; }, doc };
+  return { ctl, render, calls, estimates, lookups, navs, store, setStore: (patch: any) => { current = { ...current, ...patch }; }, doc };
 }
 const type = (root: any, key: string, value: string) => { const el = byKey(root, key); el.value = value; el.dispatch('input'); };
 const submit = async (root: any) => { byTag(root, 'form')[0].dispatch('submit'); await tick(); };
@@ -658,4 +660,31 @@ test('typing the evidence and picking the course saves both', async () => {
   select.dispatch('change');
   await submit(lec);
   assert.equal(second.calls[0].commitments.find((c: any) => c.id === 'chem-lecture').courseId, 'chem');
+});
+
+test('the commute form shows the Maps lines, and saving a Maps commute asks for a lookup', async () => {
+  const withMaps = stateWith({
+    places: [{ id: 'home', name: 'Home', kind: 'home', address: '1 Main St' }, { id: 'campus', name: 'Campus', kind: 'campus', address: '9 Uni Rd' }],
+    commutes: [{ id: 'r1', fromPlaceId: 'home', toPlaceId: 'campus', repeats: null, marginMinutes: 10, source: { method: 'maps', mode: 'walk', fallbackMinutes: 40 } }],
+  });
+  const { render, lookups } = setup(withMaps, { storeState: { maps: 'ready', mapsUsage: { month: '2026-10', count: 3, limit: 5000 } } });
+  const el: any = render('commutes', 'r1');
+  assert.match(textOf(el), /Not looked up yet\. Using your typed 40 min\./);
+  assert.match(textOf(el), /Used 3 of 5000 lookups this month\./);
+  assert.match(textOf(el), /Walking and bicycling routes may be missing sidewalks or bike paths/);
+  assert.ok(named(el, 'Refresh now'));
+  await submit(el);
+  assert.deepEqual(lookups, ['r1']);
+});
+
+test('a typed commute asks for no lookup and shows no Maps lines', async () => {
+  const typed = stateWith({
+    places: [{ id: 'home', name: 'Home', kind: 'home', address: '1 Main St' }, { id: 'campus', name: 'Campus', kind: 'campus', address: '9 Uni Rd' }],
+    commutes: [{ id: 'r1', fromPlaceId: 'home', toPlaceId: 'campus', repeats: null, marginMinutes: 10, source: { method: 'typed', minutes: 20 } }],
+  });
+  const { render, lookups } = setup(typed, { storeState: { maps: 'ready' } });
+  const el: any = render('commutes', 'r1');
+  assert.doesNotMatch(textOf(el), /Google found|Not looked up/);
+  await submit(el);
+  assert.deepEqual(lookups, []);
 });

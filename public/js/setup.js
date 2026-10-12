@@ -1,4 +1,5 @@
 import { renderField } from './form.js';
+import { renderMapsBlock } from './maps-ui.js';
 import { labelOptions, lookClass, paint } from './labels.js';
 import { findByKey } from './focus.js';
 import { isValidDate } from './time.js';
@@ -127,9 +128,10 @@ export const FIELDS = {
     { name: 'minutes', label: 'Minutes, one way', type: 'text', inputmode: 'numeric' },
     { name: 'margin', label: 'Safety margin, min', type: 'text', inputmode: 'numeric' },
     { name: 'mode', label: 'If Google Maps finds it: how you travel', type: 'choice', span: 3, options: TRAVEL_MODES.map((m) => ({ value: m, label: m === 'transit' ? 'Bus' : cap(m) })) },
+    { name: 'mapsBlock', type: 'custom', span: 3, show: (d) => d.method === 'maps', render: (dom, d, ctx) => renderMapsBlock(dom, d, ctx) },
     {
       name: 'note', type: 'custom', span: 3,
-      render: (dom, d, ctx) => (ctx.maps === 'ready' ? null : dom.h('p', { class: 'hint' }, 'Google Maps is not connected yet. Until it is, the time you type is used, and the Maps choice stays dimmed.')),
+      render: (dom, d, ctx) => (ctx.maps === 'ready' ? null : dom.h('p', { class: 'hint' }, 'Google Maps is not connected yet. To connect it, follow docs/google-maps-setup.md. Until then, the time you type is used, and the Maps choice stays dimmed.')),
     },
     {
       name: 'preview', type: 'custom', span: 3,
@@ -283,6 +285,9 @@ export function createSetup(dom, deps) {
     }
     local.error = null;
     await finish((fresh) => applyItem(fresh, kindId, result.item), sel.spec.single ? '#/settings' : `#/${kindId}/${encodeURIComponent(result.item.id)}`);
+    if (kindId === 'commutes' && result.item.source.method === 'maps' && typeof store.lookupCommute === 'function' && !store.get().formError) {
+      await store.lookupCommute(result.item.id);
+    }
   }
 
   async function remove(sel) {
@@ -309,7 +314,7 @@ export function createSetup(dom, deps) {
     const { kindId, s } = current;
     if (!sel.editing) return h('div', { class: 'form' }, h('p', { class: 'hint' }, 'Pick one from the list, or add a new one.'));
     const error = local.error ?? (local.submittedKey === key ? s.formError : null);
-    const ctx = { state: s.state, maps: s.maps, scratch: local.scratch, rerender, estimate: estimateApi() };
+    const ctx = { state: s.state, maps: s.maps, mapsUsage: s.mapsUsage, mapsNote: s.mapsNote, busy: s.busy, item: sel.item, lookup: (id) => store.lookupCommute(id), scratch: local.scratch, rerender, estimate: estimateApi() };
     const fields = FIELDS[kindId].filter((f) => !f.show || f.show(draft)).map((f) => renderField(dom, f, draft, ctx)).filter(Boolean);
     return h('form', { class: 'form', novalidate: true, onsubmit: (e) => { e.preventDefault(); save(sel); } },
       error && h('div', { class: 'err', role: 'alert' }, h('b', {}, 'Nothing was saved.'), h('span', { class: 'mono msg' }, error)),

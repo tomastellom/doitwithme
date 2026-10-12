@@ -8,7 +8,7 @@ export function createStore(api, getClock) {
   let current = {
     status: 'loading', state: null, warnings: [], approvedSoft: [], dismissed: [], travel: [], maps: 'unavailable', estimating: false,
     isEmpty: false, error: null, busy: false, confirm: null, notice: null, formError: null, cheer: null,
-    reopened: false, checkInResult: null, attendance: [],
+    reopened: false, checkInResult: null, attendance: [], mapsUsage: null, mapsNote: null,
   };
   const listeners = new Set();
 
@@ -47,23 +47,42 @@ export function createStore(api, getClock) {
     set({ busy: false });
   }
 
+  // Results older than two weeks, or for changed addresses, are looked up again. Best effort: any failure is ignored.
+  async function refreshStale() {
+    try {
+      const r = await api.refreshCommutes(getClock());
+      if (r && r.updated > 0) {
+        const state = await api.getState();
+        const plan = await api.replan(getClock());
+        current = { ...current, state };
+        set(merged(plan, {}));
+      }
+    } catch {
+      // The typed times keep working.
+    }
+  }
+
   async function load() {
     set({ status: 'loading', error: null, busy: false });
     try {
       const state = await api.getState();
       let maps = 'unavailable';
+      let mapsUsage = null;
       try {
-        maps = (await api.commuteStatus()).maps === 'ready' ? 'ready' : 'unavailable';
+        const status = await api.commuteStatus();
+        maps = status.maps === 'ready' ? 'ready' : 'unavailable';
+        mapsUsage = status.usage ?? null;
       } catch {
         // Not knowing about Google Maps is never a reason to fail the page.
       }
       if (state.tasks.length === 0 && state.commitments.length === 0) {
-        set({ status: 'ready', state, maps, travel: [], warnings: [], approvedSoft: state.approvedSoft, dismissed: state.dismissed, isEmpty: true, confirm: null });
+        set({ status: 'ready', state, maps, mapsUsage, travel: [], warnings: [], approvedSoft: state.approvedSoft, dismissed: state.dismissed, isEmpty: true, confirm: null });
         return;
       }
       const r = await api.replan(getClock());
-      current = { ...current, state, maps };
+      current = { ...current, state, maps, mapsUsage };
       set(merged(r, { isEmpty: false, confirm: null }));
+      if (maps === 'ready') await refreshStale();
     } catch (e) {
       fail(e);
     }
@@ -99,6 +118,30 @@ export function createStore(api, getClock) {
         set(merged(r, { confirm: null, reopened: false, checkInResult: { mood, minutes: r.moved ? r.moved.minutes : 0, dates: r.moved ? r.moved.dates : [] } }));
       }),
     reopenCheckIn: () => set({ reopened: true }),
+    lookupCommute: (id) =>
+      guard(async () => {
+        let r;
+        try {
+          r = await api.lookupCommute(id, getClock());
+        } catch (e) {
+          if (e && typeof e.status === 'number' && e.status !== 0 && e.message) {
+            set({ mapsNote: { commuteId: id, ok: false, message: e.message } });
+            return;
+          }
+          throw e;
+        }
+        let mapsUsage = current.mapsUsage;
+        try {
+          mapsUsage = (await api.commuteStatus()).usage ?? mapsUsage;
+        } catch {
+          // The usage line just stays as it was.
+        }
+        const state = await api.getState();
+        const plan = await api.replan(getClock());
+        current = { ...current, state, mapsUsage };
+        set(merged(plan, { mapsNote: { commuteId: id, ok: r.ok, message: r.ok ? null : r.message } }));
+      }),
+    refreshCommutes: () => refreshStale(),
     // Skipping a class only adds that date to its exceptions, the same as "Skip this day" in the class panel.
     skipClass: (offer) =>
       guard(async () => {

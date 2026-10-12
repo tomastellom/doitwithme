@@ -569,3 +569,6 @@ a.dh:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
 .review:hover { background: var(--ink); }
 .review:hover svg path { stroke: var(--paper); }
 @media (hover: none) { .review { opacity: 1; } }
+.mapsb { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.mapsb .hint { margin: 0; }
+.mapsb .err-line { font-weight: 600; }

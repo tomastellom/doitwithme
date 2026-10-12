@@ -432,3 +432,43 @@ test('after a class changed elsewhere, the page shows the fresh classes, not the
   assert.equal(gone.store.get().notice, 'That class changed, so I refreshed the plan.');
   assert.deepEqual(gone.store.get().state.commitments, []);
 });
+
+test('the store keeps the Maps usage from the status, and a lookup shows its answer for that commute', async () => {
+  const usage = { month: '2026-10', count: 4, limit: 5000 };
+  const { store, calls } = make({
+    commuteStatus: () => ({ maps: 'ready', usage }),
+    refreshCommutes: () => ({ updated: 0, failed: 0, skipped: 0 }),
+    lookupCommute: () => ({ ok: false, code: 'no-route', message: 'Google found no route for that mode.' }),
+  });
+  await store.load();
+  assert.deepEqual(store.get().mapsUsage, usage);
+  assert.ok(calls.includes('refreshCommutes'), 'stale results are refreshed at load');
+  await store.lookupCommute('k');
+  assert.deepEqual(store.get().mapsNote, { commuteId: 'k', ok: false, message: 'Google found no route for that mode.' });
+  assert.equal(store.get().status, 'ready');
+});
+
+test('a successful lookup replans, and a server refusal is a note, not an error page', async () => {
+  const ok = make({ commuteStatus: () => ({ maps: 'ready' }), refreshCommutes: () => ({ updated: 0 }), lookupCommute: () => ({ ok: true, minutes: 41, at: '2026-10-12' }) });
+  await ok.store.load();
+  await ok.store.lookupCommute('k');
+  assert.deepEqual(ok.store.get().mapsNote, { commuteId: 'k', ok: true, message: null });
+  assert.equal(ok.calls.filter((c: string) => c === 'replan').length, 2, 'once at load and once after the lookup');
+  const refused = make({ commuteStatus: () => ({ maps: 'ready' }), refreshCommutes: () => ({ updated: 0 }), lookupCommute: () => { throw new ApiError(400, 'That commute does not use Google Maps.'); } });
+  await refused.store.load();
+  await refused.store.lookupCommute('k');
+  assert.equal(refused.store.get().status, 'ready');
+  assert.equal(refused.store.get().mapsNote.message, 'That commute does not use Google Maps.');
+});
+
+test('a refresh that updated something replans, and a failing refresh is ignored', async () => {
+  const updated = make({ commuteStatus: () => ({ maps: 'ready' }), refreshCommutes: () => ({ updated: 2, failed: 0, skipped: 0 }) });
+  await updated.store.load();
+  assert.equal(updated.calls.filter((c: string) => c === 'replan').length, 2);
+  const broken = make({ commuteStatus: () => ({ maps: 'ready' }), refreshCommutes: () => { throw new ApiError(0, 'The planner is not reachable'); } });
+  await broken.store.load();
+  assert.equal(broken.store.get().status, 'ready');
+  const none = make();
+  await none.store.load();
+  assert.equal(none.store.get().status, 'ready');
+});

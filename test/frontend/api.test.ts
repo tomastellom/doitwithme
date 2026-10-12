@@ -65,3 +65,12 @@ test('checkIn posts the mood with the clock', async () => {
   await api.checkIn('low', { today: '2026-10-05', nowMinutes: 540, horizonDays: 14 });
   assert.deepEqual([f.calls[0].init.method, f.calls[0].path, JSON.parse(f.calls[0].init.body)], ['POST', '/api/checkin', { today: '2026-10-05', nowMinutes: 540, horizonDays: 14, mood: 'low' }]);
 });
+
+test('lookupCommute and refreshCommutes post the clock', async () => {
+  const f = fakeFetch([{ status: 200, body: { ok: true } }, { status: 200, body: { updated: 0 } }]);
+  const api = createApi(f.fn as any);
+  await api.lookupCommute('k', clock);
+  await api.refreshCommutes(clock);
+  assert.deepEqual([f.calls[0].path, JSON.parse(f.calls[0].init.body)], ['/api/commute/lookup', { today: '2026-10-05', commuteId: 'k' }]);
+  assert.deepEqual([f.calls[1].path, JSON.parse(f.calls[1].init.body)], ['/api/commute/refresh', { today: '2026-10-05' }]);
+});

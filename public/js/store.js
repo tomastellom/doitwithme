@@ -105,7 +105,9 @@ export function createStore(api, getClock) {
         const fresh = await api.getState();
         const c = fresh.commitments.find((x) => x.id === offer.commitmentId);
         if (!c || c.pattern.kind !== 'weekly') {
-          set(merged(await api.replan(getClock()), { confirm: null, notice: CLASS_NOTICE }));
+          const r = await api.replan(getClock());
+          current = { ...current, state: fresh };
+          set(merged(r, { confirm: null, notice: CLASS_NOTICE }));
           return;
         }
         if (!c.exceptions.includes(offer.date)) {

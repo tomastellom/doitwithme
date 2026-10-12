@@ -76,6 +76,8 @@ export function replanCore(
 }
 
 const OFFER_DAYS = 3;
+// Each trial is a whole plan, so only the earliest few are worked out.
+const MAX_TRIALS = 4;
 
 // Total minutes the linked task is short, from the plan's own warnings.
 const shortBy = (warnings: Warning[], taskId: string): number =>
@@ -87,10 +89,16 @@ const shortBy = (warnings: Warning[], taskId: string): number =>
 function skipOffers(state: State, base: { state: State; warnings: Warning[] }, today: DateStr, nowMinutes: Minutes | undefined, horizonDays: number): Warning[] {
   const out: Warning[] = [];
   const advice = attendanceFor(base.state, base.warnings, today, OFFER_DAYS).filter((a) => a.verdict === 'skippable');
+  let trials = 0;
   for (const a of advice) {
+    if (trials >= MAX_TRIALS) break;
     const c = state.commitments.find((x) => x.id === a.commitmentId);
     const task = c && state.tasks.find((t) => t.id === c.courseId);
     if (!c || !task || c.pattern.kind !== 'weekly') continue;
+    // A class that has already begun today is not worth offering, and a gain can never beat the whole shortfall.
+    if (a.date === today && nowMinutes !== undefined && c.start <= nowMinutes) continue;
+    if (shortBy(base.warnings, task.id) < state.preferences.minBlock) continue;
+    trials++;
     try {
       const trial: State = {
         ...state,

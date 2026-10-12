@@ -85,3 +85,31 @@ test('the key names the class and the date, not the minutes', () => {
   assert.notEqual(warningKey(a), warningKey({ ...a, detail: { ...a.detail, commitmentId: 'other' } }));
   assert.notEqual(warningKey(a), warningKey({ ...a, detail: { ...a.detail, date: '2026-10-06' } }));
 });
+
+test('a class that has already started today is not offered, one that has not is', () => {
+  const state = build();
+  const at = (now: number) => offers(state, now).map((w) => w.detail?.date);
+  assert.deepEqual(at(9 * 60), [TODAY, '2026-10-06', '2026-10-07']);
+  assert.deepEqual(at(11 * 60), ['2026-10-06', '2026-10-07'], 'sitting in it already');
+  assert.deepEqual(at(13 * 60), ['2026-10-06', '2026-10-07'], 'already over');
+});
+
+test('only a few trial plans are worked out, from the earliest days', () => {
+  const second = build().tasks[0];
+  const state = build();
+  state.tasks.push({ ...second, id: 'phys', title: 'Physics', course: course() });
+  state.commitments.push(commitment({ id: 'phys-lec', title: 'Physics lecture', category: 'class', courseId: 'phys', start: 780, end: 840, pattern: weekdays }));
+  const found = offers(state);
+  assert.ok(found.length > 0 && found.length <= 4);
+  // Six class days qualify as candidates; the fifth and sixth (Wednesday) are never tried.
+  assert.ok(found.every((w) => w.detail!.date <= '2026-10-06'));
+});
+
+test('answering the check-in keeps a dismissed skip offer dismissed', async () => {
+  const { applyCheckIn } = await import('../src/checkin.ts');
+  const state = build();
+  const [first] = replan(state, TODAY).warnings.filter((w) => w.kind === 'skip-offer');
+  const dismissed = { ...state, dismissed: [warningKey(first)] };
+  const { state: after } = applyCheckIn(dismissed, 'okay', { today: TODAY, horizonDays: 14 });
+  assert.deepEqual(after.dismissed, [warningKey(first)]);
+});

@@ -419,3 +419,16 @@ test('a failing skip reports offline and changes nothing', async () => {
   await f.store.skipClass(offerFor());
   assert.equal(f.store.get().status, 'offline');
 });
+
+test('after a class changed elsewhere, the page shows the fresh classes, not the old one', async () => {
+  const { store } = skipRig(full({ commitments: [lecture()] }));
+  await store.load();
+  assert.equal(store.get().state.commitments.length, 1);
+  const gone = skipRig(full({ commitments: [lecture()] }), {});
+  await gone.store.load();
+  // The class is deleted in another tab, then the stale page presses Skip it.
+  (gone.server() as any).commitments = [];
+  await gone.store.skipClass(offerFor());
+  assert.equal(gone.store.get().notice, 'That class changed, so I refreshed the plan.');
+  assert.deepEqual(gone.store.get().state.commitments, []);
+});

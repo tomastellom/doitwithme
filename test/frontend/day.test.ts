@@ -104,3 +104,8 @@ test('item rows in the day are buttons that open the editor; buffers and gaps ar
   assert.equal(byClass(el, 'dv-buf')[0].tag === 'button', false);
   assert.equal(byClass(el, 'dv-gap').every((g: any) => g.tag !== 'button'), true);
 });
+
+test('a low day shows a Light day tag and a normal day does not', () => {
+  assert.match(textOf(byClass(draw({ light: true }).el, 'meta')[0]), /Light day/);
+  assert.doesNotMatch(textOf(byClass(draw({ light: false }).el, 'meta')[0]), /Light day/);
+});

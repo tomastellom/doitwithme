@@ -15,7 +15,7 @@ function setup(opts: any = {}) {
   let range = { from: 7, to: 22 };
   const permission = opts.permission ?? 'default';
   const store: any = {
-    get: () => ({ state: { preferences: { softMode } }, busy: opts.busy ?? false, formError: opts.formError ?? null, status: 'ready' }),
+    get: () => ({ state: { preferences: { softMode, checkInEnabled: true, lowDayMinutes: 120 } }, busy: opts.busy ?? false, formError: opts.formError ?? null, status: 'ready' }),
     saveState: async (fn: any) => {
       const next = fn({ preferences: { softMode: 'ask', minBreak: 10 }, tasks: [1] });
       saves.push(next);
@@ -149,4 +149,17 @@ test('the Calendar hours pickers show the saved range and change it', () => {
   from.value = '9';
   from.dispatch('change');
   assert.deepEqual(ui.hours(), { from: 9, to: 22 });
+});
+
+test('the check-in rows show the current choice and save the on/off choice and the low-day minimum', async () => {
+  const { draw, saves } = setup();
+  const el = draw();
+  assert.equal(key(el, 'set-checkin-on').getAttribute('aria-pressed'), 'true');
+  assert.equal(key(el, 'set-lowday-120').getAttribute('aria-pressed'), 'true');
+  key(el, 'set-checkin-off').click();
+  await tick();
+  key(el, 'set-lowday-180').click();
+  await tick();
+  assert.equal(saves[0].preferences.checkInEnabled, false);
+  assert.equal(saves[1].preferences.lowDayMinutes, 180);
 });

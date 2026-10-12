@@ -51,7 +51,7 @@ export function renderDay(dom, view, actions) {
         h('button', { type: 'button', 'data-fk': 'prev', 'aria-label': `Previous day, ${prevLabel}`, onclick: () => actions.go(-1) }, prevLabel),
         h('button', { type: 'button', 'data-fk': 'today', onclick: () => actions.today() }, 'Today'),
         h('button', { type: 'button', 'data-fk': 'next', 'aria-label': `Next day, ${nextLabel}`, onclick: () => actions.go(1) }, nextLabel)),
-      h('div', { class: 'meta mono' }, h('span', {}, model.weekLine), h('span', {}, `Booked ${duration(model.booked)}`), status)));
+      h('div', { class: 'meta mono' }, h('span', {}, model.weekLine), h('span', {}, `Booked ${duration(model.booked)}`), status, view.light && h('span', { class: 'tag' }, 'Light day'))));
 
   if (isEmpty) {
     return h('section', { class: 'dayv' }, hero,

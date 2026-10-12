@@ -45,6 +45,22 @@ export const SETTINGS = [
     write: (ctx, value) =>
       ctx.store.saveState((fresh) => ({ ...fresh, preferences: { ...fresh.preferences, softMode: value } })),
   },
+  {
+    id: 'checkin', group: 'planner', title: 'Daily check-in',
+    description: 'Nudge asks how you are the first time you open the app each day. A low answer makes that day lighter.',
+    options: [{ value: 'on', label: 'On' }, { value: 'off', label: 'Off' }],
+    read: (ctx) => (ctx.s.state.preferences.checkInEnabled ? 'on' : 'off'),
+    write: (ctx, value) =>
+      ctx.store.saveState((fresh) => ({ ...fresh, preferences: { ...fresh.preferences, checkInEnabled: value === 'on' } })),
+  },
+  {
+    id: 'lowday', group: 'planner', title: 'Low-day minimum',
+    description: 'On a low day I keep this much planned work and move the rest to later days. Classes, lessons and work stay where they are.',
+    options: [{ value: '60', label: '1 h' }, { value: '120', label: '2 h' }, { value: '180', label: '3 h' }, { value: '240', label: '4 h' }],
+    read: (ctx) => String(ctx.s.state.preferences.lowDayMinutes),
+    write: (ctx, value) =>
+      ctx.store.saveState((fresh) => ({ ...fresh, preferences: { ...fresh.preferences, lowDayMinutes: Number(value) } })),
+  },
 ];
 
 export function createSettings(dom, deps) {

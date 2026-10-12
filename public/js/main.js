@@ -15,7 +15,7 @@ import { weekModel } from './model.js';
 import { createNotifier, startHiddenRefresh } from './notify.js';
 import { createNudge } from './nudge.js';
 import { buildNudge } from './nudge-model.js';
-import { askLine, canReopen, movedLine, replyLine, shouldAsk } from './checkin-model.js';
+import { askLine, canReopen, todayMood, movedLine, replyLine, shouldAsk } from './checkin-model.js';
 import { buildHash, dateParam, resolveRoute, weekParam } from './router.js';
 import { createRegistry } from './sections.js';
 import { createSettings } from './settings.js';
@@ -163,6 +163,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       const { needsYou } = buildNudge(ctx.s.warnings);
       return renderDay(dom, {
         model, needsYou, isEmpty: ctx.s.isEmpty, hours: ui.hours(), nowMinutes: getClock().nowMinutes, date,
+        light: todayMood(ctx.s.state, date) === 'low',
         isToday: date === getClock().today, prevLabel: WEEKDAYS[weekdayOf(addDays(date, -1))], nextLabel: WEEKDAYS[weekdayOf(addDays(date, 1))],
       }, dayActions);
     },

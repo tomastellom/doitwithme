@@ -1,6 +1,7 @@
 import { buildConfirm } from './nudge-model.js';
 
 const GENERIC_ERROR = 'Something unexpected happened. Reload the page.';
+const CLASS_NOTICE = 'That class changed, so I refreshed the plan.';
 const STALE_NOTICE = 'That warning changed, so I refreshed the plan.';
 
 export function createStore(api, getClock) {
@@ -98,6 +99,35 @@ export function createStore(api, getClock) {
         set(merged(r, { confirm: null, reopened: false, checkInResult: { mood, minutes: r.moved ? r.moved.minutes : 0, dates: r.moved ? r.moved.dates : [] } }));
       }),
     reopenCheckIn: () => set({ reopened: true }),
+    // Skipping a class only adds that date to its exceptions, the same as "Skip this day" in the class panel.
+    skipClass: (offer) =>
+      guard(async () => {
+        const fresh = await api.getState();
+        const c = fresh.commitments.find((x) => x.id === offer.commitmentId);
+        if (!c || c.pattern.kind !== 'weekly') {
+          set(merged(await api.replan(getClock()), { confirm: null, notice: CLASS_NOTICE }));
+          return;
+        }
+        if (!c.exceptions.includes(offer.date)) {
+          await api.putState({ ...fresh, commitments: fresh.commitments.map((x) => (x.id === c.id ? { ...x, exceptions: [...x.exceptions, offer.date].sort() } : x)) });
+        }
+        const state = await api.getState();
+        const r = await api.replan(getClock());
+        current = { ...current, state };
+        set(merged(r, { confirm: { used: true, skip: { commitmentId: c.id, date: offer.date, title: c.title, taskTitle: offer.taskTitle, minutes: offer.minutes } } }));
+      }),
+    undoSkip: (skip) =>
+      guard(async () => {
+        const fresh = await api.getState();
+        await api.putState({
+          ...fresh,
+          commitments: fresh.commitments.map((x) => (x.id === skip.commitmentId ? { ...x, exceptions: x.exceptions.filter((d) => d !== skip.date) } : x)),
+        });
+        const state = await api.getState();
+        const r = await api.replan(getClock());
+        current = { ...current, state };
+        set(merged(r, { confirm: null }));
+      }),
     undo: (date) => guard(async () => set(merged(await api.undo(date, getClock()), { confirm: null }))),
     dismiss: (keys) =>
       guard(async () => {

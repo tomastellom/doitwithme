@@ -62,6 +62,8 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
 
   const nudge = createNudge(dom, {
     approve: (date) => store.approve(date),
+    accept: (offer) => (offer.kind === 'skip' ? store.skipClass(offer) : store.approve(offer.date)),
+    undoSkip: (skip) => store.undoSkip(skip),
     undo: (date) => store.undo(date),
     dismiss: (keys) => store.dismiss(keys),
     okay: () => store.clearConfirm(),
@@ -347,7 +349,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     }
     nudge.update({
       status: s.status,
-      items: s.isEmpty || !s.state ? [] : buildNudge(s.warnings).items,
+      items: s.isEmpty || !s.state ? [] : buildNudge(s.warnings, getClock().today).items,
       confirm: s.confirm,
       error: s.error,
       busy: s.busy,

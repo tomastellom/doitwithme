@@ -365,3 +365,57 @@ test('the store keeps the attendance advice from every replan and starts empty',
   await bare.store.load();
   assert.deepEqual(bare.store.get().attendance, []);
 });
+
+const lecture = (over: any = {}) => ({ id: 'lec', title: 'Chemistry lecture', category: 'class', pattern: { kind: 'weekly', weekdays: [1], from: '2026-10-05', to: '2026-12-31' }, exceptions: [], ...over });
+const offerFor = (over: any = {}) => ({ kind: 'skip', commitmentId: 'lec', date: '2026-10-06', minutes: 120, title: 'Chemistry lecture', taskTitle: 'Chemistry', ...over });
+
+function skipRig(initial: any, over: any = {}) {
+  let server = structuredClone(initial);
+  const puts: any[] = [];
+  const f = make({
+    getState: () => structuredClone(server),
+    putState: (s: any) => { puts.push(structuredClone(s)); server = structuredClone(s); return { ok: true }; },
+    ...over,
+  });
+  return { ...f, puts, server: () => server };
+}
+
+test('skipClass adds the date once, replans and confirms with what moved in', async () => {
+  const { store, puts, server } = skipRig(full({ commitments: [lecture()] }));
+  await store.load();
+  await store.skipClass(offerFor());
+  assert.deepEqual(server().commitments[0].exceptions, ['2026-10-06']);
+  assert.deepEqual(store.get().confirm, { used: true, skip: { commitmentId: 'lec', date: '2026-10-06', title: 'Chemistry lecture', taskTitle: 'Chemistry', minutes: 120 } });
+  await store.skipClass(offerFor());
+  assert.deepEqual(server().commitments[0].exceptions, ['2026-10-06'], 'a second press adds nothing');
+  assert.equal(puts.length, 1, 'and does not even save');
+});
+
+test('skipClass for a class that is gone or no longer weekly changes nothing and says so', async () => {
+  const gone = skipRig(full({ commitments: [] }));
+  await gone.store.load();
+  await gone.store.skipClass(offerFor());
+  assert.equal(gone.puts.length, 0);
+  assert.equal(gone.store.get().notice, 'That class changed, so I refreshed the plan.');
+  assert.equal(gone.store.get().confirm, null);
+  const once = skipRig(full({ commitments: [lecture({ pattern: { kind: 'once', date: '2026-10-06' } })] }));
+  await once.store.load();
+  await once.store.skipClass(offerFor());
+  assert.equal(once.puts.length, 0);
+  assert.equal(once.store.get().notice, 'That class changed, so I refreshed the plan.');
+});
+
+test('undoSkip removes only that date and clears the confirmation', async () => {
+  const { store, server } = skipRig(full({ commitments: [lecture({ exceptions: ['2026-10-06', '2026-10-13'] })] }));
+  await store.load();
+  await store.undoSkip({ commitmentId: 'lec', date: '2026-10-06' });
+  assert.deepEqual(server().commitments[0].exceptions, ['2026-10-13']);
+  assert.equal(store.get().confirm, null);
+});
+
+test('a failing skip reports offline and changes nothing', async () => {
+  const f = skipRig(full({ commitments: [lecture()] }), { putState: () => { throw new ApiError(0, 'The planner is not reachable'); } });
+  await f.store.load();
+  await f.store.skipClass(offerFor());
+  assert.equal(f.store.get().status, 'offline');
+});

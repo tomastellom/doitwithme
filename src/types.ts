@@ -107,6 +107,8 @@ export interface Preferences {
   hoursPerCredit: number | null;
   normalCredits: number;
   fullLoadHours: number;
+  lowDayMinutes: Minutes;
+  checkInEnabled: boolean;
 }
 
 export type BlockStatus = 'done' | 'missed' | 'waived';
@@ -115,6 +117,13 @@ export interface CommitmentMark {
   id: string;
   date: DateStr;
   status: 'done' | 'missed';
+}
+
+export type Mood = 'good' | 'okay' | 'low' | 'skipped';
+
+export interface CheckIn {
+  date: DateStr;
+  mood: Mood;
 }
 
 export interface Block {
@@ -185,6 +194,7 @@ export interface State {
   commutes: Commute[];
   labels?: Label[];
   commitmentMarks?: CommitmentMark[];
+  checkIns?: CheckIn[];
   preferences: Preferences;
   blocks: Block[];
   approvedSoft: DateStr[];

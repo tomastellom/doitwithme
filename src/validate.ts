@@ -1,7 +1,9 @@
 import { defaultPreferences } from './defaults.ts';
 import type {
   BlockStatus,
+  CheckIn,
   CommitmentMark,
+  Mood,
   Label,
   Block, Commitment, Commute, Course, Deadline, Pattern, Place, PlaceKind, Preferences, Repeats, SoftWindow, State, Task,
   TravelMode, TravelSource, Window,
@@ -222,6 +224,29 @@ function commitmentMarks(v: unknown): CommitmentMark[] {
   return marks;
 }
 
+const MOODS: Mood[] = ['good', 'okay', 'low', 'skipped'];
+
+function moodOf(v: unknown, path: string): Mood {
+  if (typeof v !== 'string' || !MOODS.includes(v as Mood)) fail(`${path} must be "good", "okay", "low" or "skipped"`);
+  return v as Mood;
+}
+
+function checkIns(v: unknown): CheckIn[] {
+  const list = arr(v, 'checkIns');
+  if (list.length > 400) fail('checkIns must have at most 400 entries');
+  const answers = list.map((c, i) => {
+    const o = obj(c, `checkIns[${i}]`);
+    return { date: dateStr(o.date, `checkIns[${i}].date`), mood: moodOf(o.mood, `checkIns[${i}].mood`) };
+  });
+  if (new Set(answers.map((a) => a.date)).size !== answers.length) fail('checkIns has the same day twice');
+  return answers;
+}
+
+function boolOf(v: unknown, path: string): boolean {
+  if (typeof v !== 'boolean') fail(`${path} must be true or false`);
+  return v as boolean;
+}
+
 function label(v: unknown, path: string): Label {
   const o = obj(v, path);
   const name = str(o.name, `${path}.name`).trim();
@@ -252,6 +277,8 @@ function preferences(v: unknown, path: string): Preferences {
     hoursPerCredit: o.hoursPerCredit === undefined || o.hoursPerCredit === null ? null : num(o.hoursPerCredit, `${path}.hoursPerCredit`, 0.1, 20),
     normalCredits: o.normalCredits === undefined ? defaultPreferences.normalCredits : num(o.normalCredits, `${path}.normalCredits`, 1, 200),
     fullLoadHours: o.fullLoadHours === undefined ? defaultPreferences.fullLoadHours : num(o.fullLoadHours, `${path}.fullLoadHours`, 1, 100),
+    lowDayMinutes: o.lowDayMinutes === undefined ? defaultPreferences.lowDayMinutes : int(o.lowDayMinutes, `${path}.lowDayMinutes`, 0, 600),
+    checkInEnabled: o.checkInEnabled === undefined ? defaultPreferences.checkInEnabled : boolOf(o.checkInEnabled, `${path}.checkInEnabled`),
     softWindows: arr(o.softWindows, `${path}.softWindows`).map((s, i): SoftWindow => {
       const so = obj(s, `${path}.softWindows[${i}]`);
       const w = windowOf(so, `${path}.softWindows[${i}]`);
@@ -327,6 +354,7 @@ export function validateState(x: unknown): State {
     commutes,
     ...(labels === undefined ? {} : { labels }),
     ...(o.commitmentMarks === undefined ? {} : { commitmentMarks: commitmentMarks(o.commitmentMarks) }),
+    ...(o.checkIns === undefined ? {} : { checkIns: checkIns(o.checkIns) }),
     preferences: preferences(o.preferences ?? defaultPreferences, 'preferences'),
     blocks: arr(o.blocks ?? [], 'blocks').map((b, i) => block(b, `blocks[${i}]`)),
     approvedSoft: approvedSoft(o.approvedSoft),
@@ -369,4 +397,9 @@ export function validateDismissRequest(x: unknown): {
 export function validateEstimateRequest(x: unknown): { title: string; course: Course } {
   const o = obj(x, 'request');
   return { title: str(o.title, 'title'), course: courseOf(o, 'request') };
+}
+
+export function validateCheckInRequest(x: unknown): { today: string; nowMinutes?: number; horizonDays: number; mood: Mood } {
+  const o = obj(x, 'request');
+  return { ...replanFields(o), mood: moodOf(o.mood, 'mood') };
 }

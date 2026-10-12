@@ -38,14 +38,14 @@ Once a day Nudge asks how the user is doing. On a low day the planner keeps only
 
 ## Server
 
-- `POST /api/checkin` with `{ mood }` and today's date taken from the server clock. Rejects an unknown mood (400) and never accepts another date. Stores the answer, replans, saves, and returns the new state plus `moved: { minutes, dates }` when the mood is low.
+- `POST /api/checkin` with `{ mood }` plus the `today` clock the browser sends, like every other endpoint, so there is no way to answer for another date. Rejects an unknown mood (400). Stores the answer, replans, saves, and returns the new state plus `moved: { minutes, dates }` when the mood is low.
 - The state response already carries `checkIns`, so the client knows whether today was answered.
 
 ## UI
 
 - **Nudge state `checkin`:** he rises like an alert with the question and three face buttons (real buttons, keyboard reachable, visible focus). Faces: Good happy, Okay resting, Low worried. A small "Not now" closes it as a skip.
 - After Low he shows the moved summary and the "Actually, I'm okay" button, then rests on his own after the usual delay. After Good or Okay he cheers briefly.
-- **Settings:** a "Daily check-in" on/off row and a "Low-day minimum" row with a number input in hours and minutes style used by the other time rows.
+- **Settings:** a "Daily check-in" on/off row and a "Low-day minimum" row of choices: 1 h, 2 h, 3 h, 4 h (the server accepts 0 to 600 minutes).
 - **Day:** the "Light day" tag.
 - UI rules still apply: no emojis, no gradients, no inline styles, all text through createTextNode, and reduced motion respected.
 

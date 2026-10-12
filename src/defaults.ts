@@ -15,4 +15,6 @@ export const defaultPreferences: Preferences = {
   hoursPerCredit: null,
   normalCredits: 30,
   fullLoadHours: 40,
+  lowDayMinutes: 120,
+  checkInEnabled: true,
 };

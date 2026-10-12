@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyState } from '../src/store.ts';
-import { ValidationError, validateEstimateRequest, validateState } from '../src/validate.ts';
+import { ValidationError, validateCheckInRequest, validateEstimateRequest, validateState } from '../src/validate.ts';
 import { commitment, deadline, task } from './helpers.ts';
 
 function sample(): any {
@@ -280,4 +280,35 @@ test('block statuses and commitment marks are optional and checked', () => {
   rejects((x) => { x.blocks = [{ taskId: 't1', title: 'S', category: 'study', date: '2026-10-05', start: 480, end: 540, status: 'maybe' }]; }, /blocks\[0\]\.status/);
   rejects((x) => { x.commitmentMarks = [{ id: 'c1', date: '2026-10-05', status: 'waived' }]; }, /commitmentMarks\[0\]\.status/);
   rejects((x) => { x.commitmentMarks = [{ id: 'c1', date: '2026-10-05', status: 'done' }, { id: 'c1', date: '2026-10-05', status: 'missed' }]; }, /same day twice/);
+});
+
+test('check-in fields default when missing and validate when present', () => {
+  const base = { ...emptyState() };
+  const prefs: any = { ...base.preferences };
+  delete prefs.lowDayMinutes;
+  delete prefs.checkInEnabled;
+  const loaded = validateState({ ...base, preferences: prefs });
+  assert.equal(loaded.preferences.lowDayMinutes, 120);
+  assert.equal(loaded.preferences.checkInEnabled, true);
+  assert.equal(loaded.checkIns, undefined);
+  const withAnswers = validateState({ ...base, checkIns: [{ date: '2026-10-05', mood: 'low' }] });
+  assert.deepEqual(withAnswers.checkIns, [{ date: '2026-10-05', mood: 'low' }]);
+});
+
+test('check-in fields reject bad values', () => {
+  const base = { ...emptyState() };
+  assert.throws(() => validateState({ ...base, preferences: { ...base.preferences, lowDayMinutes: 601 } }), /lowDayMinutes/);
+  assert.throws(() => validateState({ ...base, preferences: { ...base.preferences, lowDayMinutes: 1.5 } }), /lowDayMinutes/);
+  assert.throws(() => validateState({ ...base, preferences: { ...base.preferences, checkInEnabled: 'yes' } }), /checkInEnabled/);
+  assert.throws(() => validateState({ ...base, checkIns: [{ date: '2026-10-05', mood: 'great' }] }), /mood/);
+  assert.throws(() => validateState({ ...base, checkIns: [{ date: 'today', mood: 'low' }] }), /date/);
+  assert.throws(() => validateState({ ...base, checkIns: [{ date: '2026-10-05', mood: 'low' }, { date: '2026-10-05', mood: 'okay' }] }), /twice/);
+});
+
+test('a check-in request needs a known mood and a clock', () => {
+  const clock = { today: '2026-10-05', horizonDays: 7 };
+  assert.deepEqual(validateCheckInRequest({ ...clock, mood: 'low' }), { ...clock, mood: 'low' });
+  assert.throws(() => validateCheckInRequest({ ...clock, mood: 'great' }), /mood/);
+  assert.throws(() => validateCheckInRequest({ mood: 'low' }), /today/);
+  assert.throws(() => validateCheckInRequest({ ...clock }), /mood/);
 });

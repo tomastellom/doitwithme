@@ -443,3 +443,13 @@ export function validateCheckInRequest(x: unknown): { today: string; nowMinutes?
   const o = obj(x, 'request');
   return { ...replanFields(o), mood: moodOf(o.mood, 'mood') };
 }
+
+export function validateLookupRequest(x: unknown): { today: string; commuteId: string } {
+  const o = obj(x, 'request');
+  return { today: dateStr(o.today, 'today'), commuteId: str(o.commuteId, 'commuteId') };
+}
+
+export function validateRefreshRequest(x: unknown): { today: string } {
+  const o = obj(x, 'request');
+  return { today: dateStr(o.today, 'today') };
+}

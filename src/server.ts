@@ -1,4 +1,5 @@
-import { unavailableProvider } from './maps.ts';
+import { BadLookup, lookupCommute, refreshCommutes, usageFor } from './commutelookup.ts';
+import { googleProvider, unavailableProvider } from './maps.ts';
 import { buildEstimate, unavailableProvider as unavailableWorkload } from './workload.ts';
 import type { WorkloadProvider } from './workload.ts';
 import type { TravelTimeProvider } from './maps.ts';
@@ -17,6 +18,8 @@ import type { State } from './types.ts';
 import {
   ValidationError,
   validateCheckInRequest,
+  validateLookupRequest,
+  validateRefreshRequest,
   validateDismissRequest,
   validateEstimateRequest,
   validateReplanRequest,
@@ -149,11 +152,14 @@ function serveStatic(publicDir: string, pathname: string, method: string, res: S
 
 export function createApp(
   statePath: string,
-  options: { publicDir?: string; exampleFile?: string; maps?: TravelTimeProvider; workload?: WorkloadProvider } = {},
+  options: { publicDir?: string; exampleFile?: string; maps?: TravelTimeProvider; workload?: WorkloadProvider; mapsLimit?: number } = {},
 ): Server {
   const publicDir = options.publicDir ?? DEFAULT_PUBLIC;
   const exampleFile = options.exampleFile ?? DEFAULT_EXAMPLE;
   const maps = options.maps ?? unavailableProvider;
+  const mapsLimit = options.mapsLimit ?? 5000;
+  const lookupDeps = { maps, limit: mapsLimit, load: () => loadState(statePath), save: (s: State) => saveState(statePath, s) };
+  const dayNow = () => new Date().toISOString().slice(0, 10);
   const workload = options.workload ?? unavailableWorkload;
   return createServer(async (req, res) => {
     try {
@@ -219,7 +225,22 @@ export function createApp(
         return send(res, 200, await buildEstimate(request, { hoursPerCredit, normalCredits, fullLoadHours }, workload));
       }
       if (req.method === 'GET' && pathname === '/api/commute/status') {
-        return send(res, 200, { maps: maps.status });
+        return send(res, 200, maps.status === 'ready' ? { maps: maps.status, usage: usageFor(loadState(statePath), dayNow(), mapsLimit) } : { maps: maps.status });
+      }
+      if (req.method === 'POST' && pathname === '/api/commute/lookup') {
+        const request = validateLookupRequest(await readJson(req));
+        if (maps.status !== 'ready') throw new HttpError(503, 'Google Maps is not connected yet');
+        try {
+          return send(res, 200, await lookupCommute(lookupDeps, request.commuteId, request.today));
+        } catch (e) {
+          if (e instanceof BadLookup) throw new HttpError(400, e.message);
+          throw e;
+        }
+      }
+      if (req.method === 'POST' && pathname === '/api/commute/refresh') {
+        const request = validateRefreshRequest(await readJson(req));
+        if (maps.status !== 'ready') throw new HttpError(503, 'Google Maps is not connected yet');
+        return send(res, 200, await refreshCommutes(lookupDeps, request.today));
       }
       if (req.method === 'GET' && pathname === '/api/example') {
         let example: State;
@@ -244,7 +265,15 @@ export function createApp(
 if (import.meta.main) {
   const port = Number(process.env.PORT ?? 8787);
   const file = process.env.DATA_FILE ?? 'data/db.json';
-  createApp(file).listen(port, '127.0.0.1', () => {
+  const key = process.env.GOOGLE_MAPS_API_KEY;
+  const region = process.env.GOOGLE_MAPS_REGION;
+  const limit = Number(process.env.MAPS_MONTHLY_LIMIT);
+  const connected = typeof key === 'string' && key.trim() !== '';
+  createApp(file, {
+    ...(connected ? { maps: googleProvider({ key: key.trim(), ...(region ? { regionCode: region } : {}) }) } : {}),
+    ...(Number.isInteger(limit) && limit > 0 ? { mapsLimit: limit } : {}),
+  }).listen(port, '127.0.0.1', () => {
     console.log(`Listening on http://127.0.0.1:${port} (data file: ${file})`);
+    console.log(connected ? 'Google Maps is connected.' : 'Google Maps is not connected (no GOOGLE_MAPS_API_KEY).');
   });
 }

@@ -42,7 +42,9 @@ after(() => {
 
 test('the status endpoint reports whether Maps can be used', async () => {
   assert.deepEqual(await (await fetch(`${base}/api/commute/status`)).json(), { maps: 'unavailable' });
-  assert.deepEqual(await (await fetch(`${readyBase}/api/commute/status`)).json(), { maps: 'ready' });
+  const status = await (await fetch(`${readyBase}/api/commute/status`)).json();
+  assert.equal(status.maps, 'ready');
+  assert.deepEqual([status.usage.count, status.usage.limit], [0, 5000]);
 });
 
 const KEY = 'AIza-secret-key-123';

@@ -124,3 +124,11 @@ Anything that differs from the boards: spacing, sizes, colors, wrapping, fonts n
 - Within the next 3 days Nudge comes up with "Chemistry lecture, Tomorrow 10:00, is recorded and counts 0%." and the line "Skipping it frees 2h00 for Chemistry. I will only do it if you say so." Buttons: Skip it, Fix it myself, Leave it. The skip offer comes after the shortfall items, so use his > button to reach it.
 - Skip it: Nudge looks happy, says "Skipped. 2h00 of Chemistry moved in." with Okay and Undo, and the freed hour fills with study. Undo puts the class back.
 - Leave it hides that one day. The other days stay offered. A class that is not recorded, or counts for the grade, is never offered.
+
+## Google Maps
+
+- Without a key: Plan, Commutes: the "Google Maps finds it" choice is dimmed and says to follow docs/google-maps-setup.md.
+- With a key (see docs/google-maps-setup.md): choose Google Maps finds it, pick a mode and save. Under the form a line says "Google found NN min on 12 Oct." with a Refresh now button and "Used N of 5000 lookups this month."
+- Pick Walk or Bike: a sentence warns that walking and bicycling routes may be missing sidewalks or bike paths.
+- Give a place no address and press Refresh now: "Add an address to NAME first." Break the key on purpose: the form shows the plain "Google rejected the key" sentence and your typed time keeps being used.
+- Week: the Commute entries use the found time plus your margin; they say "Commute NN".

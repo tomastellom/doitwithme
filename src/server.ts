@@ -1,5 +1,5 @@
 import { BadLookup, keepMapsData, lookupCommute, refreshCommutes, usageFor } from './commutelookup.ts';
-import { DEFAULT_MODEL, anthropicProvider } from './anthropic.ts';
+import { DEFAULT_MODEL, anthropicProvider, plausibleKey } from './anthropic.ts';
 import { googleProvider, unavailableProvider } from './maps.ts';
 import { buildEstimate, unavailableProvider as unavailableWorkload } from './workload.ts';
 import type { WorkloadProvider } from './workload.ts';
@@ -286,18 +286,23 @@ if (import.meta.main) {
   const connected = typeof key === 'string' && key.trim() !== '';
   // A dedicated variable name on purpose: Claude Code switches to pay-per-use billing if it finds ANTHROPIC_API_KEY.
   const aiKey = process.env.DOITWITHME_ANTHROPIC_KEY;
-  const aiConnected = typeof aiKey === 'string' && aiKey.trim() !== '';
+  let aiConnected = typeof aiKey === 'string' && aiKey.trim() !== '';
+  if (aiConnected && !plausibleKey(aiKey!.trim())) {
+    // Never print the key itself, only that it cannot be one.
+    console.log('DOITWITHME_ANTHROPIC_KEY has characters a key cannot have (a line break or a curly quote, perhaps). The AI is not connected.');
+    aiConnected = false;
+  }
   let aiModel = process.env.DOITWITHME_AI_MODEL?.trim() || DEFAULT_MODEL;
   if (aiConnected) {
     try {
-      anthropicProvider({ key: aiKey.trim(), model: aiModel });
+      anthropicProvider({ key: aiKey!.trim(), model: aiModel });
     } catch {
       console.log(`DOITWITHME_AI_MODEL does not look right. Using ${DEFAULT_MODEL}.`);
       aiModel = DEFAULT_MODEL;
     }
   }
   createApp(file, {
-    ...(aiConnected ? { workload: anthropicProvider({ key: aiKey.trim(), model: aiModel }) } : {}),
+    ...(aiConnected ? { workload: anthropicProvider({ key: aiKey!.trim(), model: aiModel }) } : {}),
     ...(connected ? { maps: googleProvider({ key: key.trim(), ...(region ? { regionCode: region } : {}) }) } : {}),
     ...(Number.isInteger(limit) && limit > 0 ? { mapsLimit: limit } : {}),
   }).listen(port, '127.0.0.1', () => {

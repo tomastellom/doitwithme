@@ -8,7 +8,7 @@ export interface WorkloadInput {
   ruleMinutes: number;
 }
 
-export type AiErrorCode = 'key' | 'billing' | 'busy' | 'server' | 'declined' | 'bad-response' | 'offline' | 'request';
+export type AiErrorCode = 'key' | 'billing' | 'busy' | 'slow' | 'server' | 'declined' | 'bad-response' | 'offline' | 'request';
 
 // The message is always one of our own sentences, never the AI service's text, so it can never carry the key.
 export class AiError extends Error {

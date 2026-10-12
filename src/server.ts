@@ -1,4 +1,5 @@
 import { BadLookup, keepMapsData, lookupCommute, refreshCommutes, usageFor } from './commutelookup.ts';
+import { DEFAULT_MODEL, anthropicProvider } from './anthropic.ts';
 import { googleProvider, unavailableProvider } from './maps.ts';
 import { buildEstimate, unavailableProvider as unavailableWorkload } from './workload.ts';
 import type { WorkloadProvider } from './workload.ts';
@@ -283,11 +284,25 @@ if (import.meta.main) {
   if (regionText && !region) console.log('GOOGLE_MAPS_REGION must be two letters, like es. Ignoring it.');
   const limit = Number(process.env.MAPS_MONTHLY_LIMIT);
   const connected = typeof key === 'string' && key.trim() !== '';
+  // A dedicated variable name on purpose: Claude Code switches to pay-per-use billing if it finds ANTHROPIC_API_KEY.
+  const aiKey = process.env.DOITWITHME_ANTHROPIC_KEY;
+  const aiConnected = typeof aiKey === 'string' && aiKey.trim() !== '';
+  let aiModel = process.env.DOITWITHME_AI_MODEL?.trim() || DEFAULT_MODEL;
+  if (aiConnected) {
+    try {
+      anthropicProvider({ key: aiKey.trim(), model: aiModel });
+    } catch {
+      console.log(`DOITWITHME_AI_MODEL does not look right. Using ${DEFAULT_MODEL}.`);
+      aiModel = DEFAULT_MODEL;
+    }
+  }
   createApp(file, {
+    ...(aiConnected ? { workload: anthropicProvider({ key: aiKey.trim(), model: aiModel }) } : {}),
     ...(connected ? { maps: googleProvider({ key: key.trim(), ...(region ? { regionCode: region } : {}) }) } : {}),
     ...(Number.isInteger(limit) && limit > 0 ? { mapsLimit: limit } : {}),
   }).listen(port, '127.0.0.1', () => {
     console.log(`Listening on http://127.0.0.1:${port} (data file: ${file})`);
     console.log(connected ? 'Google Maps is connected.' : 'Google Maps is not connected (no GOOGLE_MAPS_API_KEY).');
+    console.log(aiConnected ? `The AI is connected (${aiModel}).` : 'The AI is not connected (no DOITWITHME_ANTHROPIC_KEY).');
   });
 }

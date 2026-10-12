@@ -132,3 +132,9 @@ Anything that differs from the boards: spacing, sizes, colors, wrapping, fonts n
 - Pick Walk or Bike: a sentence warns that walking and bicycling routes may be missing sidewalks or bike paths.
 - Give a place no address and press Refresh now: "Add an address to NAME first." Break the key on purpose: the form shows the plain "Google rejected the key" sentence and your typed time keeps being used.
 - Week: the Commute entries use the found time plus your margin; they say "Commute NN".
+
+## The AI estimate
+
+- Without a key: Plan, Tasks, a study task with credits, Estimate hours: the card shows the rule of thumb, a "Rule of thumb" tag and the line "AI is not connected yet..." pointing at docs/anthropic-setup.md.
+- With a key (see docs/anthropic-setup.md): the card leads with the AI's hours and a short reason, tagged "AI", with the rule of thumb as a smaller second line. Use this fills "Minutes a week".
+- Break the key on purpose or go offline: the card shows a plain sentence ("The AI key was rejected...", "I could not reach the AI.") and the rule of thumb.

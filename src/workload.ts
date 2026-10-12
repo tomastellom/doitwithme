@@ -8,6 +8,18 @@ export interface WorkloadInput {
   ruleMinutes: number;
 }
 
+export type AiErrorCode = 'key' | 'billing' | 'busy' | 'server' | 'declined' | 'bad-response' | 'offline' | 'request';
+
+// The message is always one of our own sentences, never the AI service's text, so it can never carry the key.
+export class AiError extends Error {
+  code: AiErrorCode;
+  constructor(code: AiErrorCode, message: string) {
+    super(message);
+    this.name = 'AiError';
+    this.code = code;
+  }
+}
+
 export interface WorkloadProvider {
   status: 'unavailable' | 'ready';
   estimate(input: WorkloadInput): Promise<{ minutes: number; reason: string }>;
@@ -60,8 +72,9 @@ export async function buildEstimate(
     const ai = clampAi(answer, rule.minutes);
     if (!ai) return { rule, ai: null, aiStatus: 'failed', aiMessage: 'The AI could not answer this time. The rule of thumb is shown.' };
     return { rule, ai, aiStatus: 'ready' };
-  } catch {
-    return { rule, ai: null, aiStatus: 'failed', aiMessage: 'The AI could not answer this time. The rule of thumb is shown.' };
+  } catch (e) {
+    const aiMessage = e instanceof AiError ? e.message : 'The AI could not answer this time. The rule of thumb is shown.';
+    return { rule, ai: null, aiStatus: 'failed', aiMessage };
   } finally {
     if (timer !== undefined) clearTimeout(timer);
   }

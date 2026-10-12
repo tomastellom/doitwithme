@@ -59,7 +59,7 @@ function estimateBlock(dom, est) {
         h('div', { class: 'estbtns' },
           h('button', { type: 'button', class: 'y mono', 'data-fk': 'estimate-use', onclick: () => est.use(lead.minutes) }, 'Use this'),
           h('button', { type: 'button', class: 'mono', 'data-fk': 'estimate-keep', onclick: () => est.keep() }, 'Keep mine')),
-        aiStatus === 'unavailable' && h('span', { class: 'mono ai' }, 'AI is not connected yet. The rule of thumb is used until it is.'),
+        aiStatus === 'unavailable' && h('span', { class: 'mono ai' }, 'AI is not connected yet. The rule of thumb is used until it is. To connect it, follow docs/anthropic-setup.md.'),
         aiStatus === 'failed' && h('span', { class: 'mono ai' }, aiMessage))));
   }
   return h('div', { class: 'estwrap' }, ...parts);

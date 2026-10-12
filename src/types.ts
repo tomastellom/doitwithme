@@ -23,9 +23,16 @@ export type Repeats =
   | { kind: 'weekly'; weekdays: number[] }
   | { kind: 'monthly'; monthDays: number[] };
 
+export interface MapsFound {
+  minutes: Minutes;
+  at: DateStr;
+  fromAddress: string;
+  toAddress: string;
+}
+
 export type TravelSource =
   | { method: 'typed'; minutes: Minutes }
-  | { method: 'maps'; mode: TravelMode; fallbackMinutes: Minutes };
+  | { method: 'maps'; mode: TravelMode; fallbackMinutes: Minutes; found?: MapsFound };
 
 export interface Commute {
   id: string;
@@ -205,6 +212,7 @@ export interface State {
   labels?: Label[];
   commitmentMarks?: CommitmentMark[];
   checkIns?: CheckIn[];
+  mapsUsage?: { month: string; count: number };
   preferences: Preferences;
   blocks: Block[];
   approvedSoft: DateStr[];

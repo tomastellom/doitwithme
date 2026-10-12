@@ -2,6 +2,7 @@ import { defaultPreferences } from './defaults.ts';
 import type {
   BlockStatus,
   CheckIn,
+  MapsFound,
   CommitmentMark,
   Mood,
   Recorded,
@@ -117,12 +118,35 @@ function repeatsOf(v: unknown, path: string): Repeats | null {
   return fail(`${path}.kind must be "weekly" or "monthly"`);
 }
 
+function foundOf(v: unknown, path: string): MapsFound {
+  const o = obj(v, path);
+  const address = (x: unknown, p: string): string => {
+    if (typeof x !== 'string' || x.length > 500) fail(`${p} must be text of at most 500 characters`);
+    return x as string;
+  };
+  return {
+    minutes: int(o.minutes, `${path}.minutes`, 0, 600),
+    at: dateStr(o.at, `${path}.at`),
+    fromAddress: address(o.fromAddress, `${path}.fromAddress`),
+    toAddress: address(o.toAddress, `${path}.toAddress`),
+  };
+}
+
+function usageOf(v: unknown): { month: string; count: number } {
+  const o = obj(v, 'mapsUsage');
+  if (typeof o.month !== 'string' || !/^\d{4}-\d{2}$/.test(o.month)) fail('mapsUsage.month must look like 2026-10');
+  return { month: o.month as string, count: int(o.count, 'mapsUsage.count', 0, 1000000) };
+}
+
 function sourceOf(v: unknown, path: string): TravelSource {
   const o = obj(v, path);
   if (o.method === 'typed') return { method: 'typed', minutes: int(o.minutes, `${path}.minutes`, 0, 600) };
   if (o.method === 'maps') {
     if (typeof o.mode !== 'string' || !MODES.includes(o.mode)) fail(`${path}.mode must be car, bike, transit or walk`);
-    return { method: 'maps', mode: o.mode as TravelMode, fallbackMinutes: int(o.fallbackMinutes, `${path}.fallbackMinutes`, 0, 600) };
+    return {
+      method: 'maps', mode: o.mode as TravelMode, fallbackMinutes: int(o.fallbackMinutes, `${path}.fallbackMinutes`, 0, 600),
+      ...(o.found === undefined ? {} : { found: foundOf(o.found, `${path}.found`) }),
+    };
   }
   return fail(`${path}.method must be "typed" or "maps"`);
 }
@@ -370,6 +394,7 @@ export function validateState(x: unknown): State {
     ...(labels === undefined ? {} : { labels }),
     ...(o.commitmentMarks === undefined ? {} : { commitmentMarks: commitmentMarks(o.commitmentMarks) }),
     ...(o.checkIns === undefined ? {} : { checkIns: checkIns(o.checkIns) }),
+    ...(o.mapsUsage === undefined ? {} : { mapsUsage: usageOf(o.mapsUsage) }),
     preferences: preferences(o.preferences ?? defaultPreferences, 'preferences'),
     blocks: arr(o.blocks ?? [], 'blocks').map((b, i) => block(b, `blocks[${i}]`)),
     approvedSoft: approvedSoft(o.approvedSoft),

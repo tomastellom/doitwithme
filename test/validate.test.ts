@@ -337,3 +337,33 @@ test('a class may link to a course, and nothing else may', () => {
   assert.throws(() => validateState(withCourse({}, { tasks: [task({ id: 'chem' })] })), /courseId does not match any course/);
   assert.throws(() => validateState(withCourse({}, { commitments: [commitment({ id: 'les', category: 'lesson', courseId: 'chem' })] })), /only for classes/);
 });
+
+const mapsState = (found: any, usage?: any) => ({
+  ...emptyState(),
+  places: [
+    { id: 'h', name: 'Home', kind: 'home', address: '1 Main St' },
+    { id: 'c', name: 'Campus', kind: 'campus', address: '9 Uni Rd' },
+  ],
+  commutes: [{ id: 'k', fromPlaceId: 'h', toPlaceId: 'c', repeats: null, marginMinutes: 10,
+    source: { method: 'maps', mode: 'transit', fallbackMinutes: 40, ...(found === undefined ? {} : { found }) } }],
+  ...(usage === undefined ? {} : { mapsUsage: usage }),
+});
+const foundOk = { minutes: 55, at: '2026-10-12', fromAddress: '1 Main St', toAddress: '9 Uni Rd' };
+
+test('a Maps commute may carry its last result, and the month count is validated', () => {
+  const ok: any = validateState(mapsState(foundOk, { month: '2026-10', count: 12 }));
+  assert.deepEqual(ok.commutes[0].source.found, foundOk);
+  assert.deepEqual(ok.mapsUsage, { month: '2026-10', count: 12 });
+  assert.equal('found' in (validateState(mapsState(undefined)) as any).commutes[0].source, false);
+  assert.equal((validateState(mapsState(undefined)) as any).mapsUsage, undefined);
+});
+
+test('a saved Maps result and the month count reject bad values', () => {
+  assert.throws(() => validateState(mapsState({ ...foundOk, minutes: 601 })), /found\.minutes/);
+  assert.throws(() => validateState(mapsState({ ...foundOk, minutes: 1.5 })), /found\.minutes/);
+  assert.throws(() => validateState(mapsState({ ...foundOk, at: 'today' })), /found\.at/);
+  assert.throws(() => validateState(mapsState({ ...foundOk, fromAddress: 'x'.repeat(501) })), /fromAddress/);
+  assert.throws(() => validateState(mapsState(foundOk, { month: '2026-1', count: 1 })), /mapsUsage\.month/);
+  assert.throws(() => validateState(mapsState(foundOk, { month: '2026-10', count: -1 })), /mapsUsage\.count/);
+  assert.throws(() => validateState(mapsState(foundOk, { month: '2026-10', count: 1000001 })), /mapsUsage\.count/);
+});

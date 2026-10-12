@@ -37,8 +37,16 @@ export function appliesOn(c: Commute, date: DateStr): boolean {
   return r.kind === 'weekly' ? r.weekdays.includes(weekdayOf(date)) : r.monthDays.includes(Number(date.slice(8)));
 }
 
-export function minutesFor(c: Commute): Minutes {
-  return c.source.method === 'typed' ? c.source.minutes : c.source.fallbackMinutes;
+// A Maps result is used only while both places still have the addresses it was found for; otherwise the typed fallback.
+export function minutesFor(c: Commute, places: Place[] = []): Minutes {
+  if (c.source.method === 'typed') return c.source.minutes;
+  const found = c.source.found;
+  if (found) {
+    const from = places.find((p) => p.id === c.fromPlaceId);
+    const to = places.find((p) => p.id === c.toPlaceId);
+    if (from && to && from.address === found.fromAddress && to.address === found.toAddress) return found.minutes;
+  }
+  return c.source.fallbackMinutes;
 }
 
 function routeFor(a: Place, b: Place, date: DateStr, commutes: Commute[]): Commute | null {
@@ -66,7 +74,7 @@ export function legsOn(date: DateStr, commitments: Commitment[], ctx: TravelCont
   const cost = (from: Place, to: Place): { minutes: Minutes; estimated: boolean; commuteId: string | null } => {
     const route = routeFor(from, to, date, ctx.commutes);
     return route
-      ? { minutes: minutesFor(route) + route.marginMinutes, estimated: false, commuteId: route.id }
+      ? { minutes: minutesFor(route, ctx.places) + route.marginMinutes, estimated: false, commuteId: route.id }
       : { minutes: ctx.allowance, estimated: true, commuteId: null };
   };
 

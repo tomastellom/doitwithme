@@ -70,3 +70,12 @@ test('answers older than 60 days are dropped when replanning', () => {
   assert.deepEqual(replan(state, TODAY).state.checkIns, [{ date: '2026-10-04', mood: 'okay' }]);
   assert.equal(replan(emptyState(), TODAY).state.checkIns, undefined);
 });
+
+test('later replans on a low day do not refill it', () => {
+  let state: any = { ...emptyState(), tasks: [task({ weeklyMinutes: 2000 })], checkIns: [{ date: TODAY, mood: 'low' as const }] };
+  state = replan(state, TODAY, 9 * 60).state;
+  assert.equal(minutes(state.blocks, TODAY), 120);
+  state = replan(state, TODAY, 12 * 60).state;
+  state = replan(state, TODAY, 15 * 60).state;
+  assert.equal(minutes(state.blocks, TODAY), 120);
+});

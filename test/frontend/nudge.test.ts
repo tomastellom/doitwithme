@@ -618,3 +618,17 @@ test('check-in: a skipped day offers a small Check in button while he rests', ()
   labelled(nudge.el, 'Check in')!.click();
   assert.deepEqual(calls, [['reopen']]);
 });
+
+test('check-in: his answer clears itself after a few seconds, like a cheer', () => {
+  const timers: Array<{ fn: Function; ms: number }> = [];
+  const calls: string[] = [];
+  const env = { setTimer: (fn: Function, ms: number) => { timers.push({ fn, ms }); return timers.length; }, clearTimer: () => {}, random: () => 0.9 };
+  const nudge: any = createNudge(dom, { approve() {}, undo() {}, dismiss() {}, okay() {}, retry() {}, cheerDone: () => calls.push('done') }, env);
+  nudge.update({ ...base, checkIn: { result: { mood: 'low', line: 'That is fine.', moved: 'Kept 2h00 today.' } } });
+  nudge.update({ ...base, checkIn: { result: { mood: 'low', line: 'That is fine.', moved: 'Kept 2h00 today.' } } });
+  assert.equal(timers.filter((t) => t.ms === 5000).length, 1, 'a redraw with the same answer does not restart the timer');
+  const clear = timers.find((t) => t.ms === 5000)!;
+  assert.ok(clear, 'a five second timer');
+  clear.fn();
+  assert.deepEqual(calls, ['done']);
+});

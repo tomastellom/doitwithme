@@ -35,3 +35,21 @@ test('the moved line names the minutes kept and the days', () => {
   assert.equal(movedLine({ mood: 'low', minutes: 180, dates: ['2026-10-08', '2026-10-09'] }, 120), 'Kept 2h00 today, moved 3h00 to Thu and Fri.');
   assert.equal(movedLine({ mood: 'low', minutes: 0, dates: [] }, 120), 'Nothing needed to move.');
 });
+
+test('when nothing could be moved the line says so instead of naming no day', () => {
+  const line = movedLine({ mood: 'low', minutes: 440, dates: [] }, 120);
+  assert.doesNotMatch(line, /undefined/);
+  assert.match(line, /Kept 2h00 today/);
+  assert.match(line, /7h20/);
+});
+
+test('a low day can be reopened to change the answer, even when the check-in is off', () => {
+  const low = state({ checkIns: [{ date: today, mood: 'low' }] });
+  assert.equal(canReopen(low, today), true);
+  assert.equal(shouldAsk(low, today, true), true);
+  assert.equal(shouldAsk(low, today, false), false);
+  const off = state({ preferences: { checkInEnabled: false }, checkIns: [{ date: today, mood: 'low' }] });
+  assert.equal(canReopen(off, today), true);
+  assert.equal(shouldAsk(off, today, true), true);
+  assert.equal(canReopen(state({ preferences: { checkInEnabled: false }, checkIns: [{ date: today, mood: 'skipped' }] }), today), false);
+});

@@ -7,12 +7,18 @@ export const todayMood = (state, today) => {
 
 const hasBlocks = (state, today) => state.blocks.some((b) => b.date === today);
 
-export const canReopen = (state, today) =>
-  Boolean(state) && state.preferences.checkInEnabled && todayMood(state, today) === 'skipped';
+// A skipped day can be answered later; a low day can always be changed, even if the check-in was switched off since.
+export const canReopen = (state, today) => {
+  if (!state) return false;
+  const mood = todayMood(state, today);
+  return mood === 'low' || (mood === 'skipped' && state.preferences.checkInEnabled);
+};
 
-export const shouldAsk = (state, today, reopened) =>
-  Boolean(state) && state.preferences.checkInEnabled && hasBlocks(state, today)
-    && (todayMood(state, today) === null || (reopened && todayMood(state, today) === 'skipped'));
+export const shouldAsk = (state, today, reopened) => {
+  if (!state) return false;
+  if (reopened && canReopen(state, today)) return true;
+  return state.preferences.checkInEnabled && hasBlocks(state, today) && todayMood(state, today) === null;
+};
 
 // The wording is rule-based and picked by the date, so one day always reads the same.
 const pick = (lines, date) => lines[Number(date.slice(8)) % lines.length];
@@ -29,6 +35,7 @@ export const replyLine = (mood, date) => pick(REPLIES[mood], date);
 
 export function movedLine(result, minimum) {
   if (result.minutes <= 0) return 'Nothing needed to move.';
+  if (result.dates.length === 0) return `Kept ${duration(minimum)} today. ${duration(result.minutes)} did not fit in the coming days, so it shows as a warning.`;
   const days = result.dates.map((d) => WEEKDAYS[weekdayOf(d)]);
   const where = days.length > 1 ? `${days.slice(0, -1).join(', ')} and ${days[days.length - 1]}` : days[0];
   return `Kept ${duration(minimum)} today, moved ${duration(result.minutes)} to ${where}.`;

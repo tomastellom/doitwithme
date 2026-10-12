@@ -84,10 +84,11 @@ export function planDays(input: PlanInput, opened: ReadonlySet<DateStr> = new Se
         .filter((s) => s.end > s.start);
     }
 
-    // A low day keeps only a minimum of generated work; minutes already ticked done count toward it.
+    // A low day keeps only a minimum of generated work. Everything already kept on it counts toward that
+    // (ticked, or simply passed), so a later replan never refills the day.
     const low = (input.lowDays ?? []).includes(date);
     let dayUsed = low
-      ? input.pastBlocks.filter((b) => b.date === date && b.status === 'done').reduce((t, b) => t + (b.end - b.start), 0)
+      ? input.pastBlocks.filter((b) => b.date === date && b.status !== 'missed' && b.status !== 'waived').reduce((t, b) => t + (b.end - b.start), 0)
       : 0;
 
     for (const slot of slots) {

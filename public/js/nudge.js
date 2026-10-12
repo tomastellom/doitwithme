@@ -422,11 +422,13 @@ export function createNudge(dom, handlers, env = {}) {
     update(next) {
       view = { notice: null, cheer: null, ...next };
       // The cheer goes away by itself after a few seconds.
-      if (view.cheer && view.cheer !== cheerShown && typeof env.setTimer === 'function' && handlers.cheerDone) {
+      // A check-in answer is rebuilt on every draw, so it is compared by what it says, not by identity.
+      const shown = view.cheer ?? (view.checkIn && view.checkIn.result ? JSON.stringify(view.checkIn.result) : null);
+      if (shown && shown !== cheerShown && typeof env.setTimer === 'function' && handlers.cheerDone) {
         if (cheerTimer !== null && typeof env.clearTimer === 'function') env.clearTimer(cheerTimer);
         cheerTimer = env.setTimer(() => { cheerTimer = null; handlers.cheerDone(); }, CHEER_MS);
       }
-      cheerShown = view.cheer;
+      cheerShown = shown;
       const attentionNow = needsAttention(view);
       if (animated && wasAttention && !attentionNow) {
         holding = true;

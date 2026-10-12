@@ -8,11 +8,13 @@ import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { addDays, weekdayOf } from './dates.ts';
+import { applyCheckIn } from './checkin.ts';
 import { describeWarnings, replan, warningKey } from './replan.ts';
 import { loadState, saveState } from './store.ts';
 import type { State } from './types.ts';
 import {
   ValidationError,
+  validateCheckInRequest,
   validateDismissRequest,
   validateEstimateRequest,
   validateReplanRequest,
@@ -193,6 +195,13 @@ export function createApp(
         }
         saveState(statePath, result.state);
         return send(res, 200, body);
+      }
+      if (req.method === 'POST' && pathname === '/api/checkin') {
+        const request = validateCheckInRequest(await readJson(req));
+        const { state, moved } = applyCheckIn(loadState(statePath), request.mood, request);
+        const { result, body } = replanned(state, request);
+        saveState(statePath, result.state);
+        return send(res, 200, { ...body, checkIns: result.state.checkIns ?? [], moved });
       }
       if (req.method === 'POST' && pathname === '/api/estimate') {
         const request = validateEstimateRequest(await readJson(req));

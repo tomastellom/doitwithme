@@ -264,7 +264,7 @@ test('the faces differ where board R says they do', () => {
   assert.equal(byClass(draw('working'), 'mascot-ring').length, 1);
   assert.equal(byClass(draw('worried'), 'mascot-eye')[0].getAttribute('transform'), 'rotate(14 42 82)');
   assert.equal(byClass(draw('worried'), 'mascot-eye')[1].getAttribute('transform'), 'rotate(-14 78 82)');
-  assert.equal(byClass(draw('peeking'), 'mascot-mask').length, 1);
+  assert.equal(byClass(draw('peeking'), 'mascot-eye').length, 2);
   assert.equal(byClass(draw('blink'), 'mascot-eye')[0].getAttribute('height'), '7');
   assert.equal(byClass(draw('sleepy'), 'mascot-eye')[0].getAttribute('height'), '8');
   assert.equal(byClass(draw('surprised'), 'mascot-eye')[0].getAttribute('height'), '44');
@@ -551,7 +551,7 @@ test('with nothing to say, the pointer on his corner makes him peek over the edg
   assert.equal(face(), 'resting');
   nudge.el.dispatch('mouseenter');
   assert.equal(face(), 'peeking');
-  assert.equal(byClass(nudge.el, 'mascot-mask').length, 1, 'the wall he looks over is drawn');
+  assert.equal(byClass(nudge.el, 'mascot-eye').length, 2);
   nudge.el.dispatch('mouseleave');
   assert.equal(face(), 'resting');
 });

@@ -35,9 +35,10 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 /* Resting: the mascot waits below the screen edge. The corner stays hoverable and brings it up. */
 .nudge[data-state="resting"] { min-width: 200px; min-height: 180px; display: flex; align-items: flex-end; justify-content: flex-end; }
 .nudge[data-state="resting"] .nudge-body { transform: translateY(calc(100% + 40px)); }
-.nudge[data-state="resting"]:hover .nudge-body, .nudge[data-state="resting"]:focus-within .nudge-body { transform: none; }
+.nudge[data-state="resting"]:hover .nudge-body { transform: translateY(calc(100% - 56px)); }
+.nudge[data-state="resting"][data-open] .nudge-body, .nudge[data-state="resting"]:focus-within .nudge-body { transform: none; }
 .nudge[data-state="resting"] .quiet { opacity: 0; visibility: hidden; transition: opacity .28s ease, visibility 0s linear .28s; }
-.nudge[data-state="resting"]:hover .quiet, .nudge[data-state="resting"]:focus-within .quiet { opacity: 1; visibility: visible; transition: opacity .28s ease .08s, visibility 0s; }
+.nudge[data-state="resting"][data-open] .quiet, .nudge[data-state="resting"]:focus-within .quiet { opacity: 1; visibility: visible; transition: opacity .28s ease .08s, visibility 0s; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .notice { color: var(--paper); font-family: var(--font-mono); font-size: 12px; }
 .say { width: 430px; max-width: calc(100vw - 200px); background: var(--ink); color: var(--paper); padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; }
@@ -277,8 +278,6 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 .mascot-confetti.c1 { fill: var(--gym); }
 .mascot-confetti.c2 { fill: var(--admin); }
 .mascot-confetti.c3 { fill: var(--ink); }
-.mascot-mask { fill: var(--paper); }
-.mascot-edge { fill: var(--ink); }
 
 /* Each field spans a label row and a control row shared with its neighbours, so a label that wraps never pushes one box lower than the rest. */
 @supports (grid-template-rows: subgrid) {

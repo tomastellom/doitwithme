@@ -38,8 +38,6 @@ export const FACES = {
   ],
   peeking: (svg) => [
     ...eyePair(...RESTING)(svg),
-    svg('rect', { class: 'mascot-mask', x: 0, y: 84, width: 120, height: 80 }),
-    svg('rect', { class: 'mascot-edge', x: 0, y: 84, width: 120, height: 4 }),
   ],
 };
 
@@ -322,7 +320,7 @@ export function createNudge(dom, handlers, env = {}) {
       mascot = createMascot(dom, { face, badge, width });
       mascotKey = key;
       // Clicking him is an invitation to talk: the text box takes the keyboard.
-      mascot.addEventListener('click', () => { if (askInput && typeof askInput.focus === 'function') askInput.focus(); });
+      mascot.addEventListener('click', () => { el.setAttribute('data-open', ''); if (askInput && typeof askInput.focus === 'function') askInput.focus(); });
     } else {
       mascot.setFace(face, motion());
       if (badge !== null) mascot.setBadge(badge);
@@ -351,7 +349,7 @@ export function createNudge(dom, handlers, env = {}) {
   // Pressing on him while he rests must not give the corner keyboard focus, or he would stay up until you click elsewhere.
   // The pointer on his corner makes him peek (only while he has nothing to say).
   el.addEventListener('mouseenter', () => { hovered = true; updateFace(); });
-  el.addEventListener('mouseleave', () => { hovered = false; updateFace(); });
+  el.addEventListener('mouseleave', () => { hovered = false; el.removeAttribute('data-open'); updateFace(); });
   el.addEventListener('mousedown', (e) => {
     const tag = ((e.target && (e.target.tagName || e.target.tag)) || '').toLowerCase();
     if (el.getAttribute('data-state') === 'resting' && tag !== 'input') e.preventDefault();

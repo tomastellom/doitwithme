@@ -117,3 +117,10 @@ Anything that differs from the boards: spacing, sizes, colors, wrapping, fonts n
 - Week or Day: open a linked class. Above "Skip this day" a small block shows Go, Skippable, Optional or No advice yet, the reasons, and "Advice only. You decide."
 - Try it: a course with attendance 0, recorded Yes, and a weekly target you are behind on shows Skippable. Press "Skip this day" and the freed hour fills with study.
 - A class with no course shows no advice block.
+
+## Nudge skip offer
+
+- Set up: a study course with attendance 0 and lectures recorded Yes, a weekly target you are behind on, and a weekly class linked to that course.
+- Within the next 3 days Nudge comes up with "Chemistry lecture, Tomorrow 10:00, is recorded and counts 0%." and the line "Skipping it frees 2h00 for Chemistry. I will only do it if you say so." Buttons: Skip it, Fix it myself, Leave it. The skip offer comes after the shortfall items, so use his > button to reach it.
+- Skip it: Nudge looks happy, says "Skipped. 2h00 of Chemistry moved in." with Okay and Undo, and the freed hour fills with study. Undo puts the class back.
+- Leave it hides that one day. The other days stay offered. A class that is not recorded, or counts for the grade, is never offered.

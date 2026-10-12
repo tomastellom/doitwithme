@@ -9,6 +9,8 @@ import { extname, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { addDays, weekdayOf } from './dates.ts';
 import { applyCheckIn } from './checkin.ts';
+import { attendanceFor } from './attendance.ts';
+import type { AttendanceAdvice } from './attendance.ts';
 import { describeWarnings, replan, warningKey } from './replan.ts';
 import { loadState, saveState } from './store.ts';
 import type { State } from './types.ts';
@@ -88,6 +90,13 @@ interface Clock {
 
 function replanned(state: State, clock: Clock) {
   const result = replan(state, clock.today, clock.nowMinutes, clock.horizonDays);
+  // Advice must never be able to break a replan.
+  let attendance: AttendanceAdvice[] = [];
+  try {
+    attendance = attendanceFor(result.state, result.warnings, clock.today, clock.horizonDays);
+  } catch {
+    attendance = [];
+  }
   return {
     result,
     body: {
@@ -96,6 +105,7 @@ function replanned(state: State, clock: Clock) {
       approvedSoft: result.state.approvedSoft,
       dismissed: result.state.dismissed,
       travel: result.travel,
+      attendance,
     },
   };
 }

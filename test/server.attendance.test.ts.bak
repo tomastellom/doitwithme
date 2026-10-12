@@ -1,0 +1,37 @@
+import { test, before, after } from 'node:test';
+import assert from 'node:assert/strict';
+import type { AddressInfo } from 'node:net';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { Server } from 'node:http';
+import { createApp } from '../src/server.ts';
+import { emptyState } from '../src/store.ts';
+import { commitment, task } from './helpers.ts';
+
+let server: Server;
+let base: string;
+const json = { 'content-type': 'application/json' };
+const clock = { today: '2026-10-05', horizonDays: 15 };
+
+before(async () => {
+  server = createApp(join(mkdtempSync(join(tmpdir(), 'doitwithme-attendance-')), 'db.json'));
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+});
+after(() => { server.close(); });
+
+test('the replan body carries advice for linked classes, and an empty list otherwise', async () => {
+  const course = { credits: 3, difficulty: 3, examOnly: false, weeklyGraded: false, lab: false, syllabus: '', attendanceWeight: 0, recorded: 'yes' };
+  const state = {
+    ...emptyState(),
+    tasks: [task({ id: 'chem', title: 'Chemistry', weeklyMinutes: 2000, course })],
+    commitments: [commitment({ id: 'lec', category: 'class', courseId: 'chem', pattern: { kind: 'weekly', weekdays: [1], from: '2026-10-05', to: '2026-12-31' } })],
+  };
+  assert.equal((await fetch(`${base}/api/state`, { method: 'PUT', headers: json, body: JSON.stringify(state) })).status, 200);
+  const body = await (await fetch(`${base}/api/replan`, { method: 'POST', headers: json, body: JSON.stringify(clock) })).json();
+  assert.deepEqual(body.attendance.map((a: any) => [a.commitmentId, a.date, a.verdict]), [['lec', '2026-10-05', 'skippable'], ['lec', '2026-10-12', 'skippable'], ['lec', '2026-10-19', 'skippable']]);
+  assert.match(body.attendance[0].reasons[0], /Chemistry is \d+ min short/);
+  assert.equal((await fetch(`${base}/api/state`, { method: 'PUT', headers: json, body: JSON.stringify(emptyState()) })).status, 200);
+  assert.deepEqual((await (await fetch(`${base}/api/replan`, { method: 'POST', headers: json, body: JSON.stringify(clock) })).json()).attendance, []);
+});

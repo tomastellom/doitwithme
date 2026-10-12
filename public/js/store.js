@@ -7,7 +7,7 @@ export function createStore(api, getClock) {
   let current = {
     status: 'loading', state: null, warnings: [], approvedSoft: [], dismissed: [], travel: [], maps: 'unavailable', estimating: false,
     isEmpty: false, error: null, busy: false, confirm: null, notice: null, formError: null, cheer: null,
-    reopened: false, checkInResult: null,
+    reopened: false, checkInResult: null, attendance: [],
   };
   const listeners = new Set();
 
@@ -28,6 +28,7 @@ export function createStore(api, getClock) {
     state: { ...current.state, blocks: r.blocks, approvedSoft: r.approvedSoft, dismissed: r.dismissed, ...(r.checkIns ? { checkIns: r.checkIns } : {}) },
     warnings: r.warnings,
     travel: r.travel ?? [],
+    attendance: r.attendance ?? [],
     approvedSoft: r.approvedSoft,
     dismissed: r.dismissed,
     ...extra,

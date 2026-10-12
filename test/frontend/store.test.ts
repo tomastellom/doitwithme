@@ -355,3 +355,13 @@ test('reopening a skipped check-in sets the flag and an answer clears it', async
   await store.answerCheckIn('good');
   assert.equal(store.get().reopened, false);
 });
+
+test('the store keeps the attendance advice from every replan and starts empty', async () => {
+  const { store } = make({ replan: () => result({ attendance: [{ commitmentId: 'lec', date: '2026-10-05', verdict: 'go', reasons: ['Labs need you there.'] }] }) });
+  assert.deepEqual(store.get().attendance, []);
+  await store.load();
+  assert.equal(store.get().attendance[0].verdict, 'go');
+  const bare = make();
+  await bare.store.load();
+  assert.deepEqual(bare.store.get().attendance, []);
+});

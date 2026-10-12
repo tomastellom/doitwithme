@@ -157,10 +157,13 @@ export interface WarningDetail {
   minutes?: number;
   costMinutes?: number;
   placeName?: string;
+  commitmentId?: string;
+  commitmentTitle?: string;
+  start?: Minutes;
 }
 
 export interface Warning {
-  kind: 'deadline-short' | 'weekly-short' | 'soft-time-used' | 'soft-offer' | 'address-missing' | 'travel-tight';
+  kind: 'deadline-short' | 'weekly-short' | 'soft-time-used' | 'soft-offer' | 'address-missing' | 'travel-tight' | 'skip-offer';
   message: string;
   detail?: WarningDetail;
 }

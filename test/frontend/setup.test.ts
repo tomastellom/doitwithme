@@ -627,3 +627,35 @@ test('the Label field in the commitment and task forms offers the labels by name
   const options = byTag(byKey(form, 'f-category'), 'option').map((o: any) => [o.value, textOf(o)]);
   assert.deepEqual(options, [['study', 'Learning'], ['label-p', 'Piano'], ['other', 'Other']]);
 });
+
+test('the attendance rows are only on study tasks, and the Course choice only on classes', () => {
+  const { render } = setup(stateWith({ tasks: [...stateWith().tasks, { id: 'cc', title: 'Chem course', category: 'study', weeklyMinutes: 60, maxBlock: 60, onePerDay: false, priority: 3, course: { credits: 3, difficulty: 3, examOnly: false, weeklyGraded: false, lab: false, syllabus: '' } }] }));
+  const study: any = render('tasks', 'chem');
+  for (const k of ['f-attendance', 'f-examShare', 'f-recorded-yes', 'f-recorded-no', 'f-recorded-unknown']) assert.ok(byKey(study, k), k);
+  const gym: any = render('tasks', 'gym');
+  for (const k of ['f-attendance', 'f-examShare', 'f-recorded-yes']) assert.equal(byKey(gym, k), undefined, k);
+  const lecture: any = render('commitments', 'chem-lecture');
+  assert.ok(byKey(lecture, 'f-courseId'));
+  assert.match(textOf(byKey(lecture, 'f-courseId')), /No course/);
+  assert.match(textOf(byKey(lecture, 'f-courseId')), /Chem course/);
+  const lesson: any = render('commitments', 'lesson-1');
+  assert.equal(byKey(lesson, 'f-courseId'), undefined);
+});
+
+test('typing the evidence and picking the course saves both', async () => {
+  const withCourse = stateWith({ tasks: stateWith().tasks.map((t: any) => (t.id === 'chem' ? { ...t, course: { credits: 3, difficulty: 3, examOnly: false, weeklyGraded: false, lab: false, syllabus: '' } } : t)) });
+  const first = setup(withCourse);
+  const el: any = first.render('tasks', 'chem');
+  type(el, 'f-attendance', '0');
+  byKey(el, 'f-recorded-yes').click();
+  await submit(el);
+  const saved = first.calls[0].tasks.find((t: any) => t.id === 'chem').course;
+  assert.deepEqual([saved.attendanceWeight, saved.recorded], [0, 'yes']);
+  const second = setup(withCourse);
+  const lec: any = second.render('commitments', 'chem-lecture');
+  const select = byKey(lec, 'f-courseId');
+  select.value = 'chem';
+  select.dispatch('change');
+  await submit(lec);
+  assert.equal(second.calls[0].commitments.find((c: any) => c.id === 'chem-lecture').courseId, 'chem');
+});

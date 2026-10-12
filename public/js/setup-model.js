@@ -44,14 +44,14 @@ const byNumber = (a, b) => a - b;
 export const commitmentKind = {
   blank(today) {
     return {
-      title: '', category: 'class', start: '09:00', end: '10:00', buffer: '0', placeId: '',
+      title: '', category: 'class', start: '09:00', end: '10:00', buffer: '0', placeId: '', courseId: '',
       repeats: 'weekly', weekdays: [1], from: today, to: addDays(today, 112), date: today, exceptions: [],
     };
   },
   toDraft(c) {
     const weekly = c.pattern.kind === 'weekly';
     return {
-      title: c.title, category: c.category, start: hhmm(c.start), end: hhmm(c.end), buffer: String(c.bufferBefore), placeId: c.placeId ?? '',
+      title: c.title, category: c.category, start: hhmm(c.start), end: hhmm(c.end), buffer: String(c.bufferBefore), placeId: c.placeId ?? '', courseId: c.courseId ?? '',
       repeats: weekly ? 'weekly' : 'once',
       weekdays: weekly ? [...c.pattern.weekdays] : [1],
       from: weekly ? c.pattern.from : '', to: weekly ? c.pattern.to : '',
@@ -82,8 +82,13 @@ export const commitmentKind = {
     }
     if (!isDates(d.exceptions)) return { error: 'Cancelled dates must be real dates.' };
     if (d.placeId && !(state.places ?? []).some((p) => p.id === d.placeId)) return { error: 'Pick a place from the list.' };
+    if (d.category === 'class' && d.courseId && !(state.tasks ?? []).some((t) => t.id === d.courseId && t.course)) return { error: 'Pick a course from the list.' };
     return {
-      item: { id, title, category: d.category, start, end, pattern, exceptions: [...d.exceptions].sort(), bufferBefore: buffer, ...(d.placeId ? { placeId: d.placeId } : {}) },
+      item: {
+        id, title, category: d.category, start, end, pattern, exceptions: [...d.exceptions].sort(), bufferBefore: buffer,
+        ...(d.placeId ? { placeId: d.placeId } : {}),
+        ...(d.category === 'class' && d.courseId ? { courseId: d.courseId } : {}),
+      },
     };
   },
   summary(c) {
@@ -127,6 +132,7 @@ export const taskKind = {
     return {
       title: '', category: 'study', weekly: '', maxBlock: '90', onePerDay: false, priority: '3',
       credits: '', difficulty: '3', examOnly: false, weeklyGraded: false, lab: false, syllabus: '',
+      attendance: '', recorded: 'unknown', examShare: '',
     };
   },
   toDraft(t) {
@@ -136,6 +142,9 @@ export const taskKind = {
       credits: t.course ? String(t.course.credits) : '', difficulty: t.course ? String(t.course.difficulty) : '3',
       examOnly: t.course ? t.course.examOnly : false, weeklyGraded: t.course ? t.course.weeklyGraded : false,
       lab: t.course ? t.course.lab : false, syllabus: t.course ? t.course.syllabus : '',
+      attendance: t.course && t.course.attendanceWeight !== undefined ? String(t.course.attendanceWeight) : '',
+      recorded: t.course && t.course.recorded ? t.course.recorded : 'unknown',
+      examShare: t.course && t.course.examShare !== undefined ? String(t.course.examShare) : '',
     };
   },
   fromDraft(d, id) {
@@ -159,7 +168,16 @@ export const taskKind = {
         const difficulty = parseWhole(d.difficulty, 1, 5);
         if (difficulty === null) return { error: 'Difficulty must be 1 to 5.' };
         if (d.syllabus.length > 20000) return { error: 'Syllabus text can be at most 20000 characters.' };
-        course = { credits, difficulty, examOnly: Boolean(d.examOnly), weeklyGraded: Boolean(d.weeklyGraded), lab: Boolean(d.lab), syllabus: d.syllabus };
+        const attendance = String(d.attendance ?? '').trim() === '' ? undefined : parseWhole(d.attendance, 0, 100);
+        if (attendance === null) return { error: 'Attendance must be a whole percent from 0 to 100, or empty.' };
+        const examShare = String(d.examShare ?? '').trim() === '' ? undefined : parseWhole(d.examShare, 0, 100);
+        if (examShare === null) return { error: 'Exams share must be a whole percent from 0 to 100, or empty.' };
+        course = {
+          credits, difficulty, examOnly: Boolean(d.examOnly), weeklyGraded: Boolean(d.weeklyGraded), lab: Boolean(d.lab), syllabus: d.syllabus,
+          ...(attendance === undefined ? {} : { attendanceWeight: attendance }),
+          ...(d.recorded === 'yes' || d.recorded === 'no' ? { recorded: d.recorded } : {}),
+          ...(examShare === undefined ? {} : { examShare }),
+        };
       }
     }
     return { item: { id, title, category: d.category, weeklyMinutes: weekly, maxBlock, onePerDay: Boolean(d.onePerDay), priority, ...(course ? { course } : {}) } };
@@ -409,12 +427,25 @@ export const KIND_IDS = ['commitments', 'tasks', 'due-dates', 'labels', 'places'
 const listOf = (state, spec) => (spec.list === 'labels' ? labelsOf(state) : state[spec.list] ?? []);
 export const itemsOf = (state, kindId) => (KINDS[kindId].list ? listOf(state, KINDS[kindId]) : []);
 
+// A class that pointed at a course which is gone or has no details any more simply loses the link.
+function unlinkCourse(state, taskId) {
+  return {
+    ...state,
+    commitments: (state.commitments ?? []).map((c) => {
+      if (c.courseId !== taskId) return c;
+      const { courseId, ...rest } = c;
+      return rest;
+    }),
+  };
+}
+
 export function applyItem(state, kindId, item) {
   const spec = KINDS[kindId];
   if (spec.single) return { ...state, preferences: item };
   const list = listOf(state, spec);
   const exists = list.some((x) => x.id === item.id);
-  return { ...state, [spec.list]: exists ? list.map((x) => (x.id === item.id ? item : x)) : [...list, item] };
+  const next = { ...state, [spec.list]: exists ? list.map((x) => (x.id === item.id ? item : x)) : [...list, item] };
+  return kindId === 'tasks' && !item.course ? unlinkCourse(next, item.id) : next;
 }
 
 export function removeItem(state, kindId, id) {
@@ -427,7 +458,10 @@ export function removeItem(state, kindId, id) {
     next.tasks = state.tasks.map(move);
     next.blocks = (state.blocks ?? []).map(move);
   }
-  if (kindId === 'tasks') next.deadlines = next.deadlines.filter((d) => d.taskId !== id);
+  if (kindId === 'tasks') {
+    next.deadlines = next.deadlines.filter((d) => d.taskId !== id);
+    next.commitments = unlinkCourse(next, id).commitments;
+  }
 
   if (kindId === 'places') {
     next.commutes = (state.commutes ?? []).filter((c) => c.fromPlaceId !== id && c.toPlaceId !== id);

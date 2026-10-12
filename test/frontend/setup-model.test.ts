@@ -368,3 +368,51 @@ test('the scale preferences round trip, blank hours per credit means none, and l
   assert.match(err({ fullLoadHours: '101' }), /full load/);
   assert.equal(preferencesKind.toDraft({ ...s.preferences, hoursPerCredit: undefined, normalCredits: undefined, fullLoadHours: undefined }).normalCredits, '30');
 });
+
+const courseTask = (course: any = {}) => ({ id: 'chem', title: 'Chemistry', category: 'study', weeklyMinutes: 360, maxBlock: 90, onePerDay: false, priority: 2,
+  course: { credits: 3, difficulty: 3, examOnly: false, weeklyGraded: false, lab: false, syllabus: '', ...course } });
+
+test('attendance evidence round-trips, and blank means not known', () => {
+  const t = courseTask({ attendanceWeight: 0, recorded: 'yes', examShare: 70 });
+  const draft = taskKind.toDraft(t);
+  assert.deepEqual([draft.attendance, draft.recorded, draft.examShare], ['0', 'yes', '70']);
+  assert.deepEqual(taskKind.fromDraft(draft, 'chem', example).item, t);
+  const bare = taskKind.toDraft(courseTask());
+  assert.deepEqual([bare.attendance, bare.recorded, bare.examShare], ['', 'unknown', '']);
+  const course = taskKind.fromDraft(bare, 'chem', example).item.course;
+  assert.equal('attendanceWeight' in course || 'examShare' in course, false);
+  assert.equal(course.recorded, undefined);
+});
+
+test('attendance evidence is refused in plain sentences', () => {
+  const draft = { ...taskKind.toDraft(courseTask()), title: 'Chemistry' };
+  const err = (over: any) => taskKind.fromDraft({ ...draft, ...over }, 'chem', example).error;
+  assert.match(err({ attendance: '101' }), /Attendance/);
+  assert.match(err({ attendance: '2.5' }), /Attendance/);
+  assert.match(err({ attendance: 'x' }), /Attendance/);
+  assert.match(err({ examShare: '-1' }), /Exams/);
+  assert.equal(err({ attendance: '0' }), undefined);
+});
+
+test('a class names its course, and only a class with a real course may', () => {
+  const s = { ...st(), tasks: [...st().tasks, courseTask()] };
+  const c = s.commitments.find((x: any) => x.id === 'chem-lecture');
+  const draft = { ...commitmentKind.toDraft(c), courseId: 'chem' };
+  assert.equal(commitmentKind.fromDraft(draft, c.id, s).item.courseId, 'chem');
+  assert.equal('courseId' in commitmentKind.fromDraft({ ...draft, courseId: '' }, c.id, s).item, false);
+  assert.match(commitmentKind.fromDraft({ ...draft, courseId: 'gym' }, c.id, s).error, /course/);
+  assert.equal('courseId' in commitmentKind.fromDraft({ ...draft, category: 'lesson' }, c.id, s).item, false, 'the link is dropped for other categories');
+  assert.equal(commitmentKind.blank('2026-10-05').courseId, '');
+  assert.equal(commitmentKind.toDraft({ ...c, courseId: 'chem' }).courseId, 'chem');
+});
+
+test('removing a course task, or saving it without course details, unlinks its classes', () => {
+  const s: any = { ...st(), tasks: [...st().tasks, courseTask()] };
+  s.commitments = s.commitments.map((c: any) => (c.id === 'chem-lecture' ? { ...c, courseId: 'chem' } : c));
+  assert.equal('courseId' in removeItem(s, 'tasks', 'chem').commitments.find((c: any) => c.id === 'chem-lecture'), false);
+  const noCourse = applyItem(s, 'tasks', { ...courseTask(), course: undefined });
+  assert.equal('courseId' in noCourse.commitments.find((c: any) => c.id === 'chem-lecture'), false);
+  const kept = applyItem(s, 'tasks', courseTask({ attendanceWeight: 5 }));
+  assert.equal(kept.commitments.find((c: any) => c.id === 'chem-lecture').courseId, 'chem');
+  assert.equal(s.commitments.find((c: any) => c.id === 'chem-lecture').courseId, 'chem', 'the input is not changed');
+});

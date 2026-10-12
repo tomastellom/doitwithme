@@ -28,6 +28,9 @@ function labelPreview(dom, d) {
 }
 
 const study = (d) => d.category === 'study';
+const classes = (d) => d.category === 'class';
+const courseOptions = (state) => [{ value: '', label: 'No course' }, ...(state.tasks ?? []).filter((t) => t.course).map((t) => ({ value: t.id, label: t.title }))];
+const recordedOptions = [{ value: 'unknown', label: 'Not sure' }, { value: 'yes', label: 'Yes' }, { value: 'no', label: 'No' }];
 const difficultyOptions = () => [
   { value: '1', label: '1 (very easy)' }, { value: '2', label: '2' }, { value: '3', label: '3' },
   { value: '4', label: '4' }, { value: '5', label: '5 (very hard)' },
@@ -64,11 +67,12 @@ function estimateBlock(dom, est) {
 export const FIELDS = {
   commitments: [
     { name: 'title', label: 'Title', type: 'text', span: 2 },
-    { name: 'category', label: 'Label', type: 'select', options: (state) => labelOptions(state) },
+    { name: 'category', label: 'Label', type: 'select', redraw: true, options: (state) => labelOptions(state) },
     { name: 'start', label: 'Starts', type: 'text', placeholder: '16:00' },
     { name: 'end', label: 'Ends', type: 'text', placeholder: '17:00' },
     { name: 'buffer', label: 'Buffer before, min', type: 'text', inputmode: 'numeric' },
     { name: 'placeId', label: 'Place', type: 'select', options: (state) => [{ value: '', label: 'No place' }, ...placeOptions(state)] },
+    { name: 'courseId', label: 'Course', type: 'select', options: (state) => courseOptions(state), show: classes },
     { name: 'repeats', label: 'Repeats', type: 'choice', options: [{ value: 'once', label: 'Once' }, { value: 'weekly', label: 'Weekly' }] },
     { name: 'weekdays', label: 'Weekdays', type: 'weekdays', span: 2, show: weekly },
     { name: 'date', label: 'Date', type: 'date', show: once },
@@ -95,6 +99,9 @@ export const FIELDS = {
     { name: 'examOnly', label: 'Graded by exams only', type: 'choice', options: yesNo, show: study },
     { name: 'weeklyGraded', label: 'Weekly graded work', type: 'choice', options: yesNo, show: study },
     { name: 'lab', label: 'Has a lab', type: 'choice', options: yesNo, show: study },
+    { name: 'attendance', label: 'Attendance counts, % of grade (blank if unknown)', type: 'text', inputmode: 'numeric', show: study },
+    { name: 'recorded', label: 'Lectures recorded', type: 'choice', options: recordedOptions, show: study },
+    { name: 'examShare', label: 'Exams share, % of grade (blank if unknown)', type: 'text', inputmode: 'numeric', show: study },
     { name: 'syllabus', label: 'Syllabus, optional (paste the text)', type: 'textarea', span: 3, show: study },
     { name: 'estimate', type: 'custom', span: 3, show: study, render: (dom, d, ctx) => estimateBlock(dom, ctx.estimate) },
   ],

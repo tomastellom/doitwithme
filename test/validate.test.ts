@@ -312,3 +312,28 @@ test('a check-in request needs a known mood and a clock', () => {
   assert.throws(() => validateCheckInRequest({ mood: 'low' }), /today/);
   assert.throws(() => validateCheckInRequest({ ...clock }), /mood/);
 });
+
+const withCourse = (course: any, over: any = {}) => ({
+  ...emptyState(),
+  tasks: [task({ id: 'chem', course: { credits: 3, difficulty: 3, examOnly: false, weeklyGraded: false, lab: false, syllabus: '', ...course } })],
+  commitments: [commitment({ id: 'lec', category: 'class', courseId: 'chem' })],
+  ...over,
+});
+
+test('attendance evidence on a course is optional and validated', () => {
+  const ok = validateState(withCourse({ attendanceWeight: 0, recorded: 'yes', examShare: 70 }));
+  assert.deepEqual([ok.tasks[0].course?.attendanceWeight, ok.tasks[0].course?.recorded, ok.tasks[0].course?.examShare], [0, 'yes', 70]);
+  const bare = validateState(withCourse({}));
+  assert.equal('attendanceWeight' in bare.tasks[0].course!, false);
+  assert.throws(() => validateState(withCourse({ attendanceWeight: 101 })), /attendanceWeight/);
+  assert.throws(() => validateState(withCourse({ attendanceWeight: 2.5 })), /attendanceWeight/);
+  assert.throws(() => validateState(withCourse({ examShare: -1 })), /examShare/);
+  assert.throws(() => validateState(withCourse({ recorded: 'maybe' })), /recorded/);
+});
+
+test('a class may link to a course, and nothing else may', () => {
+  assert.equal(validateState(withCourse({})).commitments[0].courseId, 'chem');
+  assert.throws(() => validateState(withCourse({}, { commitments: [commitment({ id: 'lec', category: 'class', courseId: 'nope' })] })), /courseId does not match any course/);
+  assert.throws(() => validateState(withCourse({}, { tasks: [task({ id: 'chem' })] })), /courseId does not match any course/);
+  assert.throws(() => validateState(withCourse({}, { commitments: [commitment({ id: 'les', category: 'lesson', courseId: 'chem' })] })), /only for classes/);
+});

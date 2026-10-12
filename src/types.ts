@@ -61,7 +61,10 @@ export interface Commitment {
   exceptions: DateStr[];
   bufferBefore: Minutes;
   placeId?: string;
+  courseId?: string;
 }
+
+export type Recorded = 'yes' | 'no' | 'unknown';
 
 export interface Course {
   credits: number;
@@ -70,6 +73,9 @@ export interface Course {
   weeklyGraded: boolean;
   lab: boolean;
   syllabus: string;
+  attendanceWeight?: number;
+  recorded?: Recorded;
+  examShare?: number;
 }
 
 export interface Task {

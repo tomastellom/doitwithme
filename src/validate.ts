@@ -4,6 +4,7 @@ import type {
   CheckIn,
   CommitmentMark,
   Mood,
+  Recorded,
   Label,
   Block, Commitment, Commute, Course, Deadline, Pattern, Place, PlaceKind, Preferences, Repeats, SoftWindow, State, Task,
   TravelMode, TravelSource, Window,
@@ -151,7 +152,13 @@ function commitment(v: unknown, path: string): Commitment {
     exceptions: arr(o.exceptions, `${path}.exceptions`).map((d, i) => dateStr(d, `${path}.exceptions[${i}]`)),
     bufferBefore: int(o.bufferBefore, `${path}.bufferBefore`, 0, 240),
     ...(o.placeId === undefined ? {} : { placeId: str(o.placeId, `${path}.placeId`) }),
+    ...(o.courseId === undefined ? {} : { courseId: str(o.courseId, `${path}.courseId`) }),
   };
+}
+
+function recordedOf(v: unknown, path: string): Recorded {
+  if (v !== 'yes' && v !== 'no' && v !== 'unknown') fail(`${path} must be "yes", "no" or "unknown"`);
+  return v as Recorded;
 }
 
 export function courseOf(v: unknown, path: string): Course {
@@ -164,6 +171,9 @@ export function courseOf(v: unknown, path: string): Course {
     weeklyGraded: bool(o.weeklyGraded, `${path}.weeklyGraded`),
     lab: bool(o.lab, `${path}.lab`),
     syllabus: o.syllabus as string,
+    ...(o.attendanceWeight === undefined ? {} : { attendanceWeight: int(o.attendanceWeight, `${path}.attendanceWeight`, 0, 100) }),
+    ...(o.recorded === undefined ? {} : { recorded: recordedOf(o.recorded, `${path}.recorded`) }),
+    ...(o.examShare === undefined ? {} : { examShare: int(o.examShare, `${path}.examShare`, 0, 100) }),
   };
 }
 
@@ -334,6 +344,11 @@ export function validateState(x: unknown): State {
   });
   commitments.forEach((c, i) => {
     if (c.placeId !== undefined && !places.some((p) => p.id === c.placeId)) fail(`commitments[${i}].placeId does not match any place`);
+  });
+  commitments.forEach((c, i) => {
+    if (c.courseId === undefined) return;
+    if (c.category !== 'class') fail(`commitments[${i}].courseId is only for classes`);
+    if (!tasks.some((t) => t.id === c.courseId && t.course !== undefined)) fail(`commitments[${i}].courseId does not match any course`);
   });
   deadlines.forEach((d, i) => {
     if (!tasks.some((t) => t.id === d.taskId)) fail(`deadlines[${i}].taskId does not match any task`);

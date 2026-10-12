@@ -1,4 +1,5 @@
 import { keysOf } from './nudge-model.js';
+import { duration } from './time.js';
 
 const ASK_REPLY = "I can't answer questions yet. That arrives with the AI phase.";
 
@@ -170,6 +171,7 @@ function spokenFor(view, item) {
   if (view.checkIn && view.checkIn.result) return `${view.checkIn.result.line} ${view.checkIn.result.moved}`.trim();
   if (view.confirm) {
     const c = view.confirm;
+    if (c.skip) return `Skipped ${c.skip.title}.`;
     return c.used ? `Done. ${c.weekday} evening is in your plan.` : `${c.weekday} evening is open.`;
   }
   if (view.notice) return view.notice;
@@ -216,6 +218,9 @@ export function createNudge(dom, handlers, env = {}) {
     h('button', { type: 'button', class: cls, 'data-fk': fk, onclick, disabled: view.busy }, label);
 
   const say = (...children) => h('div', { class: 'say' }, ...children);
+
+  // Offers go through one handler; without it the soft-evening offer keeps working as before.
+  const accept = (offer) => (handlers.accept ? handlers.accept(offer) : handlers.approve(offer.date));
 
   // The text box is the same in every state, so you can talk to him even when nothing is wrong.
   function askForm() {
@@ -273,7 +278,7 @@ export function createNudge(dom, handlers, env = {}) {
       item.offer && h('p', {}, item.offer.line),
       view.notice && h('p', { class: 'notice' }, view.notice),
       h('div', { class: 'acts' },
-        item.offer && button(item.offer.button, () => handlers.approve(item.offer.date), 'y', 'nudge-use'),
+        item.offer && button(item.offer.button, () => accept(item.offer), 'y', item.offer.kind === 'skip' ? 'nudge-skip' : 'nudge-use'),
         item.fix && handlers.fix && button(item.fix.label, () => handlers.fix(item.fix.hash), '', 'nudge-fix'),
         button('Leave it', () => handlers.dismiss(keysOf(item)), '', 'nudge-leave'),
       ),
@@ -305,6 +310,14 @@ export function createNudge(dom, handlers, env = {}) {
       );
     } else if (view.checkIn && (view.checkIn.asking || view.checkIn.result)) {
       bubble = checkInBubble();
+    } else if (view.confirm && view.confirm.skip) {
+      const s = view.confirm.skip;
+      bubble = say(
+        h('span', { class: 'mono k' }, 'Nudge'),
+        h('b', {}, `Skipped. ${duration(s.minutes)} of ${s.taskTitle} moved in.`),
+        h('p', {}, `${s.title} is off your plan that day. You can take it back.`),
+        h('div', { class: 'acts' }, button('Okay', () => handlers.okay(), 'y', 'nudge-okay'), button('Undo', () => handlers.undoSkip(s), '', 'nudge-undo')),
+      );
     } else if (view.confirm) {
       const c = view.confirm;
       bubble = say(

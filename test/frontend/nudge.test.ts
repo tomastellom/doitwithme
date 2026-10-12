@@ -632,3 +632,48 @@ test('check-in: his answer clears itself after a few seconds, like a cheer', () 
   clear.fn();
   assert.deepEqual(calls, ['done']);
 });
+
+const skipItem = (over: any = {}) => ({
+  key: 'skip-offer|Chemistry|lec|2026-10-06', headline: 'Chemistry lecture, Tomorrow 10:00, is recorded and counts 0%.', minutes: 0, category: 'attendance',
+  offer: { kind: 'skip', key: 'skip-offer|Chemistry|lec|2026-10-06', commitmentId: 'lec', date: '2026-10-06', minutes: 120, title: 'Chemistry lecture', taskTitle: 'Chemistry', button: 'Skip it', line: 'Skipping it frees 2h00 for Chemistry. I will only do it if you say so.' },
+  fix: { label: 'Fix it myself', hash: '#/day/2026-10-06' }, ...over,
+});
+
+function setupSkip() {
+  const calls: any[] = [];
+  const handlers = {
+    approve: (d: string) => calls.push(['approve', d]), undo() {}, dismiss: (k: string[]) => calls.push(['dismiss', k]), okay: () => calls.push(['okay']), retry() {},
+    accept: (o: any) => calls.push(['accept', o.kind, o.commitmentId ?? o.date]),
+    undoSkip: (s: any) => calls.push(['undoSkip', s.commitmentId, s.date]),
+    fix: (h: string) => calls.push(['fix', h]),
+  };
+  return { nudge: createNudge(dom, handlers) as any, calls };
+}
+
+test('skip offer: Skip it, Fix it myself and Leave it fire the right handlers', () => {
+  const { nudge, calls } = setupSkip();
+  nudge.update({ ...base, items: [skipItem()] });
+  assert.match(textOf(nudge.el), /Chemistry lecture, Tomorrow 10:00, is recorded and counts 0%\./);
+  assert.match(textOf(nudge.el), /Skipping it frees 2h00 for Chemistry\./);
+  labelled(nudge.el, 'Skip it')!.click();
+  labelled(nudge.el, 'Fix it myself')!.click();
+  labelled(nudge.el, 'Leave it')!.click();
+  assert.deepEqual(calls, [['accept', 'skip', 'lec'], ['fix', '#/day/2026-10-06'], ['dismiss', [skipItem().key]]]);
+});
+
+test('without an accept handler the soft offer still calls approve', () => {
+  const { nudge, calls } = setup();
+  nudge.update({ ...base, items: [item()] });
+  labelled(nudge.el, 'Use Friday evening')!.click();
+  assert.deepEqual(calls, [['approve', '2026-10-09']]);
+});
+
+test('skip confirmation: happy, says what moved in, and offers Okay and Undo', () => {
+  const { nudge, calls } = setupSkip();
+  nudge.update({ ...base, confirm: { used: true, skip: { commitmentId: 'lec', date: '2026-10-06', title: 'Chemistry lecture', taskTitle: 'Chemistry', minutes: 120 } } });
+  assert.match(textOf(nudge.el), /Skipped\. 2h00 of Chemistry moved in\./);
+  assert.equal(byClass(nudge.el, 'mascot')[0].getAttribute('data-face'), 'happy');
+  labelled(nudge.el, 'Undo')!.click();
+  labelled(nudge.el, 'Okay')!.click();
+  assert.deepEqual(calls, [['undoSkip', 'lec', '2026-10-06'], ['okay']]);
+});

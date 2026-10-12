@@ -1,4 +1,4 @@
-import { FULL_WEEKDAYS, longDate, shortDate, weekdayOf } from './time.js';
+import { FULL_WEEKDAYS, addDays, duration, hhmm, longDate, shortDate, weekdayOf } from './time.js';
 
 const SHORTFALLS = ['deadline-short', 'weekly-short'];
 const TRAVEL = ['address-missing', 'travel-tight'];
@@ -28,6 +28,7 @@ function offerOf(w) {
   const weekday = FULL_WEEKDAYS[weekdayOf(w.detail.date)];
   const cost = w.detail.costMinutes ?? 0;
   return {
+    kind: 'soft',
     key: w.key,
     date: w.detail.date,
     weekday,
@@ -53,7 +54,29 @@ function fixOf(w) {
   }
 }
 
-export function buildNudge(warnings) {
+function whenLabel(date, today) {
+  if (today && date === today) return 'Today';
+  if (today && date === addDays(today, 1)) return 'Tomorrow';
+  return FULL_WEEKDAYS[weekdayOf(date)];
+}
+
+function skipItemOf(w, today) {
+  const d = w.detail;
+  return {
+    key: w.key,
+    headline: `${d.commitmentTitle}, ${whenLabel(d.date, today)} ${hhmm(d.start)}, is recorded and counts 0%.`,
+    minutes: 0,
+    category: 'attendance',
+    offer: {
+      kind: 'skip', key: w.key, commitmentId: d.commitmentId, date: d.date, minutes: d.minutes, title: d.commitmentTitle, taskTitle: d.taskTitle,
+      button: 'Skip it',
+      line: `Skipping it frees ${duration(d.minutes)} for ${d.taskTitle}. I will only do it if you say so.`,
+    },
+    fix: fixOf(w),
+  };
+}
+
+export function buildNudge(warnings, today) {
   const open = warnings.filter((w) => !w.dismissed && w.detail);
   const shortfalls = open.filter((w) => SHORTFALLS.includes(w.kind)).sort(order);
   const offerWarning = open.find((w) => w.kind === 'soft-offer') ?? null;
@@ -83,6 +106,7 @@ export function buildNudge(warnings) {
       });
     }
   }
+  items.push(...open.filter((w) => w.kind === 'skip-offer').map((w) => skipItemOf(w, today)));
   return { items, needsYou: shortfalls.length + trips.length };
 }
 

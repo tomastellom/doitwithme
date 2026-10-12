@@ -98,3 +98,32 @@ test('every warning says where to go to fix it by hand, and a missing id falls b
   assert.deepEqual(fix([trip('travel-tight')]), [{ label: 'Fix it myself', hash: '#/day/2026-10-14' }]);
   assert.deepEqual(fix([offer()]), [{ label: 'Fix it myself', hash: '#/day/2026-10-09' }], 'a lone offer leads to the day it is about');
 });
+
+const skip = (over: any = {}) => w('skip-offer', { commitmentId: 'lec', commitmentTitle: 'Chemistry lecture', taskId: 'chem', taskTitle: 'Chemistry', category: 'study', date: '2026-10-06', start: 600, minutes: 120, ...over });
+
+test('a skip offer reads as a headline and a line, is not counted in needs you, and has its own button', () => {
+  const { items, needsYou } = buildNudge([skip()], '2026-10-05');
+  assert.equal(needsYou, 0);
+  assert.equal(items.length, 1);
+  assert.equal(items[0].headline, 'Chemistry lecture, Tomorrow 10:00, is recorded and counts 0%.');
+  assert.deepEqual(
+    [items[0].offer.kind, items[0].offer.button, items[0].offer.commitmentId, items[0].offer.date, items[0].offer.minutes, items[0].offer.taskTitle],
+    ['skip', 'Skip it', 'lec', '2026-10-06', 120, 'Chemistry'],
+  );
+  assert.equal(items[0].offer.line, 'Skipping it frees 2h00 for Chemistry. I will only do it if you say so.');
+  assert.deepEqual(items[0].fix, { label: 'Fix it myself', hash: '#/day/2026-10-06' });
+});
+
+test('the headline says Today, Tomorrow or the weekday, and a dismissed offer is not shown', () => {
+  assert.match(buildNudge([skip({ date: '2026-10-05' })], '2026-10-05').items[0].headline, /, Today 10:00,/);
+  assert.match(buildNudge([skip({ date: '2026-10-07' })], '2026-10-05').items[0].headline, /, Wednesday 10:00,/);
+  assert.match(buildNudge([skip({ date: '2026-10-07' })]).items[0].headline, /, Wednesday 10:00,/);
+  assert.equal(buildNudge([{ ...skip(), dismissed: true }], '2026-10-05').items.length, 0);
+});
+
+test('skip offers come after shortfalls and keep the soft offer as it was', () => {
+  const { items } = buildNudge([skip(), exam(), offer()], '2026-10-05');
+  assert.deepEqual(items.map((i: any) => i.category), ['study', 'attendance']);
+  assert.equal(items[0].offer.kind, 'soft');
+  assert.deepEqual(keysOf(items[1]), [items[1].key]);
+});

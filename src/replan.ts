@@ -44,6 +44,7 @@ export function replan(
   // A block marked not done no longer counts as work done, so its minutes come back as a shortfall to plan again.
   const relevant = kept.filter((b) => (b.date >= cutoff || b.deadlineId !== undefined) && b.status !== 'missed');
   const approvedSoft = state.approvedSoft.filter((d) => d >= today);
+  const lowDays = (state.checkIns ?? []).filter((c) => c.mood === 'low' && c.date >= today).map((c) => c.date);
   const result = plan({
     today,
     ...(nowMinutes === undefined ? {} : { nowMinutes }),
@@ -56,11 +57,18 @@ export function replan(
     preferences: state.preferences,
     pastBlocks: relevant,
     approvedSoft,
+    lowDays,
   });
   const open = new Set(result.warnings.map(warningKey));
   const dismissed = state.dismissed.filter((k) => open.has(k));
   return {
-    state: { ...state, approvedSoft, dismissed, blocks: [...kept, ...result.blocks] },
+    state: {
+      ...state,
+      approvedSoft,
+      dismissed,
+      blocks: [...kept, ...result.blocks],
+      ...(state.checkIns === undefined ? {} : { checkIns: state.checkIns.filter((c) => c.date >= addDays(today, -60)) }),
+    },
     warnings: result.warnings,
     travel: result.travel,
   };

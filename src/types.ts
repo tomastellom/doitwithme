@@ -169,6 +169,7 @@ export interface PlanInput {
   preferences: Preferences;
   pastBlocks: Block[];
   approvedSoft?: DateStr[];
+  lowDays?: DateStr[];
   places?: Place[];
   commutes?: Commute[];
 }

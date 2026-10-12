@@ -84,10 +84,17 @@ export function planDays(input: PlanInput, opened: ReadonlySet<DateStr> = new Se
         .filter((s) => s.end > s.start);
     }
 
+    // A low day keeps only a minimum of generated work; minutes already ticked done count toward it.
+    const low = (input.lowDays ?? []).includes(date);
+    let dayUsed = low
+      ? input.pastBlocks.filter((b) => b.date === date && b.status === 'done').reduce((t, b) => t + (b.end - b.start), 0)
+      : 0;
+
     for (const slot of slots) {
       let cursor = slot.start;
       for (;;) {
-        const room = slot.end - cursor;
+        const capLeft = low ? pref.lowDayMinutes - dayUsed : Number.POSITIVE_INFINITY;
+        const room = Math.min(slot.end - cursor, capLeft);
         const pick = demandsFor(input, date, all, usableDays).find((d) => {
           if (slot.soft && d.task.category !== 'study') return false;
           const wanted = Math.min(d.task.maxBlock, d.allowedLeft);
@@ -108,6 +115,7 @@ export function planDays(input: PlanInput, opened: ReadonlySet<DateStr> = new Se
         };
         all.push(block);
         placed.push(block);
+        dayUsed += length;
         cursor += length + pref.minBreak;
       }
     }

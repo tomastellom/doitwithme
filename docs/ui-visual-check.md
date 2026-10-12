@@ -109,3 +109,11 @@ Anything that differs from the boards: spacing, sizes, colors, wrapping, fonts n
 - Press Not now: he rests. Hover his corner and click him: a small Check in button brings the question back.
 - Settings, How I plan: Daily check-in On/Off and Low-day minimum 1 to 4 h.
 - Fixed things (classes, lessons, work) never move.
+
+## Attendance advice
+
+- Plan, Tasks: open a study task with credits. Below Has a lab there are three new rows: Attendance counts (percent), Lectures recorded (Not sure, Yes, No) and Exams share (percent).
+- Plan, Commitments: open a class. A Course choice lists your study tasks that have course details. Lessons and work have no Course choice.
+- Week or Day: open a linked class. Above "Skip this day" a small block shows Go, Skippable, Optional or No advice yet, the reasons, and "Advice only. You decide."
+- Try it: a course with attendance 0, recorded Yes, and a weekly target you are behind on shows Skippable. Press "Skip this day" and the freed hour fills with study.
+- A class with no course shows no advice block.

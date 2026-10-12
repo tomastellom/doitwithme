@@ -16,6 +16,11 @@ let base: string;
 const json = { 'content-type': 'application/json' };
 const now = () => new Date(2026, 9, 5, 9, 0); // Monday 5 Oct 2026, 09:00
 const tick = (ms = 30) => new Promise((r) => setTimeout(r, ms));
+// Wait for the estimate to finish instead of guessing how long it takes, so a busy machine cannot make these flaky.
+const estimated = async (app: any) => {
+  for (let i = 0; i < 300 && app.store.get().estimating; i++) await tick(10);
+  await tick(10);
+};
 
 const task = (over: any = {}) => ({ id: 't1', title: 'Study', category: 'study', weeklyMinutes: 300, maxBlock: 120, onePerDay: false, priority: 3, ...over });
 const baseState = (over: any = {}) => ({ ...emptyState(), tasks: [task()], preferences: structuredClone(defaultPreferences), ...over });
@@ -60,7 +65,7 @@ test('estimate with the rule, use the number, save: the server keeps the course 
   type(root, 'f-credits', '3');
   key(root, 'f-weeklyGraded-true').click();
   key(root, 'estimate-run').click();
-  await tick(60);
+  await estimated(app);
   assert.match(textOf(byClass(root, 'est')[0]), /Rule of thumb/);
   key(root, 'estimate-use').click();
   assert.equal(key(root, 'f-weekly').value, '210');
@@ -81,7 +86,7 @@ test('Preferences scale fields save, and the estimate follows them', async () =>
   app.navigate('#/tasks/t1');
   type(root, 'f-credits', '3');
   key(root, 'estimate-run').click();
-  await tick(60);
+  await estimated(app);
   assert.match(textOf(byClass(root, 'est')[0]), /6h a week/);
 });
 
@@ -107,6 +112,6 @@ test('while an estimate runs Nudge thinks', async () => {
   key(root, 'estimate-run').click();
   assert.equal(app.store.get().estimating, true);
   assert.equal(byClass(app.nudge.el, 'mascot')[0].getAttribute('data-face'), 'thinking');
-  await tick(60);
+  await estimated(app);
   assert.equal(app.store.get().estimating, false);
 });

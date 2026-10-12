@@ -323,3 +323,35 @@ test('a failed estimate clears the flag and passes the error on', async () => {
   assert.equal(store.get().estimating, false);
   assert.equal(store.get().status, 'ready');
 });
+
+test('answering low stores the answer, keeps the result for Nudge and clears on okay', async () => {
+  const { store, calls } = make({
+    checkIn: (mood: string) => result({ checkIns: [{ date: '2026-10-05', mood }], moved: mood === 'low' ? { minutes: 180, dates: ['2026-10-08'] } : null }),
+  });
+  await store.load();
+  await store.answerCheckIn('low');
+  assert.deepEqual(calls.slice(-1), ['checkIn']);
+  assert.deepEqual(store.get().state.checkIns, [{ date: '2026-10-05', mood: 'low' }]);
+  assert.deepEqual(store.get().checkInResult, { mood: 'low', minutes: 180, dates: ['2026-10-08'] });
+  store.clearConfirm();
+  assert.equal(store.get().checkInResult, null);
+  await store.answerCheckIn('okay');
+  assert.deepEqual(store.get().checkInResult, { mood: 'okay', minutes: 0, dates: [] });
+});
+
+test('a failing check-in leaves the state alone and reports offline', async () => {
+  const { store } = make({ checkIn: () => { throw new ApiError(0, 'The planner is not reachable'); } });
+  await store.load();
+  await store.answerCheckIn('low');
+  assert.equal(store.get().status, 'offline');
+  assert.equal(store.get().state.checkIns, undefined);
+});
+
+test('reopening a skipped check-in sets the flag and an answer clears it', async () => {
+  const { store } = make({ checkIn: () => result({ checkIns: [{ date: '2026-10-05', mood: 'good' }], moved: null }) });
+  await store.load();
+  store.reopenCheckIn();
+  assert.equal(store.get().reopened, true);
+  await store.answerCheckIn('good');
+  assert.equal(store.get().reopened, false);
+});

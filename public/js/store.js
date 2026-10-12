@@ -7,6 +7,7 @@ export function createStore(api, getClock) {
   let current = {
     status: 'loading', state: null, warnings: [], approvedSoft: [], dismissed: [], travel: [], maps: 'unavailable', estimating: false,
     isEmpty: false, error: null, busy: false, confirm: null, notice: null, formError: null, cheer: null,
+    reopened: false, checkInResult: null,
   };
   const listeners = new Set();
 
@@ -24,7 +25,7 @@ export function createStore(api, getClock) {
     status: 'ready',
     error: null,
     notice: null,
-    state: { ...current.state, blocks: r.blocks, approvedSoft: r.approvedSoft, dismissed: r.dismissed },
+    state: { ...current.state, blocks: r.blocks, approvedSoft: r.approvedSoft, dismissed: r.dismissed, ...(r.checkIns ? { checkIns: r.checkIns } : {}) },
     warnings: r.warnings,
     travel: r.travel ?? [],
     approvedSoft: r.approvedSoft,
@@ -90,6 +91,12 @@ export function createStore(api, getClock) {
         const r = await api.approve(date, getClock());
         set(merged(r, { confirm: buildConfirm(r.warnings, date) }));
       }),
+    answerCheckIn: (mood) =>
+      guard(async () => {
+        const r = await api.checkIn(mood, getClock());
+        set(merged(r, { confirm: null, reopened: false, checkInResult: { mood, minutes: r.moved ? r.moved.minutes : 0, dates: r.moved ? r.moved.dates : [] } }));
+      }),
+    reopenCheckIn: () => set({ reopened: true }),
     undo: (date) => guard(async () => set(merged(await api.undo(date, getClock()), { confirm: null }))),
     dismiss: (keys) =>
       guard(async () => {
@@ -126,7 +133,7 @@ export function createStore(api, getClock) {
     },
     // Nudge cheers when something is ticked off; he clears it himself after a few seconds.
     cheer: (cheer) => set({ cheer }),
-    clearConfirm: () => set({ confirm: null, notice: null, cheer: null }),
+    clearConfirm: () => set({ confirm: null, notice: null, cheer: null, checkInResult: null }),
     saveState: (next) =>
       guard(async () => {
         try {

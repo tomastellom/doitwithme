@@ -37,5 +37,6 @@ export function createApi(fetchFn) {
     approve: (date, clock) => call('POST', '/api/soft/approve', { ...clock, date }),
     undo: (date, clock) => call('POST', '/api/soft/undo', { ...clock, date }),
     dismiss: (key, clock) => call('POST', '/api/warnings/dismiss', { ...clock, key }),
+    checkIn: (mood, clock) => call('POST', '/api/checkin', { ...clock, mood }),
   };
 }

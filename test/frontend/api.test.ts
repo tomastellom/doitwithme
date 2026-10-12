@@ -58,3 +58,10 @@ test('estimate posts the course to the estimate endpoint', async () => {
   assert.deepEqual(await api.estimate({ title: 'x' }), { rule: { minutes: 240 } });
   assert.deepEqual([f.calls[0].init.method, f.calls[0].path, JSON.parse(f.calls[0].init.body)], ['POST', '/api/estimate', { title: 'x' }]);
 });
+
+test('checkIn posts the mood with the clock', async () => {
+  const f = fakeFetch([{ status: 200, body: {} }]);
+  const api = createApi(f.fn as any);
+  await api.checkIn('low', { today: '2026-10-05', nowMinutes: 540, horizonDays: 14 });
+  assert.deepEqual([f.calls[0].init.method, f.calls[0].path, JSON.parse(f.calls[0].init.body)], ['POST', '/api/checkin', { today: '2026-10-05', nowMinutes: 540, horizonDays: 14, mood: 'low' }]);
+});

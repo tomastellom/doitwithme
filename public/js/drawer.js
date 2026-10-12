@@ -1,3 +1,4 @@
+import { adviceBlock } from './attendance-ui.js';
 import { renderField } from './form.js';
 import { FIELDS } from './setup.js';
 import { WEEK_ORDER, applyItem, commitmentKind, newId, removeItem } from './setup-model.js';
@@ -136,6 +137,7 @@ export function createDrawer(dom, deps) {
     const c = state.commitments.find((x) => x.id === item.commitmentId);
     if (!c) return gone(item, 'commitment');
     const busy = store.get().busy;
+    const advice = (store.get().attendance ?? []).find((a) => a.commitmentId === c.id && a.date === item.date);
     const weekly = c.pattern.kind === 'weekly';
     const ctx = { state, scratch, rerender: draw };
     const fields = FIELDS.commitments
@@ -151,6 +153,7 @@ export function createDrawer(dom, deps) {
     return [
       head(`${labelFor(labelsOf(state), c.category).name} / ${patternText(c)}`, c.title, when(item)),
       ...(marks ? statusRow('commitment') : []),
+      advice && adviceBlock(dom, advice),
       weekly && !c.exceptions.includes(item.date) && h('div', { class: 'skip' },
         h('span', {}, `Not going this week? Skip only ${longDate(item.date)}. The other weeks stay.`),
         h('button', { type: 'button', class: 'mono', 'data-fk': 'drawer-skip', disabled: busy, onclick: () => skip(c) }, 'Skip this day')),

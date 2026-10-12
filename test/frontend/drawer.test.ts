@@ -383,3 +383,23 @@ test('the Month day checklist lists what is planned, ticks things off in place a
   r.drawer.close();
   assert.equal(r.focused.at(-1), 'review-2026-10-13');
 });
+
+test('a class with advice shows it above Skip this day, and a class without shows none', () => {
+  const plain = rig();
+  plain.drawer.open(plain.itemOf('commitment', TUE, (i) => i.commitmentId === 'chem-lecture'));
+  assert.equal(byClass(plain.drawer.el, 'advice').length, 0);
+  const { drawer, itemOf, store } = rig();
+  const current: any = store.get();
+  const advised = { ...current, attendance: [
+    { commitmentId: 'chem-lecture', date: TUE, verdict: 'skippable', reasons: ['Recorded, attendance counts 0%, and Chemistry is 90 min short.'] },
+    { commitmentId: 'chem-lecture', date: '2026-10-15', verdict: 'go', reasons: ['Labs need you there.'] },
+  ] };
+  store.get = () => advised;
+  drawer.open(itemOf('commitment', TUE, (i) => i.commitmentId === 'chem-lecture'));
+  const text = textOf(drawer.el);
+  assert.equal(byClass(drawer.el, 'advice').length, 1, 'only this date');
+  assert.match(text, /Skippable/);
+  assert.match(text, /Chemistry is 90 min short/);
+  assert.ok(text.indexOf('Skippable') < text.indexOf('Skip this day'), 'the advice comes first');
+  assert.ok(key(drawer.el, 'drawer-skip'), 'the existing skip button is still there');
+});

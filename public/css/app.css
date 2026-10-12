@@ -314,6 +314,9 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 .drawer .sub2 { color: var(--muted); }
 .drawer .skip { border: 2px dashed var(--ink); padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 12px; background: #F4F4F2; margin: 0; }
 .drawer .skip span { font-size: 14px; color: #3A3D40; }
+.advice { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px 0; border-top: 1px solid var(--line); }
+.advice .reason { margin: 0; font-size: 14px; }
+.advice[data-verdict="skippable"] .tag { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .drawer .skip button { padding: 8px 12px; border: 2px solid var(--ink); background: transparent; font-weight: 600; white-space: nowrap; }
 .drawer .dfg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 12px; }
 .drawer .dfg .fld { display: flex; flex-direction: column; gap: 5px; min-width: 0; }

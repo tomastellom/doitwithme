@@ -101,3 +101,11 @@ Anything that differs from the boards: spacing, sizes, colors, wrapping, fonts n
 - **Nudge** is happy after a tick, and does his confetti face when everything planned for that day is done. The message goes away by itself after six seconds.
 - **The cheer leaves by itself** five seconds after a tick if nobody presses Okay (also with reduced motion on). If there are open warnings he stays out to tell you about them, as before.
 - **Peeking.** With nothing to tell you, put the pointer on the bottom-right corner: he rises and peeks over a white edge with only his eyes showing. Move the pointer away and he sinks back. He does not peek while he has a warning or an offer.
+
+## Daily check-in
+
+- Open the app on a day with planned work: Nudge comes up and asks how you are, with Good, Okay, Low and Not now.
+- Press Low: today shrinks to your minimum (Settings, Low-day minimum), Nudge looks worried and says what moved and to which days, and the Day screen shows a Light day tag. Press "Actually, I'm okay": the day comes back.
+- Press Not now: he rests. Hover his corner and click him: a small Check in button brings the question back.
+- Settings, How I plan: Daily check-in On/Off and Low-day minimum 1 to 4 h.
+- Fixed things (classes, lessons, work) never move.

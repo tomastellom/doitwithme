@@ -688,3 +688,17 @@ test('a typed commute asks for no lookup and shows no Maps lines', async () => {
   await submit(el);
   assert.deepEqual(lookups, []);
 });
+
+test('saving a Maps commute again asks for no lookup while its result still matches', async () => {
+  const places = [{ id: 'home', name: 'Home', kind: 'home', address: '1 Main St' }, { id: 'campus', name: 'Campus', kind: 'campus', address: '9 Uni Rd' }];
+  const found = { minutes: 55, at: '2026-10-12', fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'walk' };
+  const withFound = stateWith({ places, commutes: [{ id: 'r1', fromPlaceId: 'home', toPlaceId: 'campus', repeats: null, marginMinutes: 10, source: { method: 'maps', mode: 'walk', fallbackMinutes: 40, found } }] });
+  const same = setup(withFound, { storeState: { maps: 'ready' } });
+  await submit(same.render('commutes', 'r1') as any);
+  assert.deepEqual(same.lookups, [], 'only the margin or days changed, so nothing is spent');
+  const changed = setup(withFound, { storeState: { maps: 'ready' } });
+  const el: any = changed.render('commutes', 'r1');
+  byKey(el, 'f-mode-bike').click();
+  await submit(changed.render('commutes', 'r1') as any);
+  assert.deepEqual(changed.lookups, ['r1'], 'another mode needs a new lookup');
+});

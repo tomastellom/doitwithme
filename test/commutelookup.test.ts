@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BadLookup, isStale, lookupCommute, refreshCommutes, usageFor } from '../src/commutelookup.ts';
+import { BadLookup, isStale, keepMapsData, lookupCommute, refreshCommutes, usageFor } from '../src/commutelookup.ts';
 import { MapsError } from '../src/maps.ts';
 import { emptyState } from '../src/store.ts';
 import type { State } from '../src/types.ts';
@@ -27,7 +27,7 @@ test('a lookup keeps the result with its date and addresses, and counts one use'
   const r = rig(base());
   assert.deepEqual(await lookupCommute(r.deps, 'k', TODAY), { ok: true, minutes: 33, at: TODAY });
   assert.deepEqual(r.asked, [{ fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'transit' }]);
-  assert.deepEqual((r.state().commutes[0].source as any).found, { minutes: 33, at: TODAY, fromAddress: '1 Main St', toAddress: '9 Uni Rd' });
+  assert.deepEqual((r.state().commutes[0].source as any).found, { minutes: 33, at: TODAY, fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'transit' });
   assert.deepEqual(r.state().mapsUsage, { month: '2026-10', count: 1 });
 });
 
@@ -54,7 +54,7 @@ test('the monthly limit stops the call before Google, and the next month starts 
 });
 
 test('a failed lookup keeps the old result, says why and still counts', async () => {
-  const old = { minutes: 50, at: '2026-09-30', fromAddress: '1 Main St', toAddress: '9 Uni Rd' };
+  const old = { minutes: 50, at: '2026-09-30', fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'transit' };
   const start = base([commute('k', 'c', { method: 'maps', mode: 'transit', fallbackMinutes: 40, found: old })]);
   const r = rig(start, () => { throw new MapsError('no-route', 'Google found no route for that mode.'); });
   assert.deepEqual(await lookupCommute(r.deps, 'k', TODAY), { ok: false, code: 'no-route', message: 'Google found no route for that mode.' });
@@ -88,19 +88,20 @@ test('a save made during the lookup survives, and a commute deleted meanwhile is
 });
 
 test('stale means never looked up, older than 14 days, or for other addresses', () => {
-  const f = (over: any = {}) => ({ minutes: 30, at: TODAY, fromAddress: '1 Main St', toAddress: '9 Uni Rd', ...over });
+  const f = (over: any = {}) => ({ minutes: 30, at: TODAY, fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'car', ...over });
   const withFound = (found: any) => commute('k', 'c', { method: 'maps', mode: 'car', fallbackMinutes: 40, ...(found ? { found } : {}) });
   assert.equal(isStale(withFound(undefined), places, TODAY), true);
   assert.equal(isStale(withFound(f()), places, TODAY), false);
   assert.equal(isStale(withFound(f({ at: '2026-09-28' })), places, TODAY), false, '14 days old is not stale yet');
   assert.equal(isStale(withFound(f({ at: '2026-09-27' })), places, TODAY), true);
   assert.equal(isStale(withFound(f({ toAddress: 'elsewhere' })), places, TODAY), true);
+  assert.equal(isStale(withFound(f({ mode: 'walk' })), places, TODAY), true, 'found for another mode');
   assert.equal(isStale(commute('t', 'c', { method: 'typed', minutes: 20 }), places, TODAY), false);
   assert.equal(isStale(commute('a', 's'), places, TODAY), false, 'no address, nothing to look up');
 });
 
 test('refresh looks up only stale Maps commutes, at most ten, and stops at the first key problem', async () => {
-  const fresh = commute('fresh', 'c', { method: 'maps', mode: 'car', fallbackMinutes: 40, found: { minutes: 30, at: TODAY, fromAddress: '1 Main St', toAddress: '9 Uni Rd' } });
+  const fresh = commute('fresh', 'c', { method: 'maps', mode: 'car', fallbackMinutes: 40, found: { minutes: 30, at: TODAY, fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'car' } });
   const stale = Array.from({ length: 12 }, (_, i) => commute(`s${i}`, 'c'));
   const r = rig(base([fresh, commute('typed', 'c', { method: 'typed', minutes: 5 }), ...stale]));
   assert.deepEqual(await refreshCommutes(r.deps, TODAY), { updated: 10, failed: 0, skipped: 2 });
@@ -111,4 +112,85 @@ test('refresh looks up only stale Maps commutes, at most ten, and stops at the f
   let n = 0;
   const other = rig(base([commute('a', 'c'), commute('b', 'c')]), () => { if (++n === 1) throw new MapsError('no-route', 'Google found no route for that mode.'); return { minutes: 9 }; });
   assert.deepEqual(await refreshCommutes(other.deps, TODAY), { updated: 1, failed: 1, skipped: 0 });
+});
+
+const failedWith = (code: string, at = TODAY) => ({ at, code, fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'transit' });
+
+test('a failed lookup is remembered, and a stale commute that failed is not tried again at every page load', async () => {
+  const r = rig(base(), () => { throw new MapsError('no-route', 'Google found no route for that mode.'); });
+  await lookupCommute(r.deps, 'k', TODAY);
+  assert.deepEqual((r.state().commutes[0].source as any).failed, failedWith('no-route'));
+  for (let i = 0; i < 4; i++) await refreshCommutes(r.deps, TODAY);
+  assert.equal(r.asked.length, 1, 'four more page loads asked Google nothing');
+  assert.equal(r.state().mapsUsage?.count, 1);
+});
+
+test('the pause after a failure is a day for a hiccup and two weeks for no route or a bad address', () => {
+  const withFailed = (failed: any) => commute('k', 'c', { method: 'maps', mode: 'transit', fallbackMinutes: 40, failed });
+  assert.equal(isStale(withFailed(failedWith('offline')), places, TODAY), false, 'same day');
+  assert.equal(isStale(withFailed(failedWith('offline')), places, '2026-10-13'), true, 'next day');
+  assert.equal(isStale(withFailed(failedWith('no-route')), places, '2026-10-25'), false, '13 days later');
+  assert.equal(isStale(withFailed(failedWith('address')), places, '2026-10-27'), true, '15 days later');
+  assert.equal(isStale(withFailed({ ...failedWith('no-route'), toAddress: 'changed' }), places, TODAY), true, 'the addresses changed');
+  assert.equal(isStale(withFailed({ ...failedWith('no-route'), mode: 'walk' }), places, TODAY), true, 'the mode changed');
+});
+
+test('a success clears the remembered failure', async () => {
+  const start = base([commute('k', 'c', { method: 'maps', mode: 'transit', fallbackMinutes: 40, failed: failedWith('offline', '2026-10-01') })]);
+  const r = rig(start);
+  await lookupCommute(r.deps, 'k', TODAY);
+  assert.equal('failed' in (r.state().commutes[0].source as any), false);
+});
+
+test('refresh stops when the network is down instead of trying every commute', async () => {
+  const r = rig(base([commute('a', 'c'), commute('b', 'c'), commute('d', 'c')]), () => { throw new MapsError('offline', 'I could not reach Google.'); });
+  assert.deepEqual(await refreshCommutes(r.deps, TODAY), { updated: 0, failed: 1, skipped: 2 });
+  assert.equal(r.asked.length, 1);
+});
+
+test('lookups started together cannot get past the limit', async () => {
+  const r = rig({ ...base(), mapsUsage: { month: '2026-10', count: 2 } }, () => ({ minutes: 20 }), 3);
+  const all = await Promise.all([1, 2, 3, 4, 5].map(() => lookupCommute(r.deps, 'k', TODAY)));
+  assert.equal(r.asked.length, 1, 'only one reached Google');
+  assert.equal(all.filter((x) => x.ok).length, 1);
+  assert.equal(all.filter((x: any) => !x.ok && x.code === 'limit').length, 4);
+  assert.equal(r.state().mapsUsage?.count, 3);
+});
+
+test('a lookup that finishes after the mode was changed is thrown away', async () => {
+  const r = rig(base());
+  const original = r.deps.maps.lookup.bind(r.deps.maps);
+  r.deps.maps.lookup = async (q: any) => {
+    const s = r.state();
+    r.setState({ ...s, commutes: s.commutes.map((c: any) => ({ ...c, source: { ...c.source, mode: 'walk' } })) });
+    return original(q);
+  };
+  const result: any = await lookupCommute(r.deps, 'k', TODAY);
+  assert.deepEqual([result.ok, result.code], [false, 'gone']);
+  assert.equal('found' in (r.state().commutes[0].source as any), false);
+});
+
+test('the month is counted by the server clock, not by the date the browser sent', async () => {
+  const r = rig(base());
+  const deps = { ...r.deps, clock: () => '2026-10-31' };
+  await lookupCommute(deps, 'k', '2026-09-01');
+  assert.deepEqual(r.state().mapsUsage, { month: '2026-10', count: 1 });
+  assert.equal((r.state().commutes[0].source as any).found.at, '2026-09-01', 'the result keeps the browser date');
+});
+
+test('saving state keeps the server count and any result the browser did not know about', () => {
+  const found = { minutes: 30, at: TODAY, fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'transit' };
+  const prev: State = { ...base([commute('k', 'c', { method: 'maps', mode: 'transit', fallbackMinutes: 40, found })]), mapsUsage: { month: '2026-10', count: 7 } };
+  const incoming: State = { ...base([commute('k', 'c')]), mapsUsage: { month: '2026-10', count: 0 } };
+  const kept = keepMapsData(prev, incoming);
+  assert.deepEqual(kept.mapsUsage, { month: '2026-10', count: 7 }, 'the browser cannot lower the count');
+  assert.deepEqual((kept.commutes[0].source as any).found, found, 'a result found meanwhile is kept');
+  assert.equal(keepMapsData({ ...prev, mapsUsage: undefined }, incoming).mapsUsage, undefined);
+  const moved = { ...incoming, places: places.map((p) => (p.id === 'c' ? { ...p, address: 'elsewhere' } : p)) };
+  assert.equal('found' in (keepMapsData(prev, moved).commutes[0].source as any), false, 'not for other addresses');
+  const walking: State = { ...base([commute('k', 'c', { method: 'maps', mode: 'walk', fallbackMinutes: 40 })]) };
+  assert.equal('found' in (keepMapsData(prev, walking).commutes[0].source as any), false, 'not for another mode');
+  const failed = failedWith('no-route');
+  const prevFailed: State = base([commute('k', 'c', { method: 'maps', mode: 'transit', fallbackMinutes: 40, failed })]);
+  assert.deepEqual((keepMapsData(prevFailed, incoming).commutes[0].source as any).failed, failed);
 });

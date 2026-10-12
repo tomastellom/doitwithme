@@ -1,5 +1,5 @@
 import { renderField } from './form.js';
-import { renderMapsBlock } from './maps-ui.js';
+import { foundFor, renderMapsBlock } from './maps-ui.js';
 import { labelOptions, lookClass, paint } from './labels.js';
 import { findByKey } from './focus.js';
 import { isValidDate } from './time.js';
@@ -285,8 +285,11 @@ export function createSetup(dom, deps) {
     }
     local.error = null;
     await finish((fresh) => applyItem(fresh, kindId, result.item), sel.spec.single ? '#/settings' : `#/${kindId}/${encodeURIComponent(result.item.id)}`);
-    if (kindId === 'commutes' && result.item.source.method === 'maps' && typeof store.lookupCommute === 'function' && !store.get().formError) {
-      await store.lookupCommute(result.item.id);
+    // Only a commute with no matching result is looked up; changing the days or the margin spends nothing.
+    if (kindId === 'commutes' && typeof store.lookupCommute === 'function' && !store.get().formError) {
+      const now = store.get().state;
+      const saved = (now.commutes ?? []).find((c) => c.id === result.item.id);
+      if (saved && saved.source.method === 'maps' && !foundFor(saved, now.places ?? [])) await store.lookupCommute(saved.id);
     }
   }
 

@@ -74,3 +74,16 @@ test('failures come back as plain messages, and the monthly limit is reported be
   const over = await (await post(readyBase, '/api/commute/lookup', { today: TODAY, commuteId: 'k' })).json();
   assert.deepEqual([over.ok, over.code], [false, 'limit']);
 });
+
+test('saving the state from the browser cannot lower the lookup count or lose a result found meanwhile', async () => {
+  const before = await (await fetch(`${readyBase}/api/state`)).json();
+  const count = before.mapsUsage.count;
+  assert.ok(count >= 1);
+  const stale = structuredClone(before);
+  delete stale.mapsUsage;
+  delete stale.commutes[0].source.found;
+  assert.equal((await fetch(`${readyBase}/api/state`, { method: 'PUT', headers: json, body: JSON.stringify(stale) })).status, 200);
+  const after = await (await fetch(`${readyBase}/api/state`)).json();
+  assert.equal(after.mapsUsage.count, count);
+  assert.equal(after.commutes[0].source.found.minutes, 41);
+});

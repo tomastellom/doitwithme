@@ -2,6 +2,7 @@ import { defaultPreferences } from './defaults.ts';
 import type {
   BlockStatus,
   CheckIn,
+  MapsFailed,
   MapsFound,
   CommitmentMark,
   Mood,
@@ -129,6 +130,27 @@ function foundOf(v: unknown, path: string): MapsFound {
     at: dateStr(o.at, `${path}.at`),
     fromAddress: address(o.fromAddress, `${path}.fromAddress`),
     toAddress: address(o.toAddress, `${path}.toAddress`),
+    mode: modeOf(o.mode, `${path}.mode`),
+  };
+}
+
+function modeOf(v: unknown, path: string): TravelMode {
+  if (typeof v !== 'string' || !MODES.includes(v)) fail(`${path} must be car, bike, transit or walk`);
+  return v as TravelMode;
+}
+
+function failedOf(v: unknown, path: string): MapsFailed {
+  const o = obj(v, path);
+  const text = (x: unknown, p: string, max: number): string => {
+    if (typeof x !== 'string' || x.length > max) fail(`${p} must be text of at most ${max} characters`);
+    return x as string;
+  };
+  return {
+    at: dateStr(o.at, `${path}.at`),
+    code: text(o.code, `${path}.code`, 40),
+    fromAddress: text(o.fromAddress, `${path}.fromAddress`, 500),
+    toAddress: text(o.toAddress, `${path}.toAddress`, 500),
+    mode: modeOf(o.mode, `${path}.mode`),
   };
 }
 
@@ -146,6 +168,7 @@ function sourceOf(v: unknown, path: string): TravelSource {
     return {
       method: 'maps', mode: o.mode as TravelMode, fallbackMinutes: int(o.fallbackMinutes, `${path}.fallbackMinutes`, 0, 600),
       ...(o.found === undefined ? {} : { found: foundOf(o.found, `${path}.found`) }),
+      ...(o.failed === undefined ? {} : { failed: failedOf(o.failed, `${path}.failed`) }),
     };
   }
   return fail(`${path}.method must be "typed" or "maps"`);

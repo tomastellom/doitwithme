@@ -28,11 +28,21 @@ export interface MapsFound {
   at: DateStr;
   fromAddress: string;
   toAddress: string;
+  mode: TravelMode;
+}
+
+// The last lookup that failed, kept so a page that opens again does not ask Google again and again.
+export interface MapsFailed {
+  at: DateStr;
+  code: string;
+  fromAddress: string;
+  toAddress: string;
+  mode: TravelMode;
 }
 
 export type TravelSource =
   | { method: 'typed'; minutes: Minutes }
-  | { method: 'maps'; mode: TravelMode; fallbackMinutes: Minutes; found?: MapsFound };
+  | { method: 'maps'; mode: TravelMode; fallbackMinutes: Minutes; found?: MapsFound; failed?: MapsFailed };
 
 export interface Commute {
   id: string;

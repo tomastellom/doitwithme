@@ -54,7 +54,13 @@ export function createStore(api, getClock) {
       if (r && r.updated > 0) {
         const state = await api.getState();
         const plan = await api.replan(getClock());
-        current = { ...current, state };
+        let mapsUsage = current.mapsUsage;
+        try {
+          mapsUsage = (await api.commuteStatus()).usage ?? mapsUsage;
+        } catch {
+          // The usage line just stays as it was.
+        }
+        current = { ...current, state, mapsUsage };
         set(merged(plan, {}));
       }
     } catch {

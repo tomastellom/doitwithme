@@ -1,18 +1,19 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createDom } from '../../public/js/dom.js';
-import { mapsLines, renderMapsBlock } from '../../public/js/maps-ui.js';
+import { foundFor, mapsLines, renderMapsBlock, usedMinutes } from '../../public/js/maps-ui.js';
 import { FakeDocument, byTag, findAll, textOf } from './fakedom.ts';
 
 const places = [{ id: 'h', name: 'Home', kind: 'home', address: '1 Main St' }, { id: 'c', name: 'Campus', kind: 'campus', address: '9 Uni Rd' }];
 const item = (found?: any) => ({ id: 'k', fromPlaceId: 'h', toPlaceId: 'c', repeats: null, marginMinutes: 10, source: { method: 'maps', mode: 'transit', fallbackMinutes: 40, ...(found ? { found } : {}) } });
-const found = { minutes: 55, at: '2026-10-12', fromAddress: '1 Main St', toAddress: '9 Uni Rd' };
+const found = { minutes: 55, at: '2026-10-12', fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'transit' };
 const ctx = (over: any = {}) => ({ state: { places }, maps: 'ready', mapsUsage: { month: '2026-10', count: 12, limit: 5000 }, mapsNote: null, busy: false, ...over });
 
 test('the lines say what Google found, or that nothing was looked up and the typed time is used', () => {
   assert.equal(mapsLines(item(found), { mode: 'transit', minutes: '40' }, ctx()).found, 'Google found 55 min on 12 Oct.');
   assert.equal(mapsLines(item(), { mode: 'transit', minutes: '40' }, ctx()).found, 'Not looked up yet. Using your typed 40 min.');
-  assert.equal(mapsLines(item({ ...found, toAddress: 'old' }), { mode: 'transit', minutes: '35' }, ctx()).found, 'Not looked up yet for these addresses. Using your typed 35 min.');
+  assert.equal(mapsLines(item({ ...found, toAddress: 'old' }), { mode: 'transit', minutes: '35' }, ctx()).found, 'Not looked up yet for these addresses. Using your typed 40 min.', 'it names the saved time, not what is half typed');
+  assert.equal(mapsLines(item({ ...found, mode: 'walk' }), { mode: 'transit', minutes: '40' }, ctx()).found, 'Not looked up yet for these addresses. Using your typed 40 min.');
   assert.equal(mapsLines(null, { mode: 'transit', minutes: '40' }, ctx()).found, 'Save it and I will look the time up.');
 });
 
@@ -50,4 +51,14 @@ test('hostile text from Google or a place name stays text', () => {
   const el: any = renderMapsBlock(dom, { method: 'maps', mode: 'car', minutes: '40' }, ctx({ item: item(), mapsNote: { commuteId: 'k', ok: false, message: evil }, lookup() {} }));
   assert.match(textOf(el), /<img src=x onerror=alert\(1\)>/);
   assert.equal(findAll(el, (e: any) => e.tag === 'img').length, 0);
+});
+
+test('foundFor and usedMinutes read a result only while its addresses and mode still match', () => {
+  assert.deepEqual(foundFor(item(found), places), found);
+  assert.equal(foundFor(item(), places), null);
+  assert.equal(foundFor(item({ ...found, mode: 'walk' }), places), null);
+  assert.equal(foundFor(item(found), [places[0], { ...places[1], address: 'x' }]), null);
+  assert.equal(usedMinutes(item(found), places), 55);
+  assert.equal(usedMinutes(item(), places), 40);
+  assert.equal(usedMinutes({ ...item(), source: { method: 'typed', minutes: 20 } }, places), 20);
 });

@@ -1,3 +1,4 @@
+import { usedMinutes } from './maps-ui.js';
 import { DEFAULT_LABELS, LOCKED_IDS, labelsOf } from './labels.js';
 import { PALETTE } from './colors.js';
 import { WEEKDAYS, addDays, hhmm, isValidDate, longDate, shortDate } from './time.js';
@@ -367,7 +368,7 @@ export const commuteKind = {
       c.repeats === null ? 'every lesson'
         : c.repeats.kind === 'weekly' ? WEEK_ORDER.filter((w) => c.repeats.weekdays.includes(w)).map((w) => WEEKDAYS[w]).join(', ')
           : `day ${c.repeats.monthDays.join(', ')}`;
-    const minutes = c.source.method === 'typed' ? c.source.minutes : c.source.fallbackMinutes;
+    const minutes = usedMinutes(c, (state && state.places) || []);
     const how = c.source.method === 'typed' ? 'typed' : `Google Maps by ${c.source.mode}`;
     return `${when} / ${minutes} min + ${c.marginMinutes} margin / ${how}`;
   },
@@ -450,6 +451,14 @@ export function applyItem(state, kindId, item) {
   if (kindId === 'commitments' && item.courseId && !(state.tasks ?? []).some((t) => t.id === item.courseId && t.course)) {
     const { courseId, ...rest } = item;
     saved = rest;
+  }
+  // Saving a Maps commute again keeps what Google found while the mode and the places are the same, so editing the days or the margin spends no lookup.
+  if (kindId === 'commutes' && item.source.method === 'maps') {
+    const old = list.find((x) => x.id === item.id);
+    if (old && old.source.method === 'maps' && old.source.mode === item.source.mode && old.fromPlaceId === item.fromPlaceId && old.toPlaceId === item.toPlaceId) {
+      const { found, failed } = old.source;
+      saved = { ...item, source: { ...item.source, ...(found ? { found } : {}), ...(failed ? { failed } : {}) } };
+    }
   }
   const next = { ...state, [spec.list]: exists ? list.map((x) => (x.id === item.id ? saved : x)) : [...list, saved] };
   return kindId === 'tasks' && !item.course ? unlinkCourse(next, item.id) : next;

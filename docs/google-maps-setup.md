@@ -32,4 +32,4 @@ Never paste the key into the app, a file in this folder, or a chat. If it leaks,
 - "I could not reach Google." You are offline. The typed time is used.
 - "This month's 5000 lookups are used up." The cap of this app. The typed time is used until next month.
 
-When anything fails, your typed time is used and nothing breaks.
+When anything fails, your typed time is used and nothing breaks. A lookup that failed is not tried again for a day (two weeks for "no route" or an unknown address), unless you change the addresses or the mode, or press Refresh now.

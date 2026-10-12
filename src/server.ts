@@ -1,4 +1,4 @@
-import { BadLookup, lookupCommute, refreshCommutes, usageFor } from './commutelookup.ts';
+import { BadLookup, keepMapsData, lookupCommute, refreshCommutes, usageFor } from './commutelookup.ts';
 import { googleProvider, unavailableProvider } from './maps.ts';
 import { buildEstimate, unavailableProvider as unavailableWorkload } from './workload.ts';
 import type { WorkloadProvider } from './workload.ts';
@@ -158,8 +158,13 @@ export function createApp(
   const exampleFile = options.exampleFile ?? DEFAULT_EXAMPLE;
   const maps = options.maps ?? unavailableProvider;
   const mapsLimit = options.mapsLimit ?? 5000;
-  const lookupDeps = { maps, limit: mapsLimit, load: () => loadState(statePath), save: (s: State) => saveState(statePath, s) };
-  const dayNow = () => new Date().toISOString().slice(0, 10);
+  // The month a lookup counts toward is the server's own local date, never one a browser sends.
+  const dayNow = () => {
+    const d = new Date();
+    const two = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}`;
+  };
+  const lookupDeps = { maps, limit: mapsLimit, load: () => loadState(statePath), save: (s: State) => saveState(statePath, s), clock: dayNow };
   const workload = options.workload ?? unavailableWorkload;
   return createServer(async (req, res) => {
     try {
@@ -171,7 +176,14 @@ export function createApp(
       }
       if (req.method === 'PUT' && pathname === '/api/state') {
         const state = validateState(await readJson(req));
-        saveState(statePath, state);
+        let previous: State | null = null;
+        try {
+          previous = loadState(statePath);
+        } catch {
+          previous = null;
+        }
+        // The lookup count and what Google found belong to the server; a browser's copy cannot lower or erase them.
+        saveState(statePath, previous ? keepMapsData(previous, state) : state);
         return send(res, 200, { ok: true });
       }
       if (req.method === 'POST' && pathname === '/api/replan') {
@@ -266,7 +278,9 @@ if (import.meta.main) {
   const port = Number(process.env.PORT ?? 8787);
   const file = process.env.DATA_FILE ?? 'data/db.json';
   const key = process.env.GOOGLE_MAPS_API_KEY;
-  const region = process.env.GOOGLE_MAPS_REGION;
+  const regionText = process.env.GOOGLE_MAPS_REGION;
+  const region = typeof regionText === 'string' && /^[A-Za-z]{2}$/.test(regionText) ? regionText : undefined;
+  if (regionText && !region) console.log('GOOGLE_MAPS_REGION must be two letters, like es. Ignoring it.');
   const limit = Number(process.env.MAPS_MONTHLY_LIMIT);
   const connected = typeof key === 'string' && key.trim() !== '';
   createApp(file, {

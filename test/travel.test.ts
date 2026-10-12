@@ -188,7 +188,7 @@ test('every trip says which place it concerns and which route set its time', () 
 const placeAt = (id: string, address: string): any => ({ id, name: id, kind: 'other', address });
 const mapsCommute = (found?: any): any => ({ id: 'k', fromPlaceId: 'a', toPlaceId: 'b', repeats: null, marginMinutes: 0,
   source: { method: 'maps', mode: 'car', fallbackMinutes: 40, ...(found ? { found } : {}) } });
-const lookedUp = { minutes: 55, at: '2026-10-12', fromAddress: '1 Main St', toAddress: '9 Uni Rd' };
+const lookedUp = { minutes: 55, at: '2026-10-12', fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'car' };
 
 test('minutesFor uses a typed time as it is, and a Maps result only while both addresses still match', () => {
   const places = [placeAt('a', '1 Main St'), placeAt('b', '9 Uni Rd')];
@@ -197,6 +197,7 @@ test('minutesFor uses a typed time as it is, and a Maps result only while both a
   assert.equal(minutesFor(mapsCommute(), places), 40, 'not looked up yet');
   assert.equal(minutesFor(mapsCommute(lookedUp), [placeAt('a', '2 Other St'), placeAt('b', '9 Uni Rd')]), 40, 'the start address changed');
   assert.equal(minutesFor(mapsCommute(lookedUp), [placeAt('a', '1 Main St'), placeAt('b', '')]), 40, 'the end address changed');
+  assert.equal(minutesFor(mapsCommute({ ...lookedUp, mode: 'walk' }), places), 40, 'the mode changed');
   assert.equal(minutesFor(mapsCommute(lookedUp), []), 40, 'a missing place');
   assert.equal(minutesFor(mapsCommute(lookedUp)), 40, 'no places given');
 });

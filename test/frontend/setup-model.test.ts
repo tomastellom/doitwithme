@@ -443,3 +443,28 @@ test('attendance details typed without credits are refused instead of dropped', 
   assert.equal(err({}), undefined);
   assert.equal(err({ recorded: 'unknown' }), undefined);
 });
+
+
+test('saving a Maps commute keeps its result while the mode and places are unchanged, and drops it otherwise', () => {
+  const places = [{ id: 'h', name: 'Home', kind: 'home', address: '1 Main St' }, { id: 'c', name: 'Campus', kind: 'campus', address: '9 Uni Rd' }];
+  const found = { minutes: 55, at: '2026-10-12', fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'transit' };
+  const failed = { at: '2026-10-12', code: 'offline', fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'transit' };
+  const old = { id: 'k', fromPlaceId: 'h', toPlaceId: 'c', repeats: null, marginMinutes: 10, source: { method: 'maps', mode: 'transit', fallbackMinutes: 40, found, failed } };
+  const state: any = { ...st(), places, commutes: [old] };
+  const { found: _f, failed: _x, ...bare } = old.source as any;
+  const edit = (over: any) => applyItem(state, 'commutes', { ...old, ...over, source: { ...bare, ...(over.source ?? {}) } }).commutes[0];
+  const kept = edit({ marginMinutes: 20 });
+  assert.deepEqual([kept.source.found, kept.source.failed, kept.marginMinutes], [found, failed, 20]);
+  assert.equal('found' in edit({ source: { mode: 'walk' } }).source, false, 'another mode');
+  assert.equal('found' in edit({ toPlaceId: 'h' }).source, false, 'another place');
+  const typed = applyItem(state, 'commutes', { ...old, source: { method: 'typed', minutes: 20 } }).commutes[0];
+  assert.equal('found' in typed.source, false);
+});
+
+test('the commute list shows the time the planner uses, the found one when there is one', () => {
+  const places = [{ id: 'h', name: 'Home', kind: 'home', address: '1 Main St' }, { id: 'c', name: 'Campus', kind: 'campus', address: '9 Uni Rd' }];
+  const found = { minutes: 55, at: '2026-10-12', fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'transit' };
+  const c = (f?: any) => ({ id: 'k', fromPlaceId: 'h', toPlaceId: 'c', repeats: null, marginMinutes: 10, source: { method: 'maps', mode: 'transit', fallbackMinutes: 40, ...(f ? { found: f } : {}) } });
+  assert.match(commuteKind.summary(c(found), { places }), /55 min \+ 10 margin \/ Google Maps by transit/);
+  assert.match(commuteKind.summary(c(), { places }), /40 min \+ 10 margin/);
+});

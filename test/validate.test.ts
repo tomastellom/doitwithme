@@ -348,7 +348,7 @@ const mapsState = (found: any, usage?: any) => ({
     source: { method: 'maps', mode: 'transit', fallbackMinutes: 40, ...(found === undefined ? {} : { found }) } }],
   ...(usage === undefined ? {} : { mapsUsage: usage }),
 });
-const foundOk = { minutes: 55, at: '2026-10-12', fromAddress: '1 Main St', toAddress: '9 Uni Rd' };
+const foundOk = { minutes: 55, at: '2026-10-12', fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'transit' };
 
 test('a Maps commute may carry its last result, and the month count is validated', () => {
   const ok: any = validateState(mapsState(foundOk, { month: '2026-10', count: 12 }));
@@ -366,4 +366,16 @@ test('a saved Maps result and the month count reject bad values', () => {
   assert.throws(() => validateState(mapsState(foundOk, { month: '2026-1', count: 1 })), /mapsUsage\.month/);
   assert.throws(() => validateState(mapsState(foundOk, { month: '2026-10', count: -1 })), /mapsUsage\.count/);
   assert.throws(() => validateState(mapsState(foundOk, { month: '2026-10', count: 1000001 })), /mapsUsage\.count/);
+});
+
+test('a Maps result records its mode, and a failed attempt is validated too', () => {
+  const noMode: any = { ...foundOk };
+  delete noMode.mode;
+  assert.throws(() => validateState(mapsState(noMode)), /found\.mode/);
+  assert.throws(() => validateState(mapsState({ ...foundOk, mode: 'rocket' })), /found\.mode/);
+  const withFailed = (failed: any) => { const s: any = mapsState(undefined); s.commutes[0].source.failed = failed; return s; };
+  const attempt = { at: '2026-10-12', code: 'no-route', fromAddress: '1 Main St', toAddress: '9 Uni Rd', mode: 'transit' };
+  assert.deepEqual((validateState(withFailed(attempt)) as any).commutes[0].source.failed, attempt);
+  assert.throws(() => validateState(withFailed({ ...attempt, at: 'soon' })), /failed\.at/);
+  assert.throws(() => validateState(withFailed({ ...attempt, code: 5 })), /failed\.code/);
 });

@@ -18,7 +18,7 @@ const now = () => new Date(2026, 9, 5, 9, 0); // Monday 5 Oct 2026, 09:00
 const tick = (ms = 30) => new Promise((r) => setTimeout(r, ms));
 
 const task = (over: any = {}) => ({ id: 't1', title: 'Study', category: 'study', weeklyMinutes: 300, maxBlock: 120, onePerDay: false, priority: 3, ...over });
-const baseState = (over: any = {}) => ({ ...emptyState(), tasks: [task()], preferences: structuredClone(defaultPreferences), ...over });
+const baseState = (over: any = {}) => ({ ...emptyState(), tasks: [task()], preferences: { ...structuredClone(defaultPreferences), checkInEnabled: false }, ...over });
 const put = (state: any) => fetch(`${base}/api/state`, { method: 'PUT', headers: json, body: JSON.stringify(state) });
 const serverState = async () => (await fetch(`${base}/api/state`)).json();
 

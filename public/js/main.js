@@ -15,6 +15,7 @@ import { weekModel } from './model.js';
 import { createNotifier, startHiddenRefresh } from './notify.js';
 import { createNudge } from './nudge.js';
 import { buildNudge } from './nudge-model.js';
+import { askLine, canReopen, movedLine, replyLine, shouldAsk } from './checkin-model.js';
 import { buildHash, dateParam, resolveRoute, weekParam } from './router.js';
 import { createRegistry } from './sections.js';
 import { createSettings } from './settings.js';
@@ -64,6 +65,9 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     undo: (date) => store.undo(date),
     dismiss: (keys) => store.dismiss(keys),
     okay: () => store.clearConfirm(),
+    answer: (mood) => store.answerCheckIn(mood),
+    skip: () => store.answerCheckIn('skipped'),
+    reopen: () => store.reopenCheckIn(),
     retry: () => store.load(),
     fix: (hash) => navigate(hash),
     cheerDone: () => store.clearConfirm(),
@@ -349,8 +353,20 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       notice: s.notice,
       estimating: s.estimating,
       cheer: s.cheer,
+      checkIn: checkInView(s),
+      checkInReopen: Boolean(s.state) && canReopen(s.state, getClock().today) && !s.reopened,
       celebrate: Boolean(s.state) && !s.isEmpty && coveredThisWeek(deadlinesModel(s.state, getClock())),
     });
+  }
+
+  function checkInView(s) {
+    const today = getClock().today;
+    if (!s.state || s.isEmpty) return null;
+    if (s.checkInResult && s.checkInResult.mood !== 'skipped') {
+      const r = s.checkInResult;
+      return { result: { mood: r.mood, line: replyLine(r.mood, today), moved: r.mood === 'low' ? movedLine(r, s.state.preferences.lowDayMinutes) : '' } };
+    }
+    return shouldAsk(s.state, today, s.reopened) ? { asking: true, line: askLine(today) } : null;
   }
 
   function render() {

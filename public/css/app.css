@@ -50,7 +50,7 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .pg { display: flex; gap: 6px; }
 .pg button { width: 30px; height: 26px; border: 2px solid var(--paper); background: transparent; color: var(--paper); font-family: var(--font-mono); }
-.acts { display: flex; gap: 8px; }
+.acts { display: flex; flex-wrap: wrap; gap: 8px; }
 .acts button { font-size: 13px; padding: 8px 12px; border: 2px solid var(--paper); background: transparent; color: var(--paper); }
 .acts button.y { background: var(--study); border-color: var(--study); color: var(--on-study); font-weight: 600; }
 .acts button:disabled { opacity: .5; cursor: not-allowed; }

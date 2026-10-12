@@ -23,7 +23,7 @@ const studyState = (over: any = {}) => ({
   preferences: {
     ...structuredClone(defaultPreferences),
     weekdayWindow: { start: 1080, end: 1200 }, dayOffWindow: { start: 1080, end: 1200 },
-    daysOff: [], softWindows: [{ weekday: 5, start: 1080, end: 1440 }], softMode: 'ask',
+    daysOff: [], checkInEnabled: false, softWindows: [{ weekday: 5, start: 1080, end: 1440 }], softMode: 'ask',
   },
   ...over,
 });

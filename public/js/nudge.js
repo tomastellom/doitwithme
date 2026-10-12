@@ -143,6 +143,7 @@ export function faceFor(view) {
   if (view.status === 'offline' || view.status === 'error') return 'sleepy';
   // Something was just ticked off: happy, and the confetti face when the whole day is done.
   if (view.cheer) return view.cheer.big ? 'celebrating' : 'happy';
+  if (view.checkIn && view.checkIn.result) return view.checkIn.result.mood === 'low' ? 'worried' : 'happy';
   if (view.confirm) return view.confirm.used ? 'happy' : 'resting';
   if (view.busy) return 'working';
   if (view.estimating) return 'thinking';
@@ -165,6 +166,8 @@ function spokenFor(view, item) {
   if (view.status === 'offline') return "I can't reach the planner.";
   if (view.status === 'error') return 'Something went wrong.';
   if (view.cheer) return view.cheer.title;
+  if (view.checkIn && view.checkIn.asking) return view.checkIn.line;
+  if (view.checkIn && view.checkIn.result) return `${view.checkIn.result.line} ${view.checkIn.result.moved}`.trim();
   if (view.confirm) {
     const c = view.confirm;
     return c.used ? `Done. ${c.weekday} evening is in your plan.` : `${c.weekday} evening is open.`;
@@ -177,7 +180,7 @@ function spokenFor(view, item) {
 const CHEER_MS = 5000;
 
 const needsAttention = (view) =>
-  view.status === 'offline' || view.status === 'error' || Boolean(view.cheer) || Boolean(view.confirm) || view.items.length > 0 || Boolean(view.notice);
+  view.status === 'offline' || view.status === 'error' || Boolean(view.cheer) || Boolean(view.checkIn && (view.checkIn.asking || view.checkIn.result)) || Boolean(view.confirm) || view.items.length > 0 || Boolean(view.notice);
 
 export function createNudge(dom, handlers, env = {}) {
   const { h, clear } = dom;
@@ -232,6 +235,29 @@ export function createNudge(dom, handlers, env = {}) {
     return { form, reply };
   }
 
+  function checkInBubble() {
+    const c = view.checkIn;
+    if (c.asking) {
+      return say(
+        h('span', { class: 'mono k' }, 'Nudge'),
+        h('b', {}, c.line),
+        h('div', { class: 'acts' },
+          button('Good', () => handlers.answer('good'), 'y', 'checkin-good'),
+          button('Okay', () => handlers.answer('okay'), '', 'checkin-okay'),
+          button('Low', () => handlers.answer('low'), '', 'checkin-low'),
+          button('Not now', () => handlers.skip(), '', 'checkin-skip')),
+      );
+    }
+    return say(
+      h('span', { class: 'mono k' }, 'Nudge'),
+      h('b', {}, c.result.line),
+      c.result.moved && h('p', {}, c.result.moved),
+      h('div', { class: 'acts' },
+        button('Okay', () => handlers.okay(), 'y', 'nudge-okay'),
+        c.result.mood === 'low' && button("Actually, I'm okay", () => handlers.answer('okay'), '', 'checkin-undo')),
+    );
+  }
+
   function speaking() {
     const item = view.items[index];
     const many = view.items.length > 1;
@@ -277,6 +303,8 @@ export function createNudge(dom, handlers, env = {}) {
         h('p', {}, view.cheer.text),
         h('div', { class: 'acts' }, button('Okay', () => handlers.okay(), 'y', 'nudge-okay')),
       );
+    } else if (view.checkIn && (view.checkIn.asking || view.checkIn.result)) {
+      bubble = checkInBubble();
     } else if (view.confirm) {
       const c = view.confirm;
       bubble = say(
@@ -299,7 +327,7 @@ export function createNudge(dom, handlers, env = {}) {
       bubble = h('div', { class: 'quiet' }, h('span', { class: 'mono' }, 'Loading'));
     } else {
       const { form, reply } = askForm();
-      bubble = h('div', { class: 'quiet' }, h('b', {}, 'All clear.'), h('span', { class: 'mono' }, 'No open warnings'), form, reply);
+      bubble = h('div', { class: 'quiet' }, h('b', {}, 'All clear.'), h('span', { class: 'mono' }, 'No open warnings'), view.checkInReopen && button('Check in', () => handlers.reopen(), '', 'checkin-reopen'), form, reply);
     }
     // With nothing to say Nudge rests out of sight; it comes out on its own for anything that needs you.
     const attention = needsAttention(view);
@@ -412,7 +440,7 @@ export function createNudge(dom, handlers, env = {}) {
         if (attention) stopGlance();
         else armGlance();
       }
-      const sig = JSON.stringify([view.status, view.items.map((i) => i.key), view.confirm, view.error]);
+      const sig = JSON.stringify([view.status, view.items.map((i) => i.key), view.confirm, view.error, view.checkIn]);
       if (sig !== signature) {
         signature = sig;
         askMessage = null;

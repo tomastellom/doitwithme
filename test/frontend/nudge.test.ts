@@ -17,6 +17,9 @@ function setup() {
     dismiss: (k: string[]) => calls.push(['dismiss', k]),
     okay: () => calls.push(['okay']),
     retry: () => calls.push(['retry']),
+    answer: (m: string) => calls.push(['answer', m]),
+    skip: () => calls.push(['skip']),
+    reopen: () => calls.push(['reopen']),
   };
   const nudge: any = createNudge(dom, handlers);
   return { nudge, calls };
@@ -574,4 +577,44 @@ test('the cheer still goes away by itself when the person asked for reduced moti
   nudge.update({ ...base, cheer: { big: false, title: 'Nice.', text: 'x' } });
   timers.find((t) => t.ms === 5000)!.fn();
   assert.deepEqual(calls, ['gone']);
+});
+
+test('check-in: asks with three face buttons and a Not now, and reports each choice', () => {
+  const { nudge, calls } = setup();
+  nudge.update({ ...base, checkIn: { asking: true, line: 'How are you today?' } });
+  assert.match(textOf(nudge.el), /How are you today\?/);
+  assert.equal(nudge.el.getAttribute('data-state'), 'alert');
+  labelled(nudge.el, 'Good')!.click();
+  labelled(nudge.el, 'Okay')!.click();
+  labelled(nudge.el, 'Low')!.click();
+  labelled(nudge.el, 'Not now')!.click();
+  assert.deepEqual(calls, [['answer', 'good'], ['answer', 'okay'], ['answer', 'low'], ['skip']]);
+});
+
+test('check-in: a low result says what moved and offers the undo, a good one only closes', () => {
+  const { nudge, calls } = setup();
+  nudge.update({ ...base, checkIn: { result: { mood: 'low', line: 'That is fine.', moved: 'Kept 2h00 today, moved 3h00 to Thu.' } } });
+  assert.match(textOf(nudge.el), /Kept 2h00 today, moved 3h00 to Thu\./);
+  assert.equal(byClass(nudge.el, 'mascot')[0].getAttribute('data-face'), 'worried');
+  labelled(nudge.el, "Actually, I'm okay")!.click();
+  labelled(nudge.el, 'Okay')!.click();
+  assert.deepEqual(calls, [['answer', 'okay'], ['okay']]);
+  nudge.update({ ...base, checkIn: { result: { mood: 'good', line: 'Glad to hear it.', moved: '' } } });
+  assert.equal(labelled(nudge.el, "Actually, I'm okay"), undefined);
+  assert.equal(byClass(nudge.el, 'mascot')[0].getAttribute('data-face'), 'happy');
+});
+
+test('check-in: errors come before the question, and the question before warnings', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base, status: 'offline', checkIn: { asking: true, line: 'How are you today?' } });
+  assert.doesNotMatch(textOf(nudge.el), /How are you today/);
+  nudge.update({ ...base, items: [item()], checkIn: { asking: true, line: 'How are you today?' } });
+  assert.match(textOf(nudge.el), /How are you today\?/);
+});
+
+test('check-in: a skipped day offers a small Check in button while he rests', () => {
+  const { nudge, calls } = setup();
+  nudge.update({ ...base, checkInReopen: true });
+  labelled(nudge.el, 'Check in')!.click();
+  assert.deepEqual(calls, [['reopen']]);
 });

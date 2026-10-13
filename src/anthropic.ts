@@ -1,4 +1,5 @@
 import { AiError } from './workload.ts';
+import type { ChatProvider } from './chat.ts';
 import type { AiErrorCode, WorkloadProvider } from './workload.ts';
 
 const URL = 'https://api.anthropic.com/v1/messages';
@@ -46,6 +47,48 @@ export const plausibleKey = (key: string): boolean => /^[\x21-\x7e]+$/.test(key)
 
 const timedOut = (e: unknown): boolean => typeof e === 'object' && e !== null && (e as { name?: string }).name === 'TimeoutError';
 
+// One request to the Messages API. Every failure is turned into one of our own sentences; the reply text is never repeated.
+async function post(fetchFn: typeof fetch, key: string, body: unknown, timeoutMs: number): Promise<any> {
+  let res: Response;
+  try {
+    res = await fetchFn(URL, {
+      method: 'POST',
+      redirect: 'error',
+      signal: AbortSignal.timeout(timeoutMs),
+      headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    return fail(timedOut(e) ? 'slow' : 'offline');
+  }
+  if (res.status === 401 || res.status === 403) return fail('key');
+  if (res.status === 402) return fail('billing');
+  if (res.status === 429 || res.status === 529) return fail('busy');
+  if (res.status >= 500) return fail('server');
+  if (res.status === 400) {
+    // A low balance comes back as a 400. The reply is only read to tell that apart, never repeated.
+    let text = '';
+    try {
+      text = String((await res.json())?.error?.message ?? '');
+    } catch (e) {
+      if (timedOut(e)) return fail('slow');
+      text = '';
+    }
+    return fail(/credit balance/i.test(text) ? 'billing' : 'request');
+  }
+  if (!res.ok) return fail('request');
+  let data: any;
+  try {
+    data = await res.json();
+  } catch (e) {
+    return fail(timedOut(e) ? 'slow' : 'bad-response');
+  }
+  if (!data || typeof data !== 'object') return fail('bad-response');
+  if (data.stop_reason === 'refusal') return fail('declined');
+  if (data.stop_reason === 'max_tokens' || !Array.isArray(data.content)) return fail('bad-response');
+  return data;
+}
+
 export function anthropicProvider(opts: { key: string; model?: string; fetchFn?: typeof fetch; timeoutMs?: number }): WorkloadProvider {
   const { key, model = DEFAULT_MODEL, timeoutMs = 15000 } = opts;
   if (!/^claude-[a-z0-9.-]{1,60}$/.test(model)) throw new Error('The AI model name does not look right');
@@ -74,43 +117,7 @@ export function anthropicProvider(opts: { key: string; model?: string; fetchFn?:
         messages: [{ role: 'user', content: user }],
         output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } },
       };
-      let res: Response;
-      try {
-        res = await fetchFn(URL, {
-          method: 'POST',
-          redirect: 'error',
-          signal: AbortSignal.timeout(timeoutMs),
-          headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify(body),
-        });
-      } catch (e) {
-        return fail(timedOut(e) ? 'slow' : 'offline');
-      }
-      if (res.status === 401 || res.status === 403) return fail('key');
-      if (res.status === 402) return fail('billing');
-      if (res.status === 429 || res.status === 529) return fail('busy');
-      if (res.status >= 500) return fail('server');
-      if (res.status === 400) {
-        // A low balance comes back as a 400. The reply is only read to tell that apart, never repeated.
-        let text = '';
-        try {
-          text = String((await res.json())?.error?.message ?? '');
-        } catch (e) {
-          if (timedOut(e)) return fail('slow');
-          text = '';
-        }
-        return fail(/credit balance/i.test(text) ? 'billing' : 'request');
-      }
-      if (!res.ok) return fail('request');
-      let data: any;
-      try {
-        data = await res.json();
-      } catch (e) {
-        return fail(timedOut(e) ? 'slow' : 'bad-response');
-      }
-      if (!data || typeof data !== 'object') return fail('bad-response');
-      if (data.stop_reason === 'refusal') return fail('declined');
-      if (data.stop_reason === 'max_tokens' || !Array.isArray(data.content)) return fail('bad-response');
+      const data = await post(fetchFn, key, body, timeoutMs);
       const block = data.content.find((b: any) => b && b.type === 'text' && typeof b.text === 'string');
       if (!block) return fail('bad-response');
       let parsed: any;
@@ -121,6 +128,38 @@ export function anthropicProvider(opts: { key: string; model?: string; fetchFn?:
       }
       if (!parsed || typeof parsed.minutes !== 'number' || !Number.isFinite(parsed.minutes) || typeof parsed.reason !== 'string') return fail('bad-response');
       return { minutes: parsed.minutes, reason: parsed.reason };
+    },
+  };
+}
+
+export function anthropicChatProvider(opts: { key: string; model?: string; fetchFn?: typeof fetch; timeoutMs?: number }): ChatProvider {
+  const { key, model = DEFAULT_MODEL, timeoutMs = 25000 } = opts;
+  if (!/^claude-[a-z0-9.-]{1,60}$/.test(model)) throw new Error('The AI model name does not look right');
+  if (!plausibleKey(key)) throw new Error('The AI key has characters a key cannot have');
+  const fetchFn = opts.fetchFn ?? fetch;
+  return {
+    status: 'ready',
+    async turn({ system, messages, tools, toolsAllowed }) {
+      // Once the lookups are used up the tools stay listed (the history holds tool calls) but may not be used.
+      const body = {
+        model,
+        max_tokens: 4096,
+        system,
+        messages,
+        tools,
+        ...(toolsAllowed ? {} : { tool_choice: { type: 'none' } }),
+        output_config: { effort: 'low' },
+      };
+      const data = await post(fetchFn, key, body, timeoutMs);
+      const text = data.content
+        .filter((b: any) => b && b.type === 'text' && typeof b.text === 'string')
+        .map((b: any) => b.text)
+        .join('\n');
+      const toolCalls = data.content
+        .filter((b: any) => b && b.type === 'tool_use' && typeof b.id === 'string' && typeof b.name === 'string')
+        .map((b: any) => ({ id: b.id, name: b.name, input: b.input }));
+      // The content goes back unchanged on the next pass, thinking blocks included.
+      return { text, toolCalls, assistantContent: data.content };
     },
   };
 }

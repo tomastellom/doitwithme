@@ -12,6 +12,7 @@ export const HISTORY_SENT = 10;
 export const SUMMARY_DAYS = 28;
 export const SUMMARY_LINES = 300;
 export const MAX_MESSAGE = 1000;
+const ANSWER_MAX = 2000;
 
 export interface ToolCall {
   id: string;
@@ -100,9 +101,9 @@ export function buildSummary(state: State, today: DateStr, nowMinutes?: Minutes)
     .filter((d) => d.dueDate >= today && d.dueDate <= last)
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
     .map((d) => `${d.dueDate} ${clean(state.tasks.find((t) => t.id === d.taskId)?.title ?? '')} ${clean(d.kind)}, ${d.effortMinutes} min of effort`);
-  const tasks = state.tasks.map((t) => `${clean(t.title)} (${clean(t.category)}${t.weeklyMinutes === null ? '' : `, ${t.weeklyMinutes} min a week`})`);
+  const tasks = state.tasks.map((t) => `- ${clean(t.title)} (${clean(t.category)}${t.weeklyMinutes === null ? '' : `, ${t.weeklyMinutes} min a week`})`);
 
-  // The lists are cut from the far end, events first, so a very full planner stays a bounded request.
+  // The lists are cut from the far end, events first then planned work, deadlines and tasks, so a very full planner stays a bounded request.
   const total = events.length + planned.length + deadlines.length + tasks.length;
   let over = Math.max(0, total - SUMMARY_LINES);
   const cut = (list: string[]): number => {
@@ -111,7 +112,7 @@ export function buildSummary(state: State, today: DateStr, nowMinutes?: Minutes)
     list.length -= n;
     return n;
   };
-  const hidden = cut(events) + cut(planned);
+  const hidden = cut(events) + cut(planned) + cut(deadlines) + cut(tasks);
   const p = state.preferences;
   const lines = [
     `Today: ${DAY_NAMES[weekdayOf(today)]} ${today}${nowMinutes === undefined ? '' : `, now ${hhmm(nowMinutes)}`}`,
@@ -119,7 +120,7 @@ export function buildSummary(state: State, today: DateStr, nowMinutes?: Minutes)
     `Events, next ${SUMMARY_DAYS} days:`, ...events,
     'Planned work:', ...planned,
     'Deadlines:', ...deadlines,
-    `Tasks: ${tasks.join('; ') || 'none'}`,
+    ...(tasks.length ? ['Tasks:', ...tasks] : ['Tasks: none']),
     ...(hidden > 0 ? [`(${hidden} more items not shown. Use find to see them.)`] : []),
   ];
   return { text: lines.join('\n'), items: events.length + planned.length + deadlines.length + tasks.length };
@@ -155,7 +156,7 @@ export async function runChat(deps: {
     if (turn.toolCalls.length === 0) {
       const answer = turn.text.trim();
       if (!answer) throw new AiError('bad-response', 'The AI answered in a way I could not read.');
-      return { answer: answer.slice(0, 2000), sent, lookups };
+      return { answer: answer.slice(0, ANSWER_MAX), sent, lookups };
     }
     messages.push({ role: 'assistant', content: turn.assistantContent });
     const results = turn.toolCalls.map((c) => {

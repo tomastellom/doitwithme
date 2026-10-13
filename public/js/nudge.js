@@ -267,21 +267,26 @@ export function createNudge(dom, handlers, env = {}) {
       });
   }
 
+  // Each request only applies its result if the panel it opened is still the one showing, so Close is not undone by a late reply.
   function openEarlier() {
     if (earlier) { earlier = null; render(); return; }
-    earlier = { loading: true, entries: [], error: null, confirmClear: false };
+    const mine = { loading: true, entries: [], error: null, confirmClear: false };
+    earlier = mine;
     render();
+    const settle = (next) => { if (earlier === mine) { earlier = next; render(); } };
     Promise.resolve()
       .then(() => handlers.history())
-      .then((r) => { earlier = { loading: false, entries: r.entries, error: null, confirmClear: false }; render(); })
-      .catch(() => { earlier = { loading: false, entries: [], error: 'I could not load the earlier chats.', confirmClear: false }; render(); });
+      .then((r) => settle({ loading: false, entries: r.entries, error: null, confirmClear: false }))
+      .catch(() => settle({ loading: false, entries: [], error: 'I could not load the earlier chats.', confirmClear: false }));
   }
 
   function clearEarlier() {
+    const mine = earlier;
+    const settle = (next) => { if (earlier === mine) { earlier = next; render(); } };
     Promise.resolve()
       .then(() => handlers.clearHistory())
-      .then(() => { earlier = { loading: false, entries: [], error: null, confirmClear: false }; render(); })
-      .catch(() => { earlier = { ...earlier, error: 'I could not clear the chats.', confirmClear: false }; render(); });
+      .then(() => settle({ loading: false, entries: [], error: null, confirmClear: false }))
+      .catch(() => settle({ ...mine, error: 'I could not clear the chats.', confirmClear: false }));
   }
 
   function earlierPanel() {
@@ -542,8 +547,11 @@ export function createNudge(dom, handlers, env = {}) {
       const sig = JSON.stringify([view.status, view.items.map((i) => i.key), view.confirm, view.error, view.checkIn]);
       if (sig !== signature) {
         signature = sig;
-        askMessage = null;
-        sentNote = '';
+        // A question still being answered keeps its Thinking line.
+        if (!asking) {
+          askMessage = null;
+          sentNote = '';
+        }
       }
       if (index >= view.items.length) index = 0;
       render();

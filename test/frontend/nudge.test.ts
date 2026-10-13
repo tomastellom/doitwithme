@@ -748,3 +748,31 @@ test('skip confirmation: happy, says what moved in, and offers Okay and Undo', (
   labelled(nudge.el, 'Okay')!.click();
   assert.deepEqual(calls, [['undoSkip', 'lec', '2026-10-06'], ['okay']]);
 });
+
+test('closing Earlier while it is still loading keeps it closed when the history arrives', async () => {
+  let release: (v: any) => void = () => {};
+  const { nudge } = setup({ history: () => new Promise((r) => { release = r; }) });
+  nudge.update({ ...base });
+  const fk = (k: string) => findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === k)[0];
+  fk('nudge-earlier').click();
+  fk('nudge-chat-close').click();
+  release({ entries: [{ at: 'a', question: 'q1', answer: 'a1' }] });
+  await flush();
+  assert.equal(byClass(nudge.el, 'earlier').length, 0);
+  assert.doesNotMatch(textOf(nudge.el), /Nudge chat sends your plan/);
+});
+
+test('a re-render while a question is pending keeps Thinking and the answer lands in the live bubble', async () => {
+  let release: (v: any) => void = () => {};
+  const { nudge } = setup({ ask: () => new Promise((r) => { release = r; }) });
+  nudge.update({ ...base });
+  type(nudge, 'hello');
+  byTag(nudge.el, 'form')[0].dispatch('submit');
+  nudge.update({ ...base, items: [item()] });
+  assert.equal(askBox(nudge).disabled, true);
+  assert.match(textOf(byClass(nudge.el, 'reply')[0]), /Thinking/);
+  release({ answer: 'All good.', sent: 2 });
+  await flush();
+  assert.match(textOf(byClass(nudge.el, 'reply')[0]), /All good\./);
+  assert.equal(askBox(nudge).disabled, false);
+});

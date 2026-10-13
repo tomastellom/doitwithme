@@ -74,3 +74,13 @@ test('lookupCommute and refreshCommutes post the clock', async () => {
   assert.deepEqual([f.calls[0].path, JSON.parse(f.calls[0].init.body)], ['/api/commute/lookup', { today: '2026-10-05', commuteId: 'k' }]);
   assert.deepEqual([f.calls[1].path, JSON.parse(f.calls[1].init.body)], ['/api/commute/refresh', { today: '2026-10-05' }]);
 });
+
+test('chat calls use the right method, path and body', async () => {
+  const f = fakeFetch([{ status: 200, body: { answer: 'hi', sent: 3, remaining: 29 } }, { status: 200, body: { entries: [] } }, { status: 200, body: { ok: true } }]);
+  const api = createApi(f.fn as any);
+  assert.deepEqual(await api.chat(clock, 'What is on?'), { answer: 'hi', sent: 3, remaining: 29 });
+  await api.chatHistory();
+  await api.clearChatHistory();
+  assert.deepEqual(f.calls.map((c) => [c.init.method, c.path]), [['POST', '/api/chat'], ['GET', '/api/chat/history'], ['DELETE', '/api/chat/history']]);
+  assert.deepEqual(JSON.parse(f.calls[0].init.body), { today: '2026-10-05', nowMinutes: 540, message: 'What is on?' });
+});

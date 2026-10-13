@@ -51,7 +51,8 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   const dom = createDom(document);
   const { h, clear } = dom;
   const getClock = () => currentClock(now());
-  const store = createStore(createApi(fetch), getClock);
+  const api = createApi(fetch);
+  const store = createStore(api, getClock);
   const registry = createRegistry();
   let hidden = loadHidden(win);
   let route = { id: 'week', param: null };
@@ -73,6 +74,9 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     retry: () => store.load(),
     fix: (hash) => navigate(hash),
     cheerDone: () => store.clearConfirm(),
+    ask: (text) => api.chat(getClock(), text),
+    history: () => api.chatHistory(),
+    clearHistory: () => api.clearChatHistory(),
   }, typeof win.setTimeout === 'function'
     ? {
         setTimer: (fn, ms) => win.setTimeout(fn, ms),

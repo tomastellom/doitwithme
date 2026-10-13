@@ -1,7 +1,8 @@
 import { keysOf } from './nudge-model.js';
 import { duration } from './time.js';
 
-const ASK_REPLY = "I can't answer questions yet. That arrives with the AI phase.";
+const NO_CHAT = 'Chat is not available here.';
+const PRIVACY = 'Nudge chat sends your plan and recent chat to Anthropic.';
 
 const bar = (svg, x, y, w, h, extra = {}) =>
   svg('rect', { class: 'mascot-eye', x, y, width: w, height: h, rx: Math.min(w, h) / 2, ...extra });
@@ -210,6 +211,11 @@ export function createNudge(dom, handlers, env = {}) {
   // Timers are optional: without them Nudge simply keeps one face for each situation.
   const animated = typeof env.setTimer === 'function' && !env.reduceMotion;
   let askMessage = null;
+  let asking = false;
+  let replyEl = null;
+  let noteEl = null;
+  let sentNote = '';
+  let earlier = null; // closed, or { loading, entries, error, confirmClear }
   let draft = '';
   let signature = '';
   let lastSpoken = null;
@@ -222,22 +228,99 @@ export function createNudge(dom, handlers, env = {}) {
   // Offers go through one handler; without it the soft-evening offer keeps working as before.
   const accept = (offer) => (handlers.accept ? handlers.accept(offer) : handlers.approve(offer.date));
 
+  function showReply(text, note = '') {
+    askMessage = text;
+    sentNote = note;
+    if (replyEl) replyEl.textContent = text;
+    if (noteEl) noteEl.textContent = note;
+  }
+
+  function finishAsking() {
+    asking = false;
+    if (askInput) {
+      askInput.disabled = false;
+      if (typeof askInput.focus === 'function') askInput.focus();
+    }
+  }
+
+  function sendAsk() {
+    const text = draft.trim();
+    if (text === '' || asking) return;
+    if (!handlers.ask) { showReply(NO_CHAT); return; }
+    asking = true;
+    if (askInput) askInput.disabled = true;
+    showReply('Thinking...');
+    // Called right away (not in a microtask) so a second press cannot slip in; a throw becomes a rejection.
+    let pending;
+    try { pending = Promise.resolve(handlers.ask(text)); } catch (e) { pending = Promise.reject(e); }
+    pending
+      .then((r) => {
+        draft = '';
+        if (askInput) askInput.value = '';
+        showReply(r.answer, r.sent ? `Looked at ${r.sent} items` : '');
+        finishAsking();
+      })
+      .catch((e) => {
+        // The text stays in the box so you can send it again.
+        showReply(e && e.message ? e.message : 'Something went wrong. Try again.');
+        finishAsking();
+      });
+  }
+
+  function openEarlier() {
+    if (earlier) { earlier = null; render(); return; }
+    earlier = { loading: true, entries: [], error: null, confirmClear: false };
+    render();
+    Promise.resolve()
+      .then(() => handlers.history())
+      .then((r) => { earlier = { loading: false, entries: r.entries, error: null, confirmClear: false }; render(); })
+      .catch(() => { earlier = { loading: false, entries: [], error: 'I could not load the earlier chats.', confirmClear: false }; render(); });
+  }
+
+  function clearEarlier() {
+    Promise.resolve()
+      .then(() => handlers.clearHistory())
+      .then(() => { earlier = { loading: false, entries: [], error: null, confirmClear: false }; render(); })
+      .catch(() => { earlier = { ...earlier, error: 'I could not clear the chats.', confirmClear: false }; render(); });
+  }
+
+  function earlierPanel() {
+    const e = earlier;
+    const list = [...e.entries].reverse().flatMap((x) => [h('p', { class: 'q' }, x.question), h('p', { class: 'a' }, x.answer)]);
+    return h('div', { class: 'earlier' },
+      h('p', { class: 'mono k' }, PRIVACY),
+      e.loading && h('p', {}, 'Loading...'),
+      e.error && h('p', {}, e.error),
+      !e.loading && !e.error && e.entries.length === 0 && h('p', {}, 'Nothing yet.'),
+      ...list,
+      e.confirmClear
+        ? h('div', { class: 'acts' },
+          h('b', {}, 'Delete all earlier chats?'),
+          button('Yes, delete', () => clearEarlier(), 'y', 'nudge-chat-clear-yes'),
+          button('Keep them', () => { earlier = { ...earlier, confirmClear: false }; render(); }, '', 'nudge-chat-clear-no'))
+        : h('div', { class: 'acts' },
+          e.entries.length > 0 && button('Clear history', () => { earlier = { ...earlier, confirmClear: true }; render(); }, '', 'nudge-chat-clear'),
+          button('Close', () => openEarlier(), '', 'nudge-chat-close')));
+  }
+
   // The text box is the same in every state, so you can talk to him even when nothing is wrong.
   function askForm() {
     const reply = h('p', { class: 'reply' }, askMessage);
+    const note = h('span', { class: 'sent mono' }, sentNote);
     const input = h('input', {
-      type: 'text', 'aria-label': 'Ask Nudge', placeholder: 'Ask me to move something', 'data-fk': 'nudge-ask', value: draft,
+      type: 'text', 'aria-label': 'Ask Nudge', placeholder: 'Ask me about your plan', 'data-fk': 'nudge-ask', value: draft,
       oninput: (e) => { draft = e.target.value; },
     });
+    if (asking) input.disabled = true;
     askInput = input;
-    const form = h('form', { class: 'ask', onsubmit: (e) => {
-      e.preventDefault();
-      askMessage = ASK_REPLY;
-      reply.textContent = askMessage;
-      draft = '';
-      input.value = '';
-    } }, input);
-    return { form, reply };
+    replyEl = reply;
+    noteEl = note;
+    const form = h('form', { class: 'ask', onsubmit: (e) => { e.preventDefault(); sendAsk(); } }, input);
+    const extra = h('div', { class: 'ask-extra' },
+      note,
+      handlers.history && !earlier && h('div', { class: 'acts' }, button('Earlier', () => openEarlier(), '', 'nudge-earlier')),
+      handlers.history && earlier && earlierPanel());
+    return { form, reply, extra };
   }
 
   function checkInBubble() {
@@ -266,7 +349,7 @@ export function createNudge(dom, handlers, env = {}) {
   function speaking() {
     const item = view.items[index];
     const many = view.items.length > 1;
-    const { form, reply } = askForm();
+    const { form, reply, extra } = askForm();
     return say(
       h('div', { class: 'pager' },
         h('span', { class: 'mono k' }, many ? `Nudge / ${index + 1} of ${view.items.length}` : 'Nudge'),
@@ -284,6 +367,7 @@ export function createNudge(dom, handlers, env = {}) {
       ),
       form,
       reply,
+      extra,
     );
   }
 
@@ -339,8 +423,8 @@ export function createNudge(dom, handlers, env = {}) {
     } else if (view.status === 'loading') {
       bubble = h('div', { class: 'quiet' }, h('span', { class: 'mono' }, 'Loading'));
     } else {
-      const { form, reply } = askForm();
-      bubble = h('div', { class: 'quiet' }, h('b', {}, 'All clear.'), h('span', { class: 'mono' }, 'No open warnings'), view.checkInReopen && button('Check in', () => handlers.reopen(), '', 'checkin-reopen'), form, reply);
+      const { form, reply, extra } = askForm();
+      bubble = h('div', { class: 'quiet' }, h('b', {}, 'All clear.'), h('span', { class: 'mono' }, 'No open warnings'), view.checkInReopen && button('Check in', () => handlers.reopen(), '', 'checkin-reopen'), form, reply, extra);
     }
     // With nothing to say Nudge rests out of sight; it comes out on its own for anything that needs you.
     const attention = needsAttention(view);
@@ -459,6 +543,7 @@ export function createNudge(dom, handlers, env = {}) {
       if (sig !== signature) {
         signature = sig;
         askMessage = null;
+        sentNote = '';
       }
       if (index >= view.items.length) index = 0;
       render();

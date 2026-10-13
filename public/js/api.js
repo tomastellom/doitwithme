@@ -40,5 +40,9 @@ export function createApi(fetchFn) {
     lookupCommute: (commuteId, clock) => call('POST', '/api/commute/lookup', { today: clock.today, commuteId }),
     refreshCommutes: (clock) => call('POST', '/api/commute/refresh', { today: clock.today }),
     checkIn: (mood, clock) => call('POST', '/api/checkin', { ...clock, mood }),
+    chat: (clock, message) =>
+      call('POST', '/api/chat', { today: clock.today, ...(clock.nowMinutes === undefined ? {} : { nowMinutes: clock.nowMinutes }), message }),
+    chatHistory: () => call('GET', '/api/chat/history'),
+    clearChatHistory: () => call('DELETE', '/api/chat/history'),
   };
 }

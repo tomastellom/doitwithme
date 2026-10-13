@@ -9,7 +9,7 @@ const offer = { key: 'soft-offer|2026-10-09', date: '2026-10-09', weekday: 'Frid
 const item = (over: any = {}) => ({ key: 'deadline-short|Chemistry|exam|2026-10-23', headline: 'Chemistry exam, Fri 23 Oct, is 90 min short.', minutes: 90, category: 'study', offer, ...over });
 const base = { status: 'ready', items: [], confirm: null, error: null, busy: false };
 
-function setup() {
+function setup(extra: any = {}) {
   const calls: any[] = [];
   const handlers = {
     approve: (d: string) => calls.push(['approve', d]),
@@ -20,12 +20,16 @@ function setup() {
     answer: (m: string) => calls.push(['answer', m]),
     skip: () => calls.push(['skip']),
     reopen: () => calls.push(['reopen']),
+    ...extra,
   };
   const nudge: any = createNudge(dom, handlers);
   return { nudge, calls };
 }
 const buttons = (el: any) => byTag(el, 'button');
 const labelled = (el: any, text: string) => buttons(el).find((b) => textOf(b).trim() === text);
+const flush = async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); };
+const askBox = (nudge: any) => findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === 'nudge-ask')[0];
+const type = (nudge: any, text: string) => { const input = askBox(nudge); input.value = text; input.dispatch('input'); return input; };
 
 test('quiet: All clear and no buttons', () => {
   const { nudge } = setup();
@@ -83,17 +87,87 @@ test('the offer states a cost to other tasks when there is one', () => {
   assert.match(textOf(nudge.el), /It would cost other tasks 20 min\./);
 });
 
-test('the Ask field answers honestly and sends nothing', () => {
-  const { nudge, calls } = setup();
+test('the Ask field sends what you typed, shows Thinking, then the answer and how much was looked at', async () => {
+  let release: (v: any) => void = () => {};
+  const asked: string[] = [];
+  const { nudge } = setup({ ask: (t: string) => { asked.push(t); return new Promise((r) => { release = r; }); } });
   nudge.update({ ...base, items: [item()] });
-  const form = byTag(nudge.el, 'form')[0];
-  const input = byTag(nudge.el, 'input')[0];
-  assert.equal(input.getAttribute('aria-label'), 'Ask Nudge');
-  input.value = 'move my gym';
-  const e = form.dispatch('submit');
+  type(nudge, '  When is my next lesson?  ');
+  const e = byTag(nudge.el, 'form')[0].dispatch('submit');
   assert.equal(e.defaultPrevented, true);
-  assert.match(textOf(nudge.el), /I can't answer questions yet\. That arrives with the AI phase\./);
-  assert.deepEqual(calls, []);
+  assert.deepEqual(asked, ['When is my next lesson?']);
+  assert.match(textOf(byClass(nudge.el, 'reply')[0]), /Thinking/);
+  assert.equal(askBox(nudge).disabled, true);
+  release({ answer: 'Friday at 10:00.', sent: 14 });
+  await flush();
+  assert.match(textOf(byClass(nudge.el, 'reply')[0]), /Friday at 10:00\./);
+  assert.match(textOf(nudge.el), /Looked at 14 items/);
+  assert.equal(askBox(nudge).value, '');
+  assert.equal(askBox(nudge).disabled, false);
+});
+
+test('a failed question keeps your text and shows the plain sentence', async () => {
+  const { nudge } = setup({ ask: () => Promise.reject(new Error('The AI is busy right now. Try again in a moment.')) });
+  nudge.update({ ...base });
+  type(nudge, 'what is up');
+  byTag(nudge.el, 'form')[0].dispatch('submit');
+  await flush();
+  assert.match(textOf(byClass(nudge.el, 'reply')[0]), /The AI is busy right now/);
+  assert.equal(askBox(nudge).value, 'what is up');
+  assert.equal(askBox(nudge).disabled, false);
+});
+
+test('an empty box sends nothing, and a second message waits for the first', async () => {
+  const asked: string[] = [];
+  const { nudge } = setup({ ask: (t: string) => { asked.push(t); return new Promise(() => {}); } });
+  nudge.update({ ...base });
+  byTag(nudge.el, 'form')[0].dispatch('submit');
+  assert.deepEqual(asked, []);
+  type(nudge, 'one');
+  byTag(nudge.el, 'form')[0].dispatch('submit');
+  type(nudge, 'two');
+  byTag(nudge.el, 'form')[0].dispatch('submit');
+  assert.deepEqual(asked, ['one']);
+});
+
+test('without a chat handler the box says it is not available instead of failing', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base });
+  type(nudge, 'hello');
+  byTag(nudge.el, 'form')[0].dispatch('submit');
+  assert.match(textOf(byClass(nudge.el, 'reply')[0]), /not available/);
+});
+
+test('Earlier lists saved chats newest first with the privacy line, and Clear history asks first', async () => {
+  let cleared = 0;
+  const entries = [{ at: 'a', question: 'older question', answer: 'older answer' }, { at: 'b', question: 'newer question', answer: 'newer answer' }];
+  const { nudge } = setup({ history: async () => ({ entries }), clearHistory: async () => { cleared += 1; } });
+  nudge.update({ ...base });
+  const earlierButton = () => findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === 'nudge-earlier')[0];
+  earlierButton().click();
+  await flush();
+  const text = textOf(nudge.el);
+  assert.match(text, /Nudge chat sends your plan and recent chat to Anthropic\./);
+  assert.ok(text.indexOf('newer question') < text.indexOf('older question'), 'newest first');
+  const fk = (k: string) => findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === k)[0];
+  fk('nudge-chat-clear').click();
+  assert.equal(cleared, 0, 'one press only asks');
+  assert.match(textOf(nudge.el), /Delete all earlier chats\?/);
+  fk('nudge-chat-clear-no').click();
+  assert.equal(cleared, 0);
+  fk('nudge-chat-clear').click();
+  fk('nudge-chat-clear-yes').click();
+  await flush();
+  assert.equal(cleared, 1);
+  assert.match(textOf(nudge.el), /Nothing yet/);
+  fk('nudge-chat-close').click();
+  assert.doesNotMatch(textOf(nudge.el), /Nothing yet/);
+});
+
+test('there is no Earlier button when the app gives no history', () => {
+  const { nudge } = setup();
+  nudge.update({ ...base });
+  assert.equal(findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === 'nudge-earlier').length, 0);
 });
 
 test('offline shows the plain message and Retry', () => {
@@ -467,10 +541,7 @@ test('even when nothing is wrong you can bring him up and type to him', () => {
   assert.equal(nudge.el.getAttribute('data-state'), 'resting');
   const input = findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === 'nudge-ask')[0];
   assert.ok(input, 'the calm bubble has a text box');
-  input.value = 'move gym to friday';
-  input.dispatch('input');
-  byTag(nudge.el, 'form')[0].dispatch('submit');
-  assert.match(textOf(byClass(nudge.el, 'reply')[0]), /AI phase/);
+  assert.equal(input.getAttribute('placeholder'), 'Ask me about your plan');
 });
 
 test('pressing inside his text box while he rests is allowed, so you can click in and type', () => {

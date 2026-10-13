@@ -755,11 +755,13 @@ test('closing Earlier while it is still loading keeps it closed when the history
   nudge.update({ ...base });
   const fk = (k: string) => findAll(nudge.el, (e: any) => e.getAttribute('data-fk') === k)[0];
   fk('nudge-earlier').click();
+  await flush(); // history() is called in a microtask; wait until it is really pending
   fk('nudge-chat-close').click();
   release({ entries: [{ at: 'a', question: 'q1', answer: 'a1' }] });
   await flush();
   assert.equal(byClass(nudge.el, 'earlier').length, 0);
   assert.doesNotMatch(textOf(nudge.el), /Nudge chat sends your plan/);
+  assert.ok(fk('nudge-earlier'), 'the Earlier button is back');
 });
 
 test('a re-render while a question is pending keeps Thinking and the answer lands in the live bubble', async () => {

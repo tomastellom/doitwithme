@@ -34,8 +34,8 @@ Each message sends:
 
 The AI may call two read-only functions (the server runs them locally):
 
-- `find`: search tasks, events, deadlines and courses by words and/or a date range, with no limit on how far back or ahead. This is how "everything in the planner" is reachable. Results include addresses, notes and syllabus text only when the question needs them, and are size-capped.
-- `free_time`: free gaps of at least a given length between two dates. Computed by the planner's own `busyOn` and `freeSlots`, so a slot can never overlap a commitment, commute or recorded class, and respects the day windows.
+- `find`: search events, planned work, tasks, deadlines and courses by words and/or a date range of up to 366 days per call (the AI can call it again for another range). This is how "everything in the planner" is reachable. Results include addresses, notes and syllabus text only when the question needs them, and are size-capped.
+- `free_time`: free gaps of at least a given length between two dates, up to 60 days ahead. Computed from the planner's own plan (`replanCore`: commitments with their buffers, commute legs, planned and ticked-off work) and `freeSlots`, so a slot can never overlap any of them. It respects the day windows and leaves out the evenings the user keeps free (soft windows), as the planner does.
 
 The server loops (AI answer, run requested function, send result back) until the AI gives its final text, with a **limit of 5 function calls** per message.
 
@@ -46,22 +46,23 @@ The server loops (AI answer, run requested function, send result back) until the
 - `src/chat.ts`: builds the summary, runs the loop, enforces the call limit and the history window.
 - `src/chattools.ts`: `find` and `free_time`.
 - `src/anthropic.ts`: a chat call next to the estimate call, sharing the key, model (`claude-haiku-5-5`), timeout and error messages.
-- `src/types.ts` / `src/store.ts` / `src/validate.ts`: `State.chat` (list of `{ at, question, answer }`), a daily counter, and request validation.
-- Settings: one line telling the user what Nudge chat sends, and a "Clear history" button with a confirm.
+- `src/chathistory.ts`: the saved chats and the daily counter, in their own file next to the data file (`db.chat.json` beside `db.json`), not inside the planner state. The browser saves the whole planner state back to the server, so history kept inside it could be overwritten by a stale page.
+- `src/validate.ts`: request validation for `/api/chat`.
+- The "Earlier" view in the bubble also holds the plain line about what Nudge chat sends and a "Clear history" button with a confirm. There is no new Settings row.
 
 ## Safety
 
 - Titles, notes, course names and syllabus text are **data, not instructions**. They go in the prompt inside labeled blocks, with a closing tag in any spelling defused, the same way the estimate call treats the syllabus. A title written as one line cannot fake another line of the request.
 - Read-only is enforced by the code: the AI can call only `find` and `free_time`, neither writes, and `/api/chat` only appends to history. A suggestion such as "move gym to Thursday" is plain text in this step.
 - The key is read from `DOITWITHME_ANTHROPIC_KEY` only and never printed, as today.
-- Settings states plainly: "Nudge chat sends your plan and recent chat to Anthropic." The bubble shows how many items were sent in the last message.
+- The Earlier view states plainly: "Nudge chat sends your plan and recent chat to Anthropic." The bubble shows how many items were sent in the last message.
 
 ## History and limits
 
-- Stored in the planner data file: `{ at, question, answer }`, newest last, capped at the latest **200** exchanges.
+- Stored in `db.chat.json` next to the planner data file: `{ at, question, answer }`, newest last, capped at the latest **200** exchanges.
 - Only the last **10** exchanges go to the AI in each message.
 - A cap of **30 chat messages per day** (counted by the server) protects against a stuck loop or a leaked key. The bubble says when it is reached. The Anthropic spend limit remains the final safety net.
-- A failed exchange (error, timeout) saves nothing to history.
+- A failed exchange (error, timeout) saves nothing to history, but it still counts toward the daily limit, because the AI may have billed for it.
 - A single message is limited to 1,000 characters.
 
 ## Errors

@@ -48,7 +48,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: 'free_time',
     description:
-      'Find free time. Returns the gaps of at least "minutes" between "from" and "to" (at most 60 days ahead) that are not taken by classes (with their buffers), commutes, planned work or ticked-off work, inside the planner\'s day windows. ' +
+      'Find free time. Returns the gaps of at least "minutes" between "from" and "to" (within the next 60 days from today) that are not taken by classes (with their buffers), commutes, planned work or ticked-off work, inside the planner\'s day windows. ' +
       'Evenings the person keeps free are not offered. Always use this for free time; never work it out yourself.',
     input_schema: {
       type: 'object',
@@ -109,14 +109,12 @@ function find(ctx: ToolContext, input: Record<string, unknown>): ToolOutput {
   const { state } = ctx;
   const placeOf = (id?: string) => state.places.find((p) => p.id === id);
   const items: Item[] = [];
-  // Past the cap nothing more is needed, only that there was more.
-  const full = () => items.length > FIND_LIMIT;
 
   if (kinds.has('event')) {
     for (const c of state.commitments) {
       const place = placeOf(c.placeId);
       if (!matches(words, c.title, c.category, place?.name, place?.address)) continue;
-      for (let d = from; d <= to && !full(); d = addDays(d, 1)) {
+      for (let d = from; d <= to; d = addDays(d, 1)) {
         if (occurrencesOn(d, [c]).length === 0) continue;
         items.push({ kind: 'event', title: c.title, category: c.category, date: d, start: hhmm(c.start), end: hhmm(c.end), ...(place ? { place: place.name, address: place.address } : {}) });
       }
@@ -162,6 +160,9 @@ function freeTime(ctx: ToolContext, input: Record<string, unknown>): ToolOutput 
   // Nothing in the past is free time.
   const from = asked < ctx.today ? ctx.today : asked;
   if (to < from) throw new ToolError('"to" must not be before "from", and not in the past.');
+  // The plan below only covers this many days from today; past it, commute legs and planned work are unknown.
+  const last = addDays(ctx.today, FREE_SPAN_DAYS - 1);
+  if (to > last) throw new ToolError(`free_time only looks ${FREE_SPAN_DAYS} days ahead from today. Ask for dates up to ${last}.`);
   if (daysBetween(from, to) >= FREE_SPAN_DAYS) throw new ToolError(`Ask for at most ${FREE_SPAN_DAYS} days at a time.`);
 
   // The planner's own plan knows the classes, buffers, commute legs and planned work; its window is the longest one we answer for.

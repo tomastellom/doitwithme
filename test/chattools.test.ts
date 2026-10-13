@@ -142,3 +142,35 @@ test('an unknown tool or an input that is not an object is a plain error, never 
   assert.ok('error' in runTool(c, 'find', [1]));
   assert.ok('error' in runTool(c, 'find', 'text'));
 });
+
+test('find keeps the first 40 in date order even when two daily commitments compete', () => {
+  const daily = (id: string, title: string) => commitment({ id, title, pattern: { kind: 'weekly', weekdays: [0, 1, 2, 3, 4, 5, 6], from: '2026-01-01', to: '2027-12-31' } });
+  const c = ctx({ commitments: [daily('g', 'Gym'), daily('w', 'Walk')] });
+  const out: any = runTool(c, 'find', { from: '2026-10-05', to: '2027-10-05' });
+  const dates = out.items.map((i: any) => i.date);
+  assert.equal(out.items.length, FIND_LIMIT);
+  assert.deepEqual(dates, [...dates].sort());
+  assert.deepEqual([...new Set(out.items.map((i: any) => i.title))].sort(), ['Gym', 'Walk']);
+  assert.equal(dates[dates.length - 1], '2026-10-24');
+  assert.match(out.note, /first 40/);
+});
+
+test('find with only the course kind and no words returns nothing', () => {
+  const course = { credits: 3, difficulty: 3, examOnly: false, weeklyGraded: false, lab: false, syllabus: 'x' };
+  assert.deepEqual(items(runTool(ctx({ tasks: [task({ course })] }), 'find', { kinds: ['course'] })), []);
+});
+
+test('free_time refuses ranges past the 60 day plan horizon and names the last allowed date', () => {
+  const c = ctx();
+  assert.ok('error' in runTool(c, 'free_time', { from: '2027-01-13', to: '2027-01-14', minutes: 60 }));
+  assert.ok(!('error' in runTool(c, 'free_time', { from: '2026-12-01', to: '2026-12-03', minutes: 60 })));
+  assert.ok(!('error' in runTool(c, 'free_time', { from: '2026-12-03', to: '2026-12-03', minutes: 60 })));
+  const over: any = runTool(c, 'free_time', { from: '2026-12-04', to: '2026-12-04', minutes: 60 });
+  assert.match(over.error, /2026-12-03/);
+  assert.ok('error' in runTool(c, 'free_time', { from: '2026-10-05', to: '2026-12-04', minutes: 60 }));
+});
+
+test('free_time after the window has closed gives no slots today and does not throw', () => {
+  const out = items(runTool(ctx({}, { nowMinutes: 1400 }), 'free_time', { from: '2026-10-05', to: '2026-10-05', minutes: 15 }));
+  assert.deepEqual(out, []);
+});

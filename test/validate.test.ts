@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyState } from '../src/store.ts';
-import { ValidationError, validateCheckInRequest, validateEstimateRequest, validateState } from '../src/validate.ts';
+import { ValidationError, validateChatRequest, validateCheckInRequest, validateEstimateRequest, validateState } from '../src/validate.ts';
 import { commitment, deadline, task } from './helpers.ts';
 
 function sample(): any {
@@ -378,4 +378,12 @@ test('a Maps result records its mode, and a failed attempt is validated too', ()
   assert.deepEqual((validateState(withFailed(attempt)) as any).commutes[0].source.failed, attempt);
   assert.throws(() => validateState(withFailed({ ...attempt, at: 'soon' })), /failed\.at/);
   assert.throws(() => validateState(withFailed({ ...attempt, code: 5 })), /failed\.code/);
+});
+
+test('validateChatRequest trims the message and keeps it between 1 and 1000 characters', () => {
+  assert.deepEqual(validateChatRequest({ today: '2026-10-05', message: '  hi  ' }), { today: '2026-10-05', horizonDays: 14, message: 'hi' });
+  assert.equal(validateChatRequest({ today: '2026-10-05', nowMinutes: 540, message: 'x' }).nowMinutes, 540);
+  for (const bad of [{ today: '2026-10-05', message: '   ' }, { today: '2026-10-05', message: 'x'.repeat(1001) }, { today: '2026-10-05' }, { message: 'hi' }, { today: '2026-10-05', message: 5 }]) {
+    assert.throws(() => validateChatRequest(bad), /./, JSON.stringify(bad).slice(0, 40));
+  }
 });

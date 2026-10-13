@@ -1,7 +1,10 @@
 import { BadLookup, keepMapsData, lookupCommute, refreshCommutes, usageFor } from './commutelookup.ts';
-import { DEFAULT_MODEL, anthropicProvider, plausibleKey } from './anthropic.ts';
+import { DEFAULT_MODEL, anthropicChatProvider, anthropicProvider, plausibleKey } from './anthropic.ts';
 import { googleProvider, unavailableProvider } from './maps.ts';
-import { buildEstimate, unavailableProvider as unavailableWorkload } from './workload.ts';
+import { runChat, unavailableChat } from './chat.ts';
+import type { ChatProvider } from './chat.ts';
+import { DAILY_LIMIT, addExchange, chatPathFor, countAttempt, loadChat, saveChat } from './chathistory.ts';
+import { AiError, buildEstimate, unavailableProvider as unavailableWorkload } from './workload.ts';
 import type { WorkloadProvider } from './workload.ts';
 import type { TravelTimeProvider } from './maps.ts';
 import { readFileSync, realpathSync, statSync } from 'node:fs';
@@ -18,6 +21,7 @@ import { loadState, saveState } from './store.ts';
 import type { State } from './types.ts';
 import {
   ValidationError,
+  validateChatRequest,
   validateCheckInRequest,
   validateLookupRequest,
   validateRefreshRequest,
@@ -153,7 +157,7 @@ function serveStatic(publicDir: string, pathname: string, method: string, res: S
 
 export function createApp(
   statePath: string,
-  options: { publicDir?: string; exampleFile?: string; maps?: TravelTimeProvider; workload?: WorkloadProvider; mapsLimit?: number } = {},
+  options: { publicDir?: string; exampleFile?: string; maps?: TravelTimeProvider; workload?: WorkloadProvider; chat?: ChatProvider; mapsLimit?: number } = {},
 ): Server {
   const publicDir = options.publicDir ?? DEFAULT_PUBLIC;
   const exampleFile = options.exampleFile ?? DEFAULT_EXAMPLE;
@@ -167,6 +171,8 @@ export function createApp(
   };
   const lookupDeps = { maps, limit: mapsLimit, load: () => loadState(statePath), save: (s: State) => saveState(statePath, s), clock: dayNow };
   const workload = options.workload ?? unavailableWorkload;
+  const chat = options.chat ?? unavailableChat;
+  const chatPath = chatPathFor(statePath);
   return createServer(async (req, res) => {
     try {
       if (!ALLOWED_HOSTS.test(req.headers.host ?? '')) throw new HttpError(403, 'Forbidden host');
@@ -255,6 +261,38 @@ export function createApp(
         if (maps.status !== 'ready') throw new HttpError(503, 'Google Maps is not connected yet');
         return send(res, 200, await refreshCommutes(lookupDeps, request.today));
       }
+      if (req.method === 'POST' && pathname === '/api/chat') {
+        const request = validateChatRequest(await readJson(req));
+        if (chat.status !== 'ready') throw new HttpError(503, 'The AI is not connected yet. See docs/anthropic-setup.md.');
+        // The day is the server's own date, never one a browser sends. The message is counted before the AI is asked.
+        const counted = countAttempt(loadChat(chatPath), dayNow());
+        if (counted === null) throw new HttpError(429, `You have used today's ${DAILY_LIMIT} messages with Nudge. It resets tomorrow.`);
+        saveChat(chatPath, counted);
+        let reply;
+        try {
+          reply = await runChat({
+            provider: chat,
+            state: loadState(statePath),
+            today: request.today,
+            ...(request.nowMinutes === undefined ? {} : { nowMinutes: request.nowMinutes }),
+            history: counted.entries,
+            message: request.message,
+          });
+        } catch (e) {
+          if (e instanceof AiError) throw new HttpError(502, e.message);
+          throw e;
+        }
+        // Read again: other messages may have been saved while the AI was thinking.
+        saveChat(chatPath, addExchange(loadChat(chatPath), { at: new Date().toISOString(), question: request.message, answer: reply.answer }));
+        return send(res, 200, { answer: reply.answer, sent: reply.sent, remaining: DAILY_LIMIT - counted.count });
+      }
+      if (req.method === 'GET' && pathname === '/api/chat/history') {
+        return send(res, 200, { entries: loadChat(chatPath).entries });
+      }
+      if (req.method === 'DELETE' && pathname === '/api/chat/history') {
+        saveChat(chatPath, { ...loadChat(chatPath), entries: [] });
+        return send(res, 200, { ok: true });
+      }
       if (req.method === 'GET' && pathname === '/api/example') {
         let example: State;
         try {
@@ -303,6 +341,7 @@ if (import.meta.main) {
   }
   createApp(file, {
     ...(aiConnected ? { workload: anthropicProvider({ key: aiKey!.trim(), model: aiModel }) } : {}),
+    ...(aiConnected ? { chat: anthropicChatProvider({ key: aiKey!.trim(), model: aiModel }) } : {}),
     ...(connected ? { maps: googleProvider({ key: key.trim(), ...(region ? { regionCode: region } : {}) }) } : {}),
     ...(Number.isInteger(limit) && limit > 0 ? { mapsLimit: limit } : {}),
   }).listen(port, '127.0.0.1', () => {

@@ -476,3 +476,10 @@ export function validateRefreshRequest(x: unknown): { today: string } {
   const o = obj(x, 'request');
   return { today: dateStr(o.today, 'today') };
 }
+
+export function validateChatRequest(x: unknown): { today: string; nowMinutes?: number; horizonDays: number; message: string } {
+  const o = obj(x, 'request');
+  const message = str(o.message, 'message', 1000).trim();
+  if (message === '') fail('message must not be empty');
+  return { ...replanFields(o), message };
+}

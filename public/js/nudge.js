@@ -489,6 +489,12 @@ export function createNudge(dom, handlers, env = {}) {
   });
   // Pressing on him while he rests must not give the corner keyboard focus, or he would stay up until you click elsewhere.
   // The pointer on his corner makes him peek (only while he has nothing to say).
+  // The whole corner is the way in while he rests, not only the sliver of him that shows.
+  el.addEventListener('click', () => {
+    if (el.getAttribute('data-state') !== 'resting' || el.hasAttribute('data-open')) return;
+    el.setAttribute('data-open', '');
+    if (askInput && typeof askInput.focus === 'function') askInput.focus();
+  });
   el.addEventListener('mouseenter', () => { hovered = true; updateFace(); });
   el.addEventListener('mouseleave', () => { hovered = false; el.removeAttribute('data-open'); updateFace(); });
   el.addEventListener('mousedown', (e) => {

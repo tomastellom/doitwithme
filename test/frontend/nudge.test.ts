@@ -778,3 +778,14 @@ test('a re-render while a question is pending keeps Thinking and the answer land
   assert.match(textOf(byClass(nudge.el, 'reply')[0]), /All good\./);
   assert.equal(askBox(nudge).disabled, false);
 });
+
+test('while he rests, a click anywhere on his corner opens him and mouse leave puts him back', () => {
+  const { nudge } = setup();
+  nudge.update(base);
+  assert.equal(nudge.el.getAttribute('data-state'), 'resting');
+  assert.equal(nudge.el.hasAttribute('data-open'), false);
+  nudge.el.click();
+  assert.equal(nudge.el.hasAttribute('data-open'), true);
+  nudge.el.dispatch('mouseleave');
+  assert.equal(nudge.el.hasAttribute('data-open'), false);
+});

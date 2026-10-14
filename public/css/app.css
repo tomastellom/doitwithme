@@ -37,7 +37,9 @@ button.mono, .tabs.mono { font-family: var(--font-sans); font-size: 16px; font-w
 .nudge[data-state="resting"] .nudge-body { transform: translateY(calc(100% + 40px)); }
 .nudge[data-state="resting"]:hover .nudge-body { transform: translateY(calc(100% - 56px)); }
 .nudge[data-state="resting"][data-open] .nudge-body, .nudge[data-state="resting"]:focus-within .nudge-body { transform: none; }
-.nudge[data-state="resting"] .quiet { opacity: 0; visibility: hidden; transition: opacity .28s ease, visibility 0s linear .28s; }
+/* The hidden bubble must not add to his height, or a long reply pushes his head out of the peek. */
+.nudge[data-state="resting"] .nudge-body { position: relative; }
+.nudge[data-state="resting"] .quiet { position: absolute; right: 100%; bottom: 0; margin-right: 14px; opacity: 0; visibility: hidden; transition: opacity .28s ease, visibility 0s linear .28s; }
 .nudge[data-state="resting"][data-open] .quiet, .nudge[data-state="resting"]:focus-within .quiet { opacity: 1; visibility: visible; transition: opacity .28s ease .08s, visibility 0s; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .notice { color: var(--paper); font-family: var(--font-mono); font-size: 12px; }

@@ -116,7 +116,7 @@ function find(ctx: ToolContext, input: Record<string, unknown>): ToolOutput {
       if (!matches(words, c.title, c.category, place?.name, place?.address)) continue;
       for (let d = from; d <= to; d = addDays(d, 1)) {
         if (occurrencesOn(d, [c]).length === 0) continue;
-        items.push({ kind: 'event', title: c.title, category: c.category, date: d, start: hhmm(c.start), end: hhmm(c.end), ...(place ? { place: place.name, address: place.address } : {}) });
+        items.push({ kind: 'event', title: c.title, category: c.category, date: d, start: hhmm(c.start), end: hhmm(c.end), ...(place ? { place: place.name, ...(words.length > 0 ? { address: place.address } : {}) } : {}) });
       }
     }
   }

@@ -63,6 +63,7 @@ test('typing a question in Nudge shows the answer, keeps it in Earlier, and the 
   for (let i = 0; i < 100 && !/You have Chemistry on Monday\./.test(textOf(root)); i++) await new Promise((r) => setTimeout(r, 10));
   assert.match(textOf(root), /You have Chemistry on Monday\./);
   assert.match(textOf(root), /Looked at \d+ items/);
+  assert.match(textOf(root), /You asked: What do I have on Monday\?/, 'the question stays visible above the reply');
   findAll(root, (e: any) => e.getAttribute('data-fk') === 'nudge-earlier')[0].click();
   for (let i = 0; i < 100 && !/What do I have on Monday\?/.test(textOf(byClass(root, 'earlier')[0] ?? root)); i++) await new Promise((r) => setTimeout(r, 10));
   assert.match(textOf(byClass(root, 'earlier')[0]), /What do I have on Monday\?/);

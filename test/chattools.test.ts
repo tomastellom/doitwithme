@@ -174,3 +174,15 @@ test('free_time after the window has closed gives no slots today and does not th
   const out = items(runTool(ctx({}, { nowMinutes: 1400 }), 'free_time', { from: '2026-10-05', to: '2026-10-05', minutes: 15 }));
   assert.deepEqual(out, []);
 });
+
+test('find leaves the address out of a plain listing and gives it when words ask', () => {
+  const c = ctx({
+    places: [{ id: 'p1', name: 'North campus', kind: 'campus', address: '1 College Road' }],
+    commitments: [commitment({ id: 'lec', title: 'Chemistry lecture', placeId: 'p1', start: 600, end: 720, pattern: { kind: 'weekly', weekdays: [1], from: '2026-09-01', to: '2026-12-31' } })],
+  });
+  const plain = items(runTool(c, 'find', { from: '2026-10-05', to: '2026-10-05' }));
+  assert.equal(plain[0].place, 'North campus');
+  assert.equal(plain[0].address, undefined);
+  const asked = items(runTool(c, 'find', { words: 'chemistry', from: '2026-10-05', to: '2026-10-05' }));
+  assert.equal(asked[0].address, '1 College Road');
+});

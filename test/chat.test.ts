@@ -155,3 +155,11 @@ test('hundreds of deadlines and tasks are cut too, and the note counts every cut
   assert.ok(lines.length <= SUMMARY_LINES + HEADROOM);
   assert.match(text, new RegExp(`\\(${400 - itemLines} more items not shown`));
 });
+
+test('one message has a time budget: a slow AI ends in the plain slow error', async () => {
+  const slow = { status: 'ready' as const, async turn() { await new Promise((r) => setTimeout(r, 200)); return say('late'); } };
+  await assert.rejects(
+    runChat({ ...base, provider: slow, state: state(), budgetMs: 30 }),
+    (e: any) => e instanceof AiError && e.code === 'slow',
+  );
+});

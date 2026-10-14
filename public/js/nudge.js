@@ -214,7 +214,9 @@ export function createNudge(dom, handlers, env = {}) {
   let asking = false;
   let replyEl = null;
   let noteEl = null;
+  let askedEl = null;
   let sentNote = '';
+  let askedLine = '';
   let earlier = null; // closed, or { loading, entries, error, confirmClear }
   let draft = '';
   let signature = '';
@@ -233,6 +235,11 @@ export function createNudge(dom, handlers, env = {}) {
     sentNote = note;
     if (replyEl) replyEl.textContent = text;
     if (noteEl) noteEl.textContent = note;
+  }
+
+  function showAsked(text) {
+    askedLine = text ? `You asked: ${text.length > 140 ? `${text.slice(0, 140)}...` : text}` : '';
+    if (askedEl) askedEl.textContent = askedLine;
   }
 
   function finishAsking() {
@@ -258,6 +265,7 @@ export function createNudge(dom, handlers, env = {}) {
         draft = '';
         if (askInput) askInput.value = '';
         showReply(r.answer, r.sent ? `Looked at ${r.sent} items` : '');
+        showAsked(text);
         finishAsking();
       })
       .catch((e) => {
@@ -312,6 +320,7 @@ export function createNudge(dom, handlers, env = {}) {
   function askForm() {
     const reply = h('p', { class: 'reply' }, askMessage);
     const note = h('span', { class: 'sent mono' }, sentNote);
+    const asked = h('span', { class: 'asked' }, askedLine);
     const input = h('input', {
       type: 'text', 'aria-label': 'Ask Nudge', placeholder: 'Ask me about your plan', 'data-fk': 'nudge-ask', value: draft,
       oninput: (e) => { draft = e.target.value; },
@@ -320,8 +329,10 @@ export function createNudge(dom, handlers, env = {}) {
     askInput = input;
     replyEl = reply;
     noteEl = note;
+    askedEl = asked;
     const form = h('form', { class: 'ask', onsubmit: (e) => { e.preventDefault(); sendAsk(); } }, input);
     const extra = h('div', { class: 'ask-extra' },
+      asked,
       note,
       handlers.history && !earlier && h('div', { class: 'acts' }, button('Earlier', () => openEarlier(), '', 'nudge-earlier')),
       handlers.history && earlier && earlierPanel());
@@ -551,6 +562,7 @@ export function createNudge(dom, handlers, env = {}) {
         if (!asking) {
           askMessage = null;
           sentNote = '';
+          askedLine = '';
         }
       }
       if (index >= view.items.length) index = 0;

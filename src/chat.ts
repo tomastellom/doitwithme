@@ -13,6 +13,8 @@ export const SUMMARY_DAYS = 28;
 export const SUMMARY_LINES = 300;
 export const MAX_MESSAGE = 1000;
 const ANSWER_MAX = 2000;
+/** One message may take this long in all, however many lookups it makes. */
+export const CHAT_BUDGET_MS = 45000;
 
 export interface ToolCall {
   id: string;
@@ -132,6 +134,15 @@ export interface ChatReply {
   lookups: number;
 }
 
+// Ends the wait with the plain "slow" sentence when the whole message has used up its time.
+function withinBudget<T>(work: Promise<T>, deadline: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new AiError('slow', 'The AI took too long. Try again.')), Math.max(0, deadline - Date.now()));
+  });
+  return Promise.race([work, late]).finally(() => clearTimeout(timer));
+}
+
 export async function runChat(deps: {
   provider: ChatProvider;
   state: State;
@@ -139,8 +150,10 @@ export async function runChat(deps: {
   nowMinutes?: Minutes;
   history: ChatEntry[];
   message: string;
+  budgetMs?: number;
 }): Promise<ChatReply> {
   const { provider, state, today, nowMinutes, history, message } = deps;
+  const deadline = Date.now() + (deps.budgetMs ?? CHAT_BUDGET_MS);
   const summary = buildSummary(state, today, nowMinutes);
   const messages: ChatMessage[] = [];
   for (const e of history.slice(-HISTORY_SENT)) messages.push({ role: 'user', content: e.question }, { role: 'assistant', content: e.answer });
@@ -152,7 +165,7 @@ export async function runChat(deps: {
   // Each pass either answers or runs lookups; lookups stop at the limit, and one more pass is allowed to answer.
   for (let pass = 0; pass <= MAX_TOOL_CALLS + 1; pass++) {
     const toolsAllowed = lookups < MAX_TOOL_CALLS;
-    const turn = await provider.turn({ system: SYSTEM, messages, tools: TOOLS, toolsAllowed });
+    const turn = await withinBudget(provider.turn({ system: SYSTEM, messages, tools: TOOLS, toolsAllowed }), deadline);
     if (turn.toolCalls.length === 0) {
       const answer = turn.text.trim();
       if (!answer) throw new AiError('bad-response', 'The AI answered in a way I could not read.');

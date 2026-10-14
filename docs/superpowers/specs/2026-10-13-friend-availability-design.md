@@ -10,8 +10,9 @@ Two people who use the planner can ask each other "when are you free for X minut
 
 - Delivery is **instant, inside the app** (not links or files sent by hand).
 - It is for **the user and a few friends** (2 to 10 people), not open sign-up.
-- The service is a **ready-made backend: Supabase** (the user chose B over a small relay service and over peer-to-peer). Supabase is chosen over Firebase because privacy is plain database rules and sign-in is an email link without passwords.
+- The service is a **ready-made backend: Supabase** (the user chose B over a small relay service and over peer-to-peer). Supabase is chosen over Firebase because privacy is plain database rules and sign-in is built in.
 - Nudge is the front door; no new screens.
+- **Sign-in is email and password** (chosen by the user, 2026-10-13, over an email link without a password). Supabase Auth stores and checks the password; the planner never stores it.
 - **What counts as available depends on the purpose of the request** (confirmed 2026-10-13). The asker picks one of three purposes, and the answering planner works out its slots by that purpose:
   - **Study together:** the answerer's planned study blocks, plus free gaps inside the day windows. Sharing a study block does not move it.
   - **Hang out:** truly free time, including the evenings the answerer keeps free (soft windows), which normal planning leaves out.
@@ -62,7 +63,7 @@ Two people who use the planner can ask each other "when are you free for X minut
 - Only free times and the note travel. Row-level rules mean you can read a request or answer only if you sent or received it; you can only ask people you are connected to; disconnecting deletes the requests and answers between the two.
 - Names and notes from a friend are shown with `textContent`/`h()` as plain text and are data, never instructions. They are never put into the Nudge chat AI prompt in this version.
 - The planner holds only the Supabase URL and the public (anon) key. Real protection is the database rules, which have their own tests. The user's session is kept in `db.share.json` and never printed or logged.
-- Sign-in is a link sent to the user's email. No passwords are stored anywhere.
+- Sign-in is email and password through Supabase Auth. The planner sends the password only to Supabase over HTTPS, never stores or logs it, and keeps only the session tokens. Supabase's own email verification is turned on, and "forgot password" sends a reset email. The password must be at least 10 characters.
 - No emojis, no inline styles (CSP), no gradients, consistent with the rest of the UI.
 
 ## Limits
@@ -95,5 +96,5 @@ Supabase is replaced by a fake service in every automated test, so no test touch
 ## Open items for the plan
 
 - The exact SQL for row-level rules and the cleanup of expired rows.
-- How the email sign-in link returns to a planner running on `localhost`.
+- How the verification and password-reset links in Supabase's emails return to a planner running on `localhost`.
 - Whether the 15-second check should slow down when the tab is hidden.

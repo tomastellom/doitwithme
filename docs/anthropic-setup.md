@@ -47,3 +47,13 @@ Set `DOITWITHME_AI_MODEL` (for example `claude-sonnet-5-5`) to use another model
 - "The AI could not answer this time. The rule of thumb is shown." Something unexpected went wrong. Try again.
 
 When anything fails, the rule of thumb is still shown and nothing breaks. Never paste the key into the app, a file in this folder, or a chat. If it leaks, delete it in the console and make a new one.
+
+## Nudge chat
+
+Once the AI is connected, the box in Nudge's bubble ("Ask me about your plan") answers questions such as "when is my next lesson with Ana?" or "find me two free hours for the essay this week". It only reads: it never changes your plan.
+
+What it sends to Anthropic with each message: a summary of the next four weeks (event, planned work and deadline titles, dates and times, and your task list), your last 10 chats, and your question. When the AI needs more, it looks things up in your planner on this computer, and what it finds (which can include addresses and course text) is sent back to answer. Nothing is sent until you press Enter.
+
+Cost: on the cheapest model, about a tenth of a cent for a simple question and a few tenths when it looks things up. There is a limit of 30 messages a day; the Anthropic spend limit you set remains the final safety net.
+
+Your chats are saved next to your planner data, in `data/db.chat.json` (the last 200). The Earlier button in the bubble shows them and can delete them.

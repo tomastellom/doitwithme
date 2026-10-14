@@ -138,3 +138,15 @@ Anything that differs from the boards: spacing, sizes, colors, wrapping, fonts n
 - Without a key: Plan, Tasks, a study task with credits, Estimate hours: the card shows the rule of thumb, a "Rule of thumb" tag and the line "AI is not connected yet..." pointing at docs/anthropic-setup.md.
 - With a key (see docs/anthropic-setup.md): the card leads with the AI's hours and a short reason, tagged "AI", with the rule of thumb as a smaller second line. Use this fills "Minutes a week".
 - Break the key on purpose or go offline: the card shows a plain sentence ("The AI key was rejected...", "I could not reach the AI.") and the rule of thumb.
+
+## Nudge chat
+
+Start the planner with the key in a separate terminal (see docs/anthropic-setup.md).
+
+1. Press Nudge to bring him up. The box says "Ask me about your plan".
+2. Type "What is on tomorrow?" and press Enter. The bubble says "Thinking...", then the answer, with a small line "Looked at N items".
+3. Type "When is my next lesson with" and a name of one of your lessons, and ask for the next one. The date and time must match your Week.
+4. Type "Find me two free hours this week". Pick one of the times it names and check in Week that nothing is planned then.
+5. Type "Move my gym to Thursday". Nudge must say what he would suggest in words, and your plan must not change.
+6. Press Earlier: your questions show, newest first, with the line about what is sent. Press Clear history, then "Keep them", then Clear history and "Yes, delete": the list empties.
+7. Stop the planner and start it WITHOUT the key. Ask something: the bubble says the AI is not connected.

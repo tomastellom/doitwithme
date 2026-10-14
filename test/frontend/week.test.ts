@@ -39,8 +39,9 @@ function setup(over: any = {}, actionOver: any = {}) {
 test('the hero shows the ISO week, the range and the weekly status', () => {
   const { el } = setup({ needsYou: 2 });
   assert.equal(textOf(byTag(el, 'h1')[0]), '12–18 Oct');
-  assert.match(textOf(byClass(el, 'meta')[0]), /Week 42 \/ 2026/);
-  assert.match(textOf(el), /7 days/);
+  assert.match(textOf(byClass(el, 'sub')[0]), /Week 42 \/ 2026/);
+  assert.equal(byClass(el, 'meta').length, 0);
+  assert.doesNotMatch(textOf(el), /7 days/);
   assert.match(textOf(el), /2 need you/);
   assert.equal(setup({ needsYou: 1 }).el.textContent.includes('1 needs you'), true);
   assert.match(textOf(setup({ needsYou: 0 }).el), /All clear/);
@@ -79,22 +80,6 @@ test('a day with nothing visible is simply empty hours on the grid', () => {
   assert.equal(byClass(thu, 'cbody').length, 1);
 });
 
-test('the filter list shows each label in use with its count, toggles it and reflects pressed state', () => {
-  const { el, calls } = setup({ hidden: new Set(['gym', 'mass', 'chores', 'personal project']) });
-  const fl = byClass(el, 'fl');
-  assert.equal(fl.length, 5, 'Study, Gym, Chores, Personal project and Mass: only labels in use');
-  const study = fl.find((b) => textOf(b).includes('Study'))!;
-  assert.equal(study.getAttribute('aria-pressed'), 'true');
-  assert.equal(textOf(byClass(study, 'ct')[0]), '1');
-  const gym = fl.find((b) => textOf(b).includes('Gym'))!;
-  assert.equal(gym.getAttribute('aria-pressed'), 'false');
-  gym.click();
-  assert.deepEqual(calls, [['toggle', 'gym']]);
-  assert.equal(findAll(el, (e) => e.hasClass('blk') && textOf(e).includes('Gym')).length, 0);
-  assert.equal(textOf(byClass(fl.find((b) => textOf(b).includes('Mass'))!, 'ct')[0]), '1');
-  assert.ok(byClass(el, 'fl-all').length === 1, 'Show all is offered while something is hidden');
-});
-
 test('week navigation buttons call the actions and the needs-you button focuses Nudge', () => {
   const { el, calls } = setup({ needsYou: 1 });
   const named = (label: string) => byTag(el, 'button').find((b) => b.getAttribute('aria-label') === label || textOf(b).trim() === label)!;
@@ -120,13 +105,13 @@ test('first run: lead text, Load the example, no filters or booked lines', () =>
   assert.equal(byClass(el, 'cbody').length, 7);
   byTag(el, 'button').find((b) => textOf(b).trim() === 'Load the example')!.click();
   assert.deepEqual(calls, [['example']]);
-  assert.equal(byTag(el, 'a').filter((a: any) => !a.hasClass('dh')).length, 0, 'only the day headers are links');
+  assert.equal(byTag(el, 'a').filter((a: any) => !a.hasClass('dh') && !(a.getAttribute('data-fk') ?? '').startsWith('view-')).length, 0, 'only the day headers and the view switch are links');
 });
 
-test('first run offers Add a commitment only when the setup section exists', () => {
+test('first run offers Add a fixed time only when the setup section exists', () => {
   const { el } = setup({ isEmpty: true, state: state({ blocks: [], commitments: [] }) }, { canAdd: true });
-  const link = byTag(el, 'a')[0];
-  assert.equal(textOf(link).trim(), 'Add a commitment');
+  const link = byClass(el, 'cta')[0].children.find((c: any) => c.tag === 'a');
+  assert.equal(textOf(link).trim(), 'Add a fixed time');
   assert.equal(link.getAttribute('href'), '#/commitments/new');
 });
 
@@ -144,8 +129,8 @@ test('the week header takes focus and the arrow keys change week', () => {
 
 test('controls carry stable focus keys', () => {
   const { el } = setup({ needsYou: 1 });
-  const keys = byTag(el, 'button').map((b) => b.getAttribute('data-fk'));
-  for (const k of ['prev', 'today', 'next', 'needs', 'fl-study', 'fl-gym']) assert.ok(keys.includes(k), k);
+  const keys = [...byTag(el, 'button'), ...byTag(el, 'a')].map((b) => b.getAttribute('data-fk'));
+  for (const k of ['prev', 'today', 'next', 'needs', 'view-week']) assert.ok(keys.includes(k), k);
 });
 
 test('a commute is a hatched entry with its length, and the week says when travel is off', () => {
@@ -249,15 +234,6 @@ test('clicking empty space on a day offers to add something at that time, snappe
   assert.equal(adds.length, before, 'a click that lands on a tile is for the tile');
 });
 
-test('the hero has a plain Add button for keyboard users, defaulting to today when it is in view', () => {
-  const adds: any[] = [];
-  const { el } = setup({}, { add: (date: string, start: number) => adds.push([date, start]) });
-  const add = findAll(el, (e: any) => e.getAttribute('data-fk') === 'add')[0];
-  assert.match(textOf(add), /\+ Add/);
-  add.click();
-  assert.deepEqual(adds, [['2026-10-13', 9 * 60]]);
-});
-
 test('every planned tile has its own tick box that marks it done, and trips have none', () => {
   const ticks: any[] = [];
   const travel = [{ date: '2026-10-13', start: 545, end: 600, fromName: 'Home', toName: 'Campus', estimated: false }];
@@ -306,4 +282,31 @@ test('a very short tile and the one after it never draw on top of each other', (
   const tiles = byClass(byClass(el, 'day')[1], 'blk').filter((t: any) => /Quick|Laundry/.test(textOf(t)));
   assert.equal(tiles.length, 2);
   assert.ok(tiles.every((t: any) => t.style.width === '50%'), 'the 5 minute tile is drawn 30 px tall, so they share the width');
+});
+
+test('the hero has a Day, Week, Month switch with Week current', () => {
+  const { el } = setup();
+  const keys = findAll(el, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('view-'));
+  assert.deepEqual(keys.map((e: any) => e.getAttribute('data-fk')), ['view-day', 'view-week', 'view-month']);
+  assert.equal(findAll(el, (e: any) => e.getAttribute('data-fk') === 'view-week')[0].getAttribute('aria-current'), 'page');
+  assert.equal(findAll(el, (e: any) => e.getAttribute('data-fk') === 'view-month')[0].getAttribute('href'), '#/month');
+});
+
+test('the Week no longer carries its own Show list or a hero Add button (the sidebar does)', () => {
+  const { el } = setup({}, { add: () => {} });
+  assert.equal(byClass(el, 'filters').length, 0);
+  assert.equal(findAll(el, (e: any) => e.getAttribute('data-fk') === 'add').length, 0);
+  assert.equal(findAll(el, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('fl-')).length, 0);
+});
+
+test('every day still shows its Booked line under the date', () => {
+  const { el } = setup();
+  assert.equal(byClass(el, 'booked').length, 7);
+  assert.match(textOf(byClass(el, 'booked')[0]), /Booked/);
+});
+
+test('first run offers Add a fixed time first and Load the example beside it', () => {
+  const { el } = setup({ isEmpty: true, state: state({ blocks: [], commitments: [] }) }, { canAdd: true });
+  assert.match(textOf(byClass(el, 'cta')[0]), /Add a fixed time.*Load the example/s);
+  assert.equal(findAll(el, (e: any) => e.getAttribute('data-fk') === 'example').length, 1);
 });

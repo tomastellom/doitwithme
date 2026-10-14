@@ -35,3 +35,37 @@ body { background: var(--canvas); }
   .side { position: fixed; inset: 0 auto 0 0; width: 256px; max-height: none; z-index: 40; background: var(--canvas); padding: 16px 12px; transform: translateX(-110%); visibility: hidden; transition: transform .26s ease-out, visibility 0s linear .26s; }
   .app[data-side="open"] .side { transform: none; visibility: visible; transition: transform .26s ease-out, visibility 0s; box-shadow: 8px 0 30px rgba(20, 22, 26, .2); }
 }
+
+/* Week header */
+.hero .titles .sub { margin: 4px 0 0; color: var(--muted); }
+.hero .right { align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.step { padding-bottom: 0; }
+.step button { border: 1px solid #D5D8DE; border-radius: 8px; padding: 7px 12px; font-size: 14px; }
+.switch { display: inline-flex; gap: 2px; padding: 2px; border-radius: 10px; background: var(--soft); }
+.switch a { padding: 7px 12px; border-radius: 8px; text-decoration: none; color: var(--ink); font-family: var(--font-sans); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.switch a.on { background: var(--ink); color: var(--paper); }
+.needs { font-size: 13px; }
+
+/* Day columns: weekday, a big numeral, then Booked. The axis head (76) = header (54) + Booked (22). Scoped to the Week; the Day keeps its own .dv-grid. */
+.week .grid { margin: 20px 28px 0; }
+.week .axis-head { height: 76px; }
+.day .dh { height: 54px; padding: 6px 0 0; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-top: 0; text-decoration: none; }
+.day .dh .mono { color: var(--muted); font-size: 11px; }
+.day .dh .dd { font-size: 22px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+.day.today .dh { background: transparent; color: var(--ink); padding: 6px 0 0; border-top: 0; }
+.day.today .dh .mono, .day.today .dh .dd { color: var(--study); }
+.day .booked { height: 22px; line-height: 22px; text-align: center; font-size: 10px; }
+.day.today .cbody { background-color: var(--today); }
+.cbody { border-radius: 8px; }
+
+/* Blocks */
+.tile { border-radius: 10px; }
+.tile.is-missed { border-radius: 10px; }
+.tick { border-radius: 7px; }
+.now { border-top: 2px solid var(--study); }
+.now i { background: var(--study); }
+
+/* First run */
+.lead p { font-size: 20px; }
+.cta .btn { border-radius: 8px; }
+.cta .btn.y { border-color: var(--study); }

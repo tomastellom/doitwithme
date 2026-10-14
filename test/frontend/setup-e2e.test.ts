@@ -160,11 +160,11 @@ test('a due date can be added for an existing task', async () => {
   assert.deepEqual([state.deadlines[0].taskId, state.deadlines[0].dueDate, state.deadlines[0].effortMinutes], ['t1', '2026-10-23', 480]);
 });
 
-test('on a first run the Add a commitment link opens an empty form', async () => {
+test('on a first run the Add a fixed time link opens an empty form', async () => {
   assert.equal((await put(emptyState())).status, 200);
   const { app, root, win } = boot();
   await settled(app);
-  const link = byTag(root, 'a').find((a: any) => textOf(a).trim() === 'Add a commitment')!;
+  const link = byTag(root, 'a').find((a: any) => textOf(a).trim() === 'Add a fixed time')!;
   assert.equal(link.getAttribute('href'), '#/commitments/new');
   app.navigate(link.getAttribute('href'));
   assert.equal(win.location.hash, '#/commitments/new');

@@ -111,9 +111,9 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     picked: () => closeSide(),
   });
   const appEl = h('div', { class: 'app' });
-  const sideToggle = h('button', { type: 'button', class: 'side-toggle btn mono', 'data-fk': 'side-toggle', 'aria-label': 'Menu', onclick: () => (appEl.getAttribute('data-side') === 'open' ? closeSide() : openSide()) }, 'Menu');
-  function openSide() { appEl.setAttribute('data-side', 'open'); }
-  function closeSide() { appEl.removeAttribute('data-side'); }
+  const sideToggle = h('button', { type: 'button', class: 'side-toggle btn mono', 'data-fk': 'side-toggle', 'aria-label': 'Menu', 'aria-expanded': 'false', onclick: () => (appEl.getAttribute('data-side') === 'open' ? closeSide() : openSide()) }, 'Menu');
+  function openSide() { appEl.setAttribute('data-side', 'open'); sideToggle.setAttribute('aria-expanded', 'true'); }
+  function closeSide() { appEl.removeAttribute('data-side'); sideToggle.setAttribute('aria-expanded', 'false'); }
   clear(appEl, sideToggle, sidebar.el, main);
   main.addEventListener('click', () => closeSide());
   root.append(appEl, nudge.el, menu.el, drawer.el);

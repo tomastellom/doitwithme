@@ -25,10 +25,11 @@ after(() => { server.close(); });
 async function bootWithData() {
   const example = await (await fetch(`${base}/api/example`)).json();
   assert.equal((await fetch(`${base}/api/state`, { method: 'PUT', headers: json, body: JSON.stringify(example) })).status, 200);
+  const calls: string[] = [];
   const document: any = new FakeDocument();
   const root = document.createElement('div');
   const win: any = { location: { hash: '' }, localStorage: undefined, listeners: {}, addEventListener(t: string, f: Function) { (this.listeners[t] ??= []).push(f); } };
-  const app: any = startApp({ root, document, fetch: (p: string, i: any) => fetch(base + p, i), win, now });
+  const app: any = startApp({ root, document, fetch: (p: string, i: any) => { calls.push(`${i?.method ?? 'GET'} ${p}`); return fetch(base + p, i); }, win, now });
   const settle = async () => {
     for (let i = 0; i < 300; i++) {
       const s = app.store.get();
@@ -40,7 +41,7 @@ async function bootWithData() {
   await settle();
   const go = (hash: string) => app.navigate(hash);
   const dispatchKey = (k: string) => document.dispatch('keydown', { key: k, target: { tag: 'body' } });
-  return { app, root, document, settle, go, dispatchKey };
+  return { app, root, document, settle, go, dispatchKey, calls };
 }
 const fk = (root: any, k: string) => findAll(root, (e: any) => e.getAttribute('data-fk') === k);
 const fkStarts = (root: any, p: string) => findAll(root, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith(p));
@@ -63,10 +64,19 @@ test('every screen is a sidebar link and the current one is marked', async () =>
 });
 
 test('+ New and Replan are in the sidebar and work', async () => {
-  const { root } = await bootWithData();
+  const { root, app, settle, calls } = await bootWithData();
+  const chooser = () => findAll(root, (e: any) => e.getAttribute('aria-label') === 'New' && e.tag !== 'button');
+  assert.equal(app.drawer.isOpen(), false);
+  assert.equal(chooser().length, 0, 'no chooser before the click');
   fk(root, 'new')[0].click();
-  assert.ok(byClass(root, 'drawer').length > 0 || /Something|New/.test(textOf(root)), 'the chooser opened');
+  assert.equal(app.drawer.isOpen(), true);
+  assert.equal(chooser().length, 1, 'the chooser panel is drawn');
+  assert.ok(byClass(root, 'choices').length > 0, 'it offers choices');
   assert.equal(fk(root, 'replan').length, 1);
+  const before = calls.filter((c) => c === 'POST /api/replan').length;
+  fk(root, 'replan')[0].click();
+  await settle();
+  assert.equal(calls.filter((c) => c === 'POST /api/replan').length, before + 1, 'Replan asked the server to replan');
 });
 
 test('the label filters live in the sidebar and hide blocks on the Week, and Show all brings them back', async () => {
@@ -108,10 +118,13 @@ test('a narrow window opens the sidebar with its button and a link closes it', a
   const app = byClass(root, 'app')[0];
   const toggle = fk(root, 'side-toggle')[0];
   assert.equal(app.getAttribute('data-side'), null);
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
   toggle.click();
   assert.equal(app.getAttribute('data-side'), 'open');
+  assert.equal(toggle.getAttribute('aria-expanded'), 'true');
   fk(root, 'side-tasks')[0].click();
   assert.equal(app.getAttribute('data-side'), null);
+  assert.equal(toggle.getAttribute('aria-expanded'), 'false');
 });
 
 test('pressing / still opens the jump-to menu', async () => {

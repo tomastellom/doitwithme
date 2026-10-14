@@ -63,6 +63,7 @@ test('the sidebar links and Menu entries exist, and the link is current on every
     app.navigate(`#/${id}`);
     assert.equal(link(id).getAttribute('aria-current'), 'page', id);
     assert.equal(links().filter((l: any) => l.getAttribute('aria-current') === 'page').length, 1, `only ${id} is current`);
+    assert.equal(textOf(byTag(root, 'h1')[0]), 'Plan', `${id} still titles itself Plan`);
   }
   app.navigate('#/setup');
   assert.equal(textOf(byTag(root, 'h1')[0]), 'Plan');

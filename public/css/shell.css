@@ -23,6 +23,7 @@ body { background: var(--canvas); }
 .side .fl .sw.is-outline { border: 2px solid var(--ink); }
 .side .fl .nm { font-size: 13px; font-weight: 600; }
 .side .fl-all { margin: 4px 10px 0; align-self: flex-start; border-radius: 7px; border: 1px solid #D5D8DE; background: transparent; padding: 5px 9px; }
+.side .fl-all:hover { background: var(--ink); color: var(--paper); }
 .side .replan { margin-top: auto; border: 1px solid #D5D8DE; border-radius: 8px; background: transparent; padding: 8px 12px; font-weight: 600; }
 .side .replan:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
 .side-toggle { display: none; }
@@ -31,6 +32,6 @@ body { background: var(--canvas); }
 @media (max-width: 860px) {
   .app { grid-template-columns: minmax(0, 1fr); padding: 8px 8px 120px; }
   .side-toggle { display: inline-flex; margin: 0 0 8px; border-radius: 8px; border: 1px solid #D5D8DE; background: var(--panel); }
-  .side { position: fixed; inset: 0 auto 0 0; width: 256px; max-height: none; z-index: 40; background: var(--canvas); padding: 16px 12px; transform: translateX(-110%); transition: transform .26s ease-out; }
-  .app[data-side="open"] .side { transform: none; box-shadow: 8px 0 30px rgba(20, 22, 26, .2); }
+  .side { position: fixed; inset: 0 auto 0 0; width: 256px; max-height: none; z-index: 40; background: var(--canvas); padding: 16px 12px; transform: translateX(-110%); visibility: hidden; transition: transform .26s ease-out, visibility 0s linear .26s; }
+  .app[data-side="open"] .side { transform: none; visibility: visible; transition: transform .26s ease-out, visibility 0s; box-shadow: 8px 0 30px rgba(20, 22, 26, .2); }
 }

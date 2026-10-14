@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createDom } from '../../public/js/dom.js';
 import { dayModel } from '../../public/js/day-model.js';
 import { renderDay } from '../../public/js/day.js';
+import { tintOf } from '../../public/js/colors.js';
 import { FakeDocument, byClass, byTag, findAll, textOf } from './fakedom.ts';
 
 const dom = createDom(new FakeDocument() as any);
@@ -49,7 +50,7 @@ test('rows show time, block, duration, gaps and buffers', () => {
   assert.match(text, /Buffer before Private lesson, Anna/);
   assert.match(text, /Travel and setup/);
   assert.equal(byClass(el, 'dv-buf').length, 1);
-  assert.ok(byClass(el, 'dv-blk').some((b: any) => b.style.background === '#FF4B1F'), 'the study block is painted in the Study color');
+  assert.ok(byClass(el, 'dv-blk').some((b: any) => b.style.background === tintOf('#FF4B1F').fill), 'the study block is painted a soft tint of the Study color');
 });
 
 test('the side lists the groups and the free time in the window', () => {

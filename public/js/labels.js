@@ -1,4 +1,4 @@
-import { PALETTE, onColor } from './colors.js';
+import { PALETTE, onColor, tintOf } from './colors.js';
 
 // Labels are what a commitment or a task is filed under. A label's id is what the item stores,
 // so renaming never breaks anything, and the planner still finds the built-in 'study' by its id.
@@ -65,6 +65,13 @@ export function paint(node, color, style, { onInk = false, done = false } = {}) 
     node.style.background = hex;
     node.style.color = onColor(hex);
   }
+}
+// A block on the Week and the Day: filled labels are a soft tint with text from the same hue; outlines and done blocks keep their look.
+export function paintTile(node, color, style, { done = false } = {}) {
+  if (done || style === 'outline') return paint(node, color, style, { done });
+  const { fill, text } = tintOf(color);
+  node.style.background = fill;
+  node.style.color = text;
 }
 export const lookClass = (style) => (style === 'outline' ? 'is-outline' : 'is-fill');
 

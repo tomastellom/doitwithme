@@ -1,5 +1,5 @@
 import { itemKey } from './model.js';
-import { lookClass, paint } from './labels.js';
+import { lookClass, paint, paintTile } from './labels.js';
 import { duration, hhmm } from './time.js';
 import { STATUS_WORDS, TAG, statusClass, tickButton } from './status-ui.js';
 import { DEFAULT_HOURS, axisEl, bodyEl, dayTileSize, hoursFor, topOf } from './timegrid.js';
@@ -28,7 +28,7 @@ export function renderDay(dom, view, actions) {
       type: 'button', class: ['dv-blk', 'tile', size, item.kind === 'travel' ? 'travel' : lookClass(r.look), item.kind === 'travel' ? '' : 'has-tick', statusClass(r.status)].filter(Boolean).join(' '), 'data-fk': `blk-${itemKey(item)}`,
       title: `${name}, ${timeOf(r)}`, 'aria-label': `${name}, ${timeOf(r)}, ${r.label}${r.status ? `, ${STATUS_WORDS[r.status]}` : ''}. Opens the editor.`, onclick: () => actions.open(item),
     }, lines(r, r.title, size));
-    if (item.kind !== 'travel' && r.status !== 'missed' && r.status !== 'waived') paint(node, r.color, r.look, { done: r.status === 'done' });
+    if (item.kind !== 'travel' && r.status !== 'missed' && r.status !== 'waived') paintTile(node, r.color, r.look, { done: r.status === 'done' });
     return node;
   };
 

@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DEFAULT_LABELS, LOCKED_IDS, labelFor, labelOptions, labelsOf, lookClass, paint, wash } from '../../public/js/labels.js';
+import { DEFAULT_LABELS, LOCKED_IDS, labelFor, labelOptions, labelsOf, lookClass, paint, paintTile, wash } from '../../public/js/labels.js';
 import { KINDS, applyItem, itemsOf, labelKind, removeItem } from '../../public/js/setup-model.js';
-import { FakeElement } from './fakedom.ts';
+import { FakeDocument, FakeElement } from './fakedom.ts';
 
 const st = (over: any = {}) => ({ commitments: [], tasks: [], deadlines: [], blocks: [], places: [], commutes: [], ...over });
 
@@ -90,4 +90,18 @@ test('a done item is its color washed pale and solid, never see-through', () => 
   assert.equal(el.style.color, '#2B2E31');
   paint(el, '#00A3A3', 'outline', { done: true });
   assert.deepEqual([el.style.borderColor, el.style.background], [wash('#00A3A3'), '#FFFFFF']);
+});
+
+test('paintTile tints a filled tile, keeps an outline an outline, and washes a done tile', () => {
+  const doc: any = new FakeDocument();
+  const fill = doc.createElement('div');
+  paintTile(fill, '#FF4B1F', 'fill');
+  assert.notEqual(fill.style.background, '#FF4B1F');
+  assert.match(fill.style.background, /^#[0-9A-F]{6}$/i);
+  const outline = doc.createElement('div');
+  paintTile(outline, '#1746F0', 'outline');
+  assert.equal(outline.style.borderColor, '#1746F0');
+  const done = doc.createElement('div');
+  paintTile(done, '#FF4B1F', 'fill', { done: true });
+  assert.equal(done.style.color, '#2B2E31');
 });

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createDom } from '../../public/js/dom.js';
 import { weekModel } from '../../public/js/model.js';
 import { renderWeek } from '../../public/js/week.js';
+import { tintOf } from '../../public/js/colors.js';
 import { FakeDocument, byClass, byTag, findAll, textOf } from './fakedom.ts';
 
 const dom = createDom(new FakeDocument() as any);
@@ -57,8 +58,8 @@ test('seven day columns with weekday, number, booked time and blocks in the boar
   assert.match(textOf(mon), /Chemistry/);
   const chem = byClass(mon, 'blk').find((b) => textOf(b).includes('Chemistry'))!;
   assert.ok(chem.hasClass('is-fill'));
-  assert.equal(chem.style.background, '#FF4B1F', 'filled with the label color');
-  assert.equal(chem.style.color, '#111111', 'with readable text');
+  assert.equal(chem.style.background, tintOf('#FF4B1F').fill, 'filled with a soft tint of the label color');
+  assert.equal(chem.style.color, tintOf('#FF4B1F').text, 'with readable text from the same hue');
   assert.match(chem.getAttribute('aria-label'), /Study/);
   const project = byClass(days[2], 'blk')[0];
   assert.ok(project.hasClass('is-outline'));
@@ -66,8 +67,8 @@ test('seven day columns with weekday, number, booked time and blocks in the boar
   assert.match(project.getAttribute('aria-label'), /Personal project/);
   const mass = byClass(days[6], 'blk')[0];
   assert.ok(mass.hasClass('is-fill'));
-  assert.equal(mass.style.background, '#111111');
-  assert.equal(mass.style.color, '#FFFFFF');
+  assert.equal(mass.style.background, tintOf('#111111').fill);
+  assert.equal(mass.style.color, tintOf('#111111').text);
   assert.equal(days[1].hasClass('today'), true);
 });
 

@@ -1,5 +1,5 @@
 import { itemKey } from './model.js';
-import { lookClass, paint } from './labels.js';
+import { lookClass, paint, paintTile } from './labels.js';
 import { duration, hhmm } from './time.js';
 import { STATUS_WORDS, TAG, statusClass, tickButton } from './status-ui.js';
 import { DEFAULT_HOURS, axisEl, bodyEl, hoursFor } from './timegrid.js';
@@ -23,7 +23,7 @@ export function renderWeek(dom, view, actions) {
       : [h('span', { class: 'k' }, item.label), h('span', { class: 'n' }, name), when];
     const classes = ['blk', 'tile', size, travel ? 'travel' : lookClass(item.look), travel ? '' : 'has-tick', statusClass(item.status)].filter(Boolean).join(' ');
     const node = h('button', { ...open(item), class: classes, title: `${name}, ${time}` }, lines);
-    if (!travel && !off) paint(node, item.color, item.look, { done: item.status === 'done' });
+    if (!travel && !off) paintTile(node, item.color, item.look, { done: item.status === 'done' });
     return node;
   };
 

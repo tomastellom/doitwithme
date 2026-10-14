@@ -30,3 +30,24 @@ export const contrast = (a, b) => {
 };
 // Whichever of ink or white reads better on the colour.
 export const onColor = (hex) => (contrast(hex, '#111111') >= contrast(hex, '#FFFFFF') ? '#111111' : '#FFFFFF');
+
+const toHex = (n) => `#${[(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => v.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+
+// `a` moved toward `b` by `t` (0 keeps a, 1 gives b).
+export function mixHex(a, b, t) {
+  const x = parseInt(a.slice(1), 16);
+  const y = parseInt(b.slice(1), 16);
+  const ch = (shift) => Math.round(((x >> shift) & 255) * (1 - t) + ((y >> shift) & 255) * t);
+  return toHex((ch(16) << 16) | (ch(8) << 8) | ch(0));
+}
+
+// A block is its label's color at this strength over white.
+export const TINT = 0.16;
+
+// The fill for a block and a text color from the same hue, darkened until it reads (4.5:1) on that fill.
+export function tintOf(hex) {
+  const fill = mixHex('#FFFFFF', hex, TINT);
+  let text = hex;
+  for (let t = 0; t <= 1 && contrast(text, fill) < 4.5; t = Math.round((t + 0.05) * 100) / 100) text = mixHex(hex, '#111111', t);
+  return { fill, text };
+}

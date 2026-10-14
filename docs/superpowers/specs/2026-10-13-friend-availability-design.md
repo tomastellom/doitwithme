@@ -12,6 +12,11 @@ Two people who use the planner can ask each other "when are you free for X minut
 - It is for **the user and a few friends** (2 to 10 people), not open sign-up.
 - The service is a **ready-made backend: Supabase** (the user chose B over a small relay service and over peer-to-peer). Supabase is chosen over Firebase because privacy is plain database rules and sign-in is an email link without passwords.
 - Nudge is the front door; no new screens.
+- **What counts as available depends on the purpose of the request** (confirmed 2026-10-13). The asker picks one of three purposes, and the answering planner works out its slots by that purpose:
+  - **Study together:** the answerer's planned study blocks, plus free gaps inside the day windows. Sharing a study block does not move it.
+  - **Hang out:** truly free time, including the evenings the answerer keeps free (soft windows), which normal planning leaves out.
+  - **Meeting:** free gaps inside the day windows only; protected evenings and day-off windows are left out.
+  - Classes (with buffers), commute legs and all other planned work are never available, whatever the purpose.
 
 ## Assumptions to confirm on review
 
@@ -30,15 +35,15 @@ Two people who use the planner can ask each other "when are you free for X minut
   - `profiles`: id, display name, email.
   - `connections`: two profile ids, status (`pending`, `accepted`), created at.
   - `invites`: a short single-use code made by one person to connect with another, expires after 7 days.
-  - `requests`: id, from, to, date range, minimum minutes, optional note (200 characters), status (`open`, `answered`, `declined`, `expired`), created at.
+  - `requests`: id, from, to, purpose (`study`, `hang`, `meeting`), date range, minimum minutes, optional note (200 characters), status (`open`, `answered`, `declined`, `expired`), created at.
   - `answers`: request id, list of free slots `{date, start, end}` (at most 40), sent at.
-- **Free slots are computed on the answering person's own computer**, with the same logic as the chat `free_time` lookup (classes with buffers, commute legs, planned and ticked-off work, day windows, evenings kept free), then shown for approval before sending.
+- **Slots are computed on the answering person's own computer by the request's purpose** (see Decisions), from the same logic as the chat `free_time` lookup (classes with buffers, commute legs, planned and ticked-off work, day windows, evenings kept free), then shown for approval before sending. An answer slot carries its kind (`study block` or `free`) so the asker sees which it is.
 - **The overlap** is computed on the asker's computer from the friend's answer and the asker's own free time. It is never stored on Supabase.
 
 ## How a request works
 
-1. The asker picks a friend in Settings, a date range, a minimum length and an optional note, and presses Ask.
-2. The friend's planner, while open, checks for new requests every 15 seconds. Nudge comes up with "NAME asks when you are free for 2 h, Mon 20 to Fri 24".
+1. The asker picks a friend in Settings, a purpose (Study together, Hang out or Meeting), a date range, a minimum length and an optional note, and presses Ask.
+2. The friend's planner, while open, checks for new requests every 15 seconds. Nudge comes up with "NAME asks when you are free to study together for 2 h, Mon 20 to Fri 24" (the purpose in plain words).
 3. His bubble shows the friend's own free slots as tick-boxes, all ticked, with Send and Decline. Nothing is sent until Send.
 4. The asker's planner picks up the answer on its next check. Nudge comes up with the slots and which of them are also free for the asker. Okay dismisses it.
 
@@ -76,7 +81,7 @@ Supabase's free tier covers a few friends. No new paid service.
 
 Supabase is replaced by a fake service in every automated test, so no test touches the network.
 
-- `share`: free slots never overlap a class, commute or planned work, respect day windows and evenings kept free, and handle midnight and daylight-saving edges; overlap of two lists; limits and expiry.
+- `share`: slots for each purpose (study offers study blocks and free gaps; hang out includes protected evenings; meeting leaves them out); slots never overlap a class, commute or non-study planned work, respect day windows and evenings kept free, and handle midnight and daylight-saving edges; overlap of two lists; limits and expiry.
 - `supabase` client: each failure maps to one plain sentence and never echoes the response text or the key.
 - Server: bad input rejected; only the expected files are written; signed-out behavior.
 - Frontend: Friends row (invite, join, disconnect); Nudge shows an incoming request; nothing sends before Send; Decline; the answer view; offline.

@@ -150,3 +150,19 @@ Start the planner with the key in a separate terminal (see docs/anthropic-setup.
 5. Type "Move my gym to Thursday". Nudge must say what he would suggest in words, and your plan must not change.
 6. Press Earlier: your questions show, newest first, with the line about what is sent. Press Clear history, then "Keep them", then Clear history and "Yes, delete": the list empties.
 7. Stop the planner and start it WITHOUT the key. Ask something: the bubble says the AI is not connected.
+
+## The new shell and Week (slice 1)
+
+Start the planner and load the example if the Week is empty.
+
+1. The page is a grey canvas with a sidebar on the left and the Week on a white rounded panel. There is no top bar, no tabs and no black Menu button.
+2. The sidebar lists, in order: Plan (Week, Day, Month, Deadlines), What goes in (Commitments, Tasks, Due dates), Details (Labels, Places, Commutes), and Settings. The current screen is white and bold. A black **+ New** is at the top and **Replan** at the bottom.
+3. The Week title is about 28 px (not huge). On the right: Prev, Today, Next, a Day / Week / Month switch with Week dark, and "All clear" or "N need you".
+4. Each day shows the weekday in small type, a big date numeral, and "Booked 3h25" under it. Today's numeral is vermilion and its column has a faint warm tint. The current-time line is vermilion. The hour labels line up with the columns.
+5. Blocks are soft tints of their label's color with dark text from the same color, rounded. Ticking one fades it; "not done" is dashed. A label with a pale color (try Sand) is still readable.
+6. Under the sidebar's pages there is a Labels list with counts. Click one: its blocks disappear from the Week and it greys. "Show all" appears and brings them back. Reload: your choice is remembered. On Settings the Labels list is not shown.
+7. Press / : the jump-to search opens. Type "tasks", press Enter: Tasks opens and the sidebar marks it.
+8. Make the window narrow (under 860 px): the sidebar hides and a Menu button appears; it slides the sidebar in, and choosing a screen closes it.
+9. Nudge: hover the bottom-right corner (he peeks), click him. The bubble is a white card with rounded corners. With a warning, the main button is vermilion and the others are outlined. The chat box and Earlier are readable. His face is the same as before for every situation.
+10. With an empty planner (First run): "Nothing planned yet..." with **Add a fixed time** (vermilion) and **Load the example** beside it.
+11. Known rough edges until slice 3: the Day and Month screens already use the new buttons, rounded blocks and vermilion time line but not yet the new header, so they look half-converted. Tell me anything else that looks off.

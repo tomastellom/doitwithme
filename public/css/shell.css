@@ -69,3 +69,27 @@ body { background: var(--canvas); }
 .lead p { font-size: 20px; }
 .cta .btn { border-radius: 8px; }
 .cta .btn.y { border-color: var(--study); }
+
+/* Nudge's bubble: a white rounded card; one vermilion main button, the rest quiet. His faces are untouched. */
+.say, .quiet { background: var(--panel); color: var(--ink); border-radius: 16px; box-shadow: 0 8px 28px rgba(20, 22, 26, .18); }
+.say { padding: 16px 18px; }
+.say p, .quiet span { color: var(--muted); }
+.say .k { color: var(--study); }
+.say .reply, .quiet .reply { color: var(--ink); }
+.notice { color: var(--muted); }
+.say .reply:not(:empty), .quiet .reply:not(:empty) { background: var(--soft); border-radius: 10px; padding: 9px 11px; }
+.acts button { border: 1px solid #D5D8DE; border-radius: 8px; color: var(--ink); }
+.acts button:hover:not(:disabled) { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.acts button.y { background: var(--study); border-color: var(--study); color: var(--on-study); }
+.acts button.y:hover:not(:disabled) { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.pg button { border: 1px solid #D5D8DE; border-radius: 8px; color: var(--ink); }
+.pg button:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.ask { border-top-color: var(--hair); }
+.ask input { color: var(--ink); }
+.ask input::placeholder { color: var(--muted); }
+.ask input:focus-visible { outline-color: var(--ink); }
+.earlier { border-top-color: var(--hair); }
+.earlier .q, .ask-extra .sent, .ask-extra .asked { color: var(--muted); }
+.earlier .a { color: var(--ink); }
+.say :focus-visible, .quiet :focus-visible { outline-color: var(--ink); }
+.say .pg button:focus-visible { outline-color: var(--ink); }

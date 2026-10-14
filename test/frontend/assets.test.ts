@@ -226,3 +226,10 @@ test('tokens.css has the canvas and panel colors', () => {
   const css = readFileSync('public/css/tokens.css', 'utf8');
   for (const token of ['--canvas', '--panel', '--hair', '--soft', '--today', '--shadow']) assert.ok(css.includes(token), token);
 });
+
+test('the bubble is a white card in shell.css and the mascot is left alone', () => {
+  const css = readFileSync('public/css/shell.css', 'utf8');
+  assert.match(css, /\.say, \.quiet \{[^}]*background: var\(--panel\)/);
+  assert.match(css, /\.say :focus-visible, \.quiet :focus-visible \{ outline-color: var\(--ink\)/);
+  assert.doesNotMatch(css, /\.mascot/, 'Nudge\'s faces are not styled here');
+});

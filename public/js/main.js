@@ -104,14 +104,15 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     focusKey: (key) => { const target = findByKey(root, key) ?? main; if (typeof target.focus === 'function') target.focus(); },
   });
   const sidebar = createSidebar(dom, registry, {
-    newThing: () => drawer.openChooser({ date: getClock().today, returnKey: 'new' }),
+    newThing: () => { closeSide(); drawer.openChooser({ date: getClock().today, returnKey: 'new' }); },
     replan: () => store.replan(),
     toggleLabel: (id) => weekActions.toggleGroup(id),
     showAll: () => weekActions.showAll(),
-    picked: () => closeSide(),
+    picked: () => { if (isNarrow() && typeof main.focus === 'function') main.focus(); closeSide(); },
   });
   const appEl = h('div', { class: 'app' });
   const sideToggle = h('button', { type: 'button', class: 'side-toggle btn mono', 'data-fk': 'side-toggle', 'aria-label': 'Menu', 'aria-expanded': 'false', onclick: () => (appEl.getAttribute('data-side') === 'open' ? closeSide() : openSide()) }, 'Menu');
+  function isNarrow() { return Boolean(win.matchMedia && win.matchMedia('(max-width: 860px)').matches); }
   function openSide() { appEl.setAttribute('data-side', 'open'); sideToggle.setAttribute('aria-expanded', 'true'); }
   function closeSide() { appEl.removeAttribute('data-side'); sideToggle.setAttribute('aria-expanded', 'false'); }
   clear(appEl, sideToggle, sidebar.el, main);
@@ -408,7 +409,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     const tag = ((e.target && (e.target.tagName || e.target.tag)) || '').toLowerCase();
     if (e.key === '/' && !['input', 'textarea', 'select'].includes(tag) && !menu.isOpen() && !drawer.isOpen()) {
       e.preventDefault();
-      menu.open({ focus: () => sidebar.focus() });
+      menu.open({ focus: () => (isNarrow() ? main.focus() : sidebar.focus({ current: true })) });
     }
   });
   win.addEventListener('hashchange', render);

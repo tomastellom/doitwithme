@@ -101,3 +101,13 @@ test('a label name that looks like markup is plain text', () => {
   assert.match(textOf(side.el), /<img src=x onerror=alert\(1\)>/);
   assert.equal(findAll(side.el, (e: any) => e.tag === 'img').length, 0);
 });
+
+test('focus() can prefer the link of the current screen, and falls back to the first', () => {
+  const { side } = make({ view: { routeId: 'month' } });
+  side.focus({ current: true });
+  const month = fk(side.el, 'side-month');
+  assert.equal(month.doc.activeElement, month);
+  side.focus();
+  const week = fk(side.el, 'side-week');
+  assert.equal(week.doc.activeElement, week);
+});

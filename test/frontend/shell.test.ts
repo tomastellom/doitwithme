@@ -132,3 +132,13 @@ test('pressing / still opens the jump-to menu', async () => {
   dispatchKey('/');
   assert.ok(byClass(root, 'menu').length > 0);
 });
+
+test('in a narrow window + New closes the sidebar and opens the drawer', async () => {
+  const { root, app } = await bootWithData();
+  const appEl = byClass(root, 'app')[0];
+  fk(root, 'side-toggle')[0].click();
+  assert.equal(appEl.getAttribute('data-side'), 'open');
+  fk(root, 'new')[0].click();
+  assert.equal(appEl.getAttribute('data-side'), null);
+  assert.equal(app.drawer.isOpen(), true);
+});

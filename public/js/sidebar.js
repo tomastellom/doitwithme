@@ -13,6 +13,7 @@ export function createSidebar(dom, registry, handlers) {
   const el = h('aside', { class: 'side', 'aria-label': 'Main' });
   let view = { routeId: 'week', labels: [], hiddenCount: 0, busy: false, ready: false };
   let firstLink = null;
+  let currentLink = null;
 
   const isCurrent = (section) => section.id === view.routeId || (section.activeFor ?? []).includes(view.routeId);
 
@@ -23,6 +24,7 @@ export function createSidebar(dom, registry, handlers) {
       onclick: () => handlers.picked(),
     }, section.title);
     if (firstLink === null) firstLink = a;
+    if (on && currentLink === null) currentLink = a;
     return a;
   }
 
@@ -41,6 +43,7 @@ export function createSidebar(dom, registry, handlers) {
 
   function build() {
     firstLink = null;
+    currentLink = null;
     const labels = view.labels.length > 0 && h('div', { class: 'sg labels' },
       h('span', { class: 'mono sgh' }, 'Labels'),
       view.labels.map(labelButton),
@@ -66,8 +69,9 @@ export function createSidebar(dom, registry, handlers) {
       draw();
     },
     // Where focus goes when something that opened from here closes.
-    focus() {
-      if (firstLink && typeof firstLink.focus === 'function') firstLink.focus();
+    focus(opts = {}) {
+      const target = (opts.current && currentLink) || firstLink;
+      if (target && typeof target.focus === 'function') target.focus();
     },
   };
 }

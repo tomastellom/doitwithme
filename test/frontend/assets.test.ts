@@ -233,3 +233,16 @@ test('the bubble is a white card in shell.css and the mascot is left alone', () 
   assert.match(css, /\.say :focus-visible, \.quiet :focus-visible \{ outline-color: var\(--ink\)/);
   assert.doesNotMatch(css, /\.mascot/, 'Nudge\'s faces are not styled here');
 });
+
+test('final review: small-text and edge colors pass contrast, and the shell rules are in place', async () => {
+  const { contrast } = await import('../../public/js/colors.js');
+  const tokens = readFileSync('public/css/tokens.css', 'utf8');
+  const tok = (n: string) => tokens.match(new RegExp(`--${n}:\\s*(#[0-9A-Fa-f]{6})`))![1];
+  for (const bg of ['#FFFFFF', tok('today'), tok('soft')]) assert.ok(contrast(tok('study-text'), bg) >= 4.5, `study-text on ${bg}`);
+  assert.ok(contrast(tok('edge'), '#FFFFFF') >= 3);
+  const shell = readFileSync('public/css/shell.css', 'utf8');
+  assert.ok(!shell.includes('D5D8DE'));
+  assert.ok(shell.includes('.week .cbody') && shell.includes('.hero button.needs'));
+  const pads = [...shell.matchAll(/\.app \{[^}]*padding:\s*\d+px \d+px (\d+)px/g)].map((m) => Number(m[1]));
+  assert.ok(pads.length >= 2 && pads.every((n) => n >= 220), 'bottom padding clears the Nudge corner');
+});

@@ -1,6 +1,6 @@
 /* The soft-panel shell: grey canvas, a sidebar, and the screen on a white panel. Loaded after app.css. */
 body { background: var(--canvas); }
-.app { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 16px; align-items: start; padding: 16px 16px 120px; min-height: 100vh; }
+.app { display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 16px; align-items: start; padding: 16px 16px 220px; min-height: 100vh; }
 .view { background: var(--panel); border-radius: 16px; box-shadow: var(--shadow); padding: 24px 0 32px; min-height: calc(100vh - 32px); min-width: 0; overflow-x: clip; }
 .view .boot, .view .state { margin: 28px; }
 
@@ -22,17 +22,17 @@ body { background: var(--canvas); }
 .side .fl .sw { width: 10px; height: 10px; border-radius: 50%; }
 .side .fl .sw.is-outline { border: 2px solid var(--ink); }
 .side .fl .nm { font-size: 13px; font-weight: 600; }
-.side .fl-all { margin: 4px 10px 0; align-self: flex-start; border-radius: 7px; border: 1px solid #D5D8DE; background: transparent; padding: 5px 9px; }
+.side .fl-all { margin: 4px 10px 0; align-self: flex-start; border-radius: 7px; border: 1px solid var(--edge); background: transparent; padding: 5px 9px; }
 .side .fl-all:hover { background: var(--ink); color: var(--paper); }
-.side .replan { margin-top: auto; border: 1px solid #D5D8DE; border-radius: 8px; background: transparent; padding: 8px 12px; font-weight: 600; }
+.side .replan { margin-top: auto; border: 1px solid var(--edge); border-radius: 8px; background: transparent; padding: 8px 12px; font-weight: 600; }
 .side .replan:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
 .side-toggle { display: none; }
 
 /* Narrow windows: the sidebar slides in over the screen. */
 @media (max-width: 860px) {
-  .app { grid-template-columns: minmax(0, 1fr); padding: 8px 8px 120px; }
-  .side-toggle { display: inline-flex; margin: 0 0 8px; border-radius: 8px; border: 1px solid #D5D8DE; background: var(--panel); }
-  .side { position: fixed; inset: 0 auto 0 0; width: 256px; max-height: none; z-index: 40; background: var(--canvas); padding: 16px 12px; transform: translateX(-110%); visibility: hidden; transition: transform .26s ease-out, visibility 0s linear .26s; }
+  .app { grid-template-columns: minmax(0, 1fr); padding: 8px 8px 220px; }
+  .side-toggle { display: inline-flex; margin: 0 0 8px; border-radius: 8px; border: 1px solid var(--edge); background: var(--panel); }
+  .side { position: fixed; inset: 0 auto 0 0; width: 256px; max-height: none; z-index: 25; background: var(--canvas); padding: 16px 12px; transform: translateX(-110%); visibility: hidden; transition: transform .26s ease-out, visibility 0s linear .26s; }
   .app[data-side="open"] .side { transform: none; visibility: visible; transition: transform .26s ease-out, visibility 0s; box-shadow: 8px 0 30px rgba(20, 22, 26, .2); }
 }
 
@@ -40,11 +40,11 @@ body { background: var(--canvas); }
 .hero .titles .sub { margin: 4px 0 0; color: var(--muted); }
 .hero .right { align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
 .step { padding-bottom: 0; }
-.step button { border: 1px solid #D5D8DE; border-radius: 8px; padding: 7px 12px; font-size: 14px; }
+.step button { border: 1px solid var(--edge); border-radius: 8px; padding: 7px 12px; font-size: 14px; }
 .switch { display: inline-flex; gap: 2px; padding: 2px; border-radius: 10px; background: var(--soft); }
 .switch a { padding: 7px 12px; border-radius: 8px; text-decoration: none; color: var(--ink); font-family: var(--font-sans); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .switch a.on { background: var(--ink); color: var(--paper); }
-.needs { font-size: 13px; }
+.hero button.needs { font-size: 13px; }
 
 /* Day columns: weekday, a big numeral, then Booked. The axis head (76) = header (54) + Booked (22). Scoped to the Week; the Day keeps its own .dv-grid. */
 .week .grid { margin: 20px 28px 0; }
@@ -53,10 +53,11 @@ body { background: var(--canvas); }
 .day .dh .mono { color: var(--muted); font-size: 11px; }
 .day .dh .dd { font-size: 22px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
 .day.today .dh { background: transparent; color: var(--ink); padding: 6px 0 0; border-top: 0; }
-.day.today .dh .mono, .day.today .dh .dd { color: var(--study); }
+.day.today .dh .mono { color: var(--study-text); }
+.day.today .dh .dd { color: var(--study); }
 .day .booked { height: 22px; line-height: 22px; text-align: center; font-size: 10px; }
 .day.today .cbody { background-color: var(--today); }
-.cbody { border-radius: 8px; }
+.week .cbody { border-radius: 8px; }
 
 /* Blocks */
 .tile { border-radius: 10px; }
@@ -74,15 +75,15 @@ body { background: var(--canvas); }
 .say, .quiet { background: var(--panel); color: var(--ink); border-radius: 16px; box-shadow: 0 8px 28px rgba(20, 22, 26, .18); }
 .say { padding: 16px 18px; }
 .say p, .quiet span { color: var(--muted); }
-.say .k { color: var(--study); }
+.say .k { color: var(--study-text); }
 .say .reply, .quiet .reply { color: var(--ink); }
 .notice { color: var(--muted); }
 .say .reply:not(:empty), .quiet .reply:not(:empty) { background: var(--soft); border-radius: 10px; padding: 9px 11px; }
-.acts button { border: 1px solid #D5D8DE; border-radius: 8px; color: var(--ink); }
+.acts button { border: 1px solid var(--edge); border-radius: 8px; color: var(--ink); }
 .acts button:hover:not(:disabled) { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .acts button.y { background: var(--study); border-color: var(--study); color: var(--on-study); }
 .acts button.y:hover:not(:disabled) { background: var(--ink); border-color: var(--ink); color: var(--paper); }
-.pg button { border: 1px solid #D5D8DE; border-radius: 8px; color: var(--ink); }
+.pg button { border: 1px solid var(--edge); border-radius: 8px; color: var(--ink); }
 .pg button:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .ask { border-top-color: var(--hair); }
 .ask input { color: var(--ink); }
@@ -93,3 +94,4 @@ body { background: var(--canvas); }
 .earlier .a { color: var(--ink); }
 .say :focus-visible, .quiet :focus-visible { outline-color: var(--ink); }
 .say .pg button:focus-visible { outline-color: var(--ink); }
+.week .travel-off, .week .lead { margin-left: 28px; margin-right: 28px; }

@@ -213,3 +213,16 @@ test('the time grid CSS uses the same hour height as timegrid.js and styles ever
   assert.match(css, /^\.now \{/m);
   assert.match(css, /^\.grid \{[^}]*grid-template-columns: 56px repeat\(7/m);
 });
+
+test('shell.css is linked after app.css, loads nothing from elsewhere, and has no gradients', () => {
+  const html = readFileSync('public/index.html', 'utf8');
+  assert.ok(html.indexOf('/css/app.css') < html.indexOf('/css/shell.css'), 'shell.css comes after app.css');
+  const css = readFileSync('public/css/shell.css', 'utf8');
+  assert.doesNotMatch(css, /https?:\/\//);
+  assert.doesNotMatch(css, /gradient/i);
+});
+
+test('tokens.css has the canvas and panel colors', () => {
+  const css = readFileSync('public/css/tokens.css', 'utf8');
+  for (const token of ['--canvas', '--panel', '--hair', '--soft', '--today', '--shadow']) assert.ok(css.includes(token), token);
+});

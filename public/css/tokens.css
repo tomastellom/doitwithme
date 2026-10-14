@@ -34,4 +34,10 @@
   --on-admin: #111111;
   --font-sans: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'DM Mono', ui-monospace, Menlo, monospace;
+  --canvas: #ECEEF2;
+  --panel: #FFFFFF;
+  --hair: #ECEEF1;
+  --soft: #F4F5F8;
+  --today: #FFF3EE;
+  --shadow: 0 2px 14px rgba(20, 22, 26, .08);
 }

@@ -55,6 +55,8 @@ async function settled(app: any) {
   throw new Error('the app did not settle');
 }
 const click = (root: any, label: string) => byTag(root, 'button').find((b: any) => textOf(b).trim() === label)!.click();
+// The sidebar links in order, as the groups lay them out.
+const SIDE_TITLES = ['Week', 'Day', 'Month', 'Deadlines', 'Commitments', 'Tasks', 'Due dates', 'Labels', 'Places', 'Commutes', 'Settings'];
 const fridayColumn = (root: any) => byClass(root, 'day')[4];
 
 test('the real server serves the page and its script', async () => {
@@ -77,8 +79,8 @@ test('boots, draws the week, and walks the whole approve, undo and dismiss story
   assert.equal(byClass(root, 'day').length, 7);
   assert.match(textOf(byClass(root, 'day')[0]), /18:00–20:00/);
   assert.equal(byClass(fridayColumn(root), 'blk').filter((b: any) => /18:00/.test(textOf(b))).length, 0, 'the evening is empty again');
-  assert.equal(byTag(root, 'nav').length, 1);
-  assert.deepEqual(findAll(root, (e) => e.tag === 'a' && e.hasClass('tab')).map(textOf), ['Day', 'Week', 'Month', 'Deadlines', 'Plan', 'Settings']);
+  assert.equal(byTag(root, 'nav').length, 4, 'one nav per sidebar group');
+  assert.deepEqual(findAll(root, (e) => e.tag === 'a' && e.hasClass('sl')).map(textOf), SIDE_TITLES);
 
   // Nudge speaks and offers Friday evening
   const nudge = byClass(root, 'nudge')[0];

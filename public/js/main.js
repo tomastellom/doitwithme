@@ -22,6 +22,7 @@ import { createSettings } from './settings.js';
 import { createStore } from './store.js';
 import { createUiPrefs } from './ui-prefs.js';
 import { WEEKDAYS, addDays, currentClock, weekStart, weekdayOf } from './time.js';
+import { createSidebar } from './sidebar.js';
 import { createSetup } from './setup.js';
 import { renderWeek } from './week.js';
 
@@ -94,8 +95,6 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     defer: (fn, ms) => (canSlide() ? (win.setTimeout(fn, ms), true) : false),
   });
   const main = h('main', { class: 'view', id: 'view', tabindex: '-1' });
-  const bar = h('header', { class: 'bar' });
-  const menuButton = h('button', { type: 'button', class: 'btn dark mono', 'data-fk': 'menu', onclick: () => menu.open(menuButton) }, 'Menu');
   const marks = createMarks(store);
   const drawer = createDrawer(dom, {
     store,
@@ -104,7 +103,20 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     // If the block is gone (deleted, skipped) focus falls back to the page itself, never to nothing.
     focusKey: (key) => { const target = findByKey(root, key) ?? main; if (typeof target.focus === 'function') target.focus(); },
   });
-  root.append(h('div', { class: 'app' }, bar, main), nudge.el, menu.el, drawer.el);
+  const sidebar = createSidebar(dom, registry, {
+    newThing: () => drawer.openChooser({ date: getClock().today, returnKey: 'new' }),
+    replan: () => store.replan(),
+    toggleLabel: (id) => weekActions.toggleGroup(id),
+    showAll: () => weekActions.showAll(),
+    picked: () => closeSide(),
+  });
+  const appEl = h('div', { class: 'app' });
+  const sideToggle = h('button', { type: 'button', class: 'side-toggle btn mono', 'data-fk': 'side-toggle', 'aria-label': 'Menu', onclick: () => (appEl.getAttribute('data-side') === 'open' ? closeSide() : openSide()) }, 'Menu');
+  function openSide() { appEl.setAttribute('data-side', 'open'); }
+  function closeSide() { appEl.removeAttribute('data-side'); }
+  clear(appEl, sideToggle, sidebar.el, main);
+  main.addEventListener('click', () => closeSide());
+  root.append(appEl, nudge.el, menu.el, drawer.el);
 
   const focus = createFocusKeeper({ document, getRoot: () => root, fallback: () => nudge.focus() });
   const keepFocus = (fn) => {
@@ -234,19 +246,19 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   // The old address for the planning rules still works: it opens Settings, where they live now.
   registry.register({ id: 'preferences', title: 'Planning rules', group: 'settings', inMenu: false, render: (ctx) => settings.render(ctx) });
 
-  function renderBar() {
+  function renderSide() {
     const s = store.get();
-    clear(bar,
-      h('a', { class: 'brand mono', href: '#/week', 'data-fk': 'brand' }, 'doitwithme'),
-      h('nav', { class: 'tabs mono', 'aria-label': 'Main' },
-        registry.primary().map((section) => {
-          const current = section.id === route.id || section.activeFor.includes(route.id);
-          return h('a', { class: section.id === 'setup' ? 'tab tab-gap' : 'tab', href: `#/${section.id}`, 'data-fk': `tab-${section.id}`, 'aria-current': current ? 'page' : null }, section.title);
-        })),
-      h('div', { class: 'actions' },
-        h('button', { type: 'button', class: 'btn new', 'data-fk': 'new', onclick: () => drawer.openChooser({ date: getClock().today, returnKey: 'new' }) }, '+ New'),
-        menuButton,
-        h('button', { type: 'button', class: 'btn go mono', 'data-fk': 'replan', disabled: s.busy || s.status !== 'ready', onclick: () => store.replan() }, 'Replan')));
+    // The filters belong to the Week; elsewhere nothing is offered (the Day and Month never filtered).
+    const labels = s.state && route.id === 'week'
+      ? weekModel(s.state, currentWeek(), hidden, getClock().today, s.travel).filters
+      : [];
+    sidebar.update({
+      routeId: route.id,
+      labels: labels.map((l) => ({ ...l, hidden: hidden.has(l.id) })),
+      hiddenCount: hidden.size,
+      busy: s.busy,
+      ready: s.status === 'ready',
+    });
   }
 
   function renderMain(s) {
@@ -311,7 +323,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   function draw() {
     route = resolveRoute(win.location.hash, registry.ids());
     const s = store.get();
-    renderBar();
+    renderSide();
     const screen = renderMain(s);
     // Changing tab, or stepping a day or a week, slides the old screen out and the new one in, towards the side you moved.
     const where = route.id === 'day' ? dateParam(route.param, getClock().today) : route.id === 'week' ? weekParam(route.param, getClock().today) : route.id === 'month' ? currentMonth() : null;
@@ -396,7 +408,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     const tag = ((e.target && (e.target.tagName || e.target.tag)) || '').toLowerCase();
     if (e.key === '/' && !['input', 'textarea', 'select'].includes(tag) && !menu.isOpen() && !drawer.isOpen()) {
       e.preventDefault();
-      menu.open(menuButton);
+      menu.open({ focus: () => sidebar.focus() });
     }
   });
   win.addEventListener('hashchange', render);

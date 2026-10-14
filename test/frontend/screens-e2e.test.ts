@@ -68,8 +68,7 @@ test('the Day tab shows today, steps to the next day, and reads a date from the 
   assert.match(win.location.hash, /2026-11-01$/);
   app.navigate('#/day/not-a-date');
   assert.equal(textOf(byTag(root, 'h1')[0]), 'Mon 5');
-  const tabs = findAll(root, (e: any) => e.tag === 'a' && e.hasClass('tab'));
-  assert.equal(tabs.find((t: any) => textOf(t) === 'Day').getAttribute('aria-current'), 'page');
+  assert.equal(key(root, 'side-day').getAttribute('aria-current'), 'page');
 });
 
 test('the Deadlines tab lists the example due dates with a shortfall for the exam', async () => {
@@ -103,8 +102,8 @@ test('Settings is a tab, one page with the hours, the look, notifications and th
   assert.equal((await put(await exampleState())).status, 200);
   const { app, root } = boot();
   await settled(app);
-  const tab = () => findAll(root, (e: any) => e.tag === 'a' && e.hasClass('tab') && textOf(e) === 'Settings')[0];
-  assert.ok(tab(), 'Settings is in the top bar, not hidden in the Menu');
+  const tab = () => key(root, 'side-settings');
+  assert.ok(tab(), 'Settings is a link in the sidebar');
   app.navigate('#/settings');
   assert.equal(tab().getAttribute('aria-current'), 'page');
   assert.deepEqual(byClass(root, 'st-gh').map(textOf), ['Calendar', 'Look', 'Notifications', 'How I plan']);

@@ -52,19 +52,23 @@ const type = (root: any, k: string, value: string) => { const el = key(root, k);
 const save = async (app: any, root: any) => { byTag(root, 'form')[0].dispatch('submit'); await app.store.idle(); await tick(); };
 const button = (root: any, label: string) => byTag(root, 'button').find((b: any) => textOf(b).trim() === label)!;
 
-test('the Plan tab and Menu entries exist, and the tab is current on every setup route', async () => {
+test('the sidebar links and Menu entries exist, and the link is current on every setup route', async () => {
   assert.equal((await put(baseState())).status, 200);
   const { app, root } = boot();
   await settled(app);
-  const tabs = () => findAll(root, (e) => e.tag === 'a' && e.hasClass('tab'));
-  assert.deepEqual(tabs().map(textOf), ['Day', 'Week', 'Month', 'Deadlines', 'Plan', 'Settings']);
-  for (const id of ['setup', 'commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes']) {
+  const links = () => findAll(root, (e) => e.tag === 'a' && e.hasClass('sl'));
+  const link = (id: string) => links().find((l: any) => l.getAttribute('data-fk') === `side-${id}`)!;
+  assert.equal(links().length, 11);
+  for (const id of ['commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes']) {
     app.navigate(`#/${id}`);
-    assert.equal(tabs().find((t: any) => textOf(t) === 'Plan').getAttribute('aria-current'), 'page', id);
-    assert.equal(textOf(byTag(root, 'h1')[0]), 'Plan');
+    assert.equal(link(id).getAttribute('aria-current'), 'page', id);
+    assert.equal(links().filter((l: any) => l.getAttribute('aria-current') === 'page').length, 1, `only ${id} is current`);
   }
+  app.navigate('#/setup');
+  assert.equal(textOf(byTag(root, 'h1')[0]), 'Plan');
   app.navigate('#/week');
-  assert.equal(tabs().find((t: any) => textOf(t) === 'Plan').getAttribute('aria-current'), null);
+  assert.equal(link('commitments').getAttribute('aria-current'), null);
+  assert.equal(link('week').getAttribute('aria-current'), 'page');
   app.menu.open(null);
   const menuLinks = byClass(app.menu.el, 'it').map((l: any) => l.getAttribute('href'));
   assert.deepEqual(menuLinks, ['#/day', '#/week', '#/month', '#/deadlines', '#/commitments', '#/tasks', '#/due-dates', '#/labels', '#/places', '#/commutes', '#/settings']);

@@ -103,3 +103,9 @@ body { background: var(--canvas); }
 .setup .chip { padding: 3px 11px; border-radius: 99px; background: var(--soft); color: var(--muted); font-size: 13px; }
 .setup .next-hint { margin: 24px 28px 0; padding: 12px 14px; border-radius: 12px; background: var(--soft); color: var(--ink); font-size: 14px; }
 .setup .cols { margin-left: 28px; margin-right: 28px; }
+
+/* Read-back and More options */
+.readback { padding: 10px 12px; border-radius: 10px; background: var(--soft); }
+.readback p { margin: 4px 0 0; color: var(--ink); font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
+.more { align-self: flex-start; padding: 4px 0; border: 0; background: transparent; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.more:hover { color: var(--ink); background: transparent; }

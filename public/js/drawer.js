@@ -1,12 +1,12 @@
 import { adviceBlock } from './attendance-ui.js';
 import { renderField } from './form.js';
-import { FIELDS } from './setup.js';
+import { FIELDS, readBackUpdater } from './setup.js';
 import { WEEK_ORDER, applyItem, commitmentKind, newId, removeItem } from './setup-model.js';
 import { dayItems, itemKey } from './model.js';
 import { labelFor, labelsOf } from './labels.js';
 import { WEEKDAYS, hhmm, longDate } from './time.js';
 
-const SHOWN = ['title', 'category', 'placeId', 'start', 'end', 'date', 'weekdays'];
+const SHOWN = ['title', 'category', 'placeId', 'start', 'end', 'date', 'weekdays', 'readback', 'more', 'buffer', 'courseId', 'exceptions'];
 const hoursText = (m) => (m < 60 ? `${m} min` : m % 60 === 0 ? `${m / 60}h` : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`);
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
@@ -142,7 +142,7 @@ export function createDrawer(dom, deps) {
     // The drawer shows no field that depends on a select, so a select change must not rebuild it and drop keyboard focus.
     const ctx = { state, scratch, rerender: draw, noSelectRedraw: true };
     const fields = FIELDS.commitments
-      .filter((f) => SHOWN.includes(f.name) && (!f.show || f.show(draft)))
+      .filter((f) => SHOWN.includes(f.name) && (!f.show || f.show(draft, ctx)))
       .map((f) => renderField(dom, f, draft, ctx))
       .filter(Boolean);
     const confirmRow = confirm
@@ -159,7 +159,7 @@ export function createDrawer(dom, deps) {
         h('span', {}, `Not going this week? Skip only ${longDate(item.date)}. The other weeks stay.`),
         h('button', { type: 'button', class: 'mono', 'data-fk': 'drawer-skip', disabled: busy, onclick: () => skip(c) }, 'Skip this day')),
       error && h('div', { class: 'err', role: 'alert' }, h('b', {}, 'Nothing was saved.'), h('span', { class: 'mono msg' }, error)),
-      h('form', { class: 'dfg', novalidate: true, onsubmit: (e) => { e.preventDefault(); save(c); } }, ...fields),
+      h('form', { class: 'dfg', novalidate: true, onsubmit: (e) => { e.preventDefault(); save(c); }, oninput: readBackUpdater('commitments', draft, ctx), onchange: readBackUpdater('commitments', draft, ctx) }, ...fields),
       h('span', { class: 'note2' }, 'Changes apply to every week of this class. ',
         h('a', { href: `#/commitments/${encodeURIComponent(c.id)}`, onclick: () => close(false) }, 'More options are in Plan.')),
       h('div', { class: 'dbtns' },
@@ -195,13 +195,13 @@ export function createDrawer(dom, deps) {
     // The drawer shows no field that depends on a select, so a select change must not rebuild it and drop keyboard focus.
     const ctx = { state, scratch, rerender: draw, noSelectRedraw: true };
     const fields = FIELDS.commitments
-      .filter((f) => SHOWN.includes(f.name) && (!f.show || f.show(draft)))
+      .filter((f) => SHOWN.includes(f.name) && (!f.show || f.show(draft, ctx)))
       .map((f) => renderField(dom, f, draft, ctx))
       .filter(Boolean);
     return [
       head('New / one time', 'Add something', longDate(item.date)),
       error && h('div', { class: 'err', role: 'alert' }, h('b', {}, 'Nothing was saved.'), h('span', { class: 'mono msg' }, error)),
-      h('form', { class: 'dfg', novalidate: true, onsubmit: (e) => { e.preventDefault(); saveNew(); } }, ...fields),
+      h('form', { class: 'dfg', novalidate: true, onsubmit: (e) => { e.preventDefault(); saveNew(); }, oninput: readBackUpdater('commitments', draft, ctx), onchange: readBackUpdater('commitments', draft, ctx) }, ...fields),
       h('span', { class: 'note2' }, 'It happens once, on this day. For something that repeats every week, ',
         h('a', { href: '#/commitments/new', onclick: () => close(false) }, 'use Plan.')),
       h('div', { class: 'dbtns' },

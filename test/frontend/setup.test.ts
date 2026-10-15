@@ -724,3 +724,82 @@ test('saving a Maps commute again asks for no lookup while its result still matc
   await submit(changed.render('commutes', 'r1') as any);
   assert.deepEqual(changed.lookups, ['r1'], 'another mode needs a new lookup');
 });
+
+// Read-back and More options
+const moreBtn = (root: any) => findAll(root, (e: any) => e.getAttribute('data-fk') === 'more-options')[0];
+const sentence = (root: any) => textOf(byClass(root, 'readback')[0]);
+
+test('the Fixed times form reads back what it will create, and updates as you type without a redraw', () => {
+  const { render } = setup();
+  const el: any = render('commitments', 'new');
+  assert.match(sentence(el), /Fill in the details/);
+  const title = byKey(el, 'f-title');
+  title.value = 'Chemistry lecture'; title.dispatch('input');
+  assert.match(sentence(el), /^This will be\s*Chemistry lecture, every Monday, 09:00 to 10:00, starting /);
+  assert.equal(byKey(el, 'f-title'), title, 'the field is the same element, so focus is kept');
+  title.value = 'Physics'; title.dispatch('input'); title.dispatch('change');
+  assert.match(sentence(el), /Physics, every Monday/);
+});
+
+test('rare options sit behind More options and open on their own when an existing item uses them', () => {
+  const { render } = setup();
+  const fresh: any = render('commitments', 'new');
+  for (const name of ['f-buffer', 'f-exceptions', 'f-courseId']) assert.equal(byKey(fresh, name), undefined, `${name} is hidden at first`);
+  assert.equal(moreBtn(fresh).getAttribute('aria-expanded'), 'false');
+  assert.equal(textOf(moreBtn(fresh)), 'More options');
+  moreBtn(fresh).click();
+  assert.ok(byKey(fresh, 'f-buffer'), 'buffer shows after More options');
+  assert.ok(byKey(fresh, 'f-exceptions'));
+  assert.equal(moreBtn(fresh).getAttribute('aria-expanded'), 'true');
+  assert.equal(textOf(moreBtn(fresh)), 'Fewer options');
+  moreBtn(fresh).click();
+  assert.equal(byKey(fresh, 'f-buffer'), undefined, 'Fewer options closes it again');
+  // lesson-1 has a buffer, so More options is already open
+  const used: any = setup().render('commitments', 'lesson-1');
+  assert.ok(byKey(used, 'f-buffer'), 'an item that uses a rare option never hides it');
+  assert.equal(moreBtn(used).getAttribute('aria-expanded'), 'true');
+});
+
+test('More options opens by itself for a used course and for cancelled dates, and stays closed for a plain item', () => {
+  const withBuf0 = (over: any) => stateWith({ commitments: stateWith().commitments.map((c: any) => (c.id === 'mass' ? { ...c, bufferBefore: 0, ...over } : c)) });
+  const plain: any = setup(withBuf0({})).render('commitments', 'mass');
+  assert.equal(moreBtn(plain).getAttribute('aria-expanded'), 'false');
+  assert.equal(byKey(plain, 'f-exceptions'), undefined);
+  const cancelled: any = setup(withBuf0({ exceptions: ['2026-10-18'] })).render('commitments', 'mass');
+  assert.ok(byKey(cancelled, 'f-exceptions'));
+  const course = stateWith({ tasks: [...stateWith().tasks, { id: 'cc', title: 'Chem course', category: 'study', weeklyMinutes: 60, maxBlock: 60, onePerDay: false, priority: 3, course: { credits: 3, difficulty: 3, examOnly: false, weeklyGraded: false, lab: false, syllabus: '' } }], commitments: stateWith().commitments.map((c: any) => (c.id === 'chem-lecture' ? { ...c, courseId: 'cc', bufferBefore: 0 } : c)) });
+  const lecture: any = setup(course).render('commitments', 'chem-lecture');
+  assert.ok(byKey(lecture, 'f-courseId'));
+});
+
+test('To do keeps the longest block, priority and one-session-a-day behind More options', () => {
+  const el: any = setup().render('tasks', 'new');
+  for (const k of ['f-maxBlock', 'f-priority', 'f-onePerDay-true']) assert.equal(byKey(el, k), undefined, k);
+  assert.ok(byKey(el, 'f-weekly'), 'the weekly time stays visible');
+  moreBtn(el).click();
+  for (const k of ['f-maxBlock', 'f-priority', 'f-onePerDay-true']) assert.ok(byKey(el, k), k);
+  const used: any = setup(stateWith({ tasks: stateWith().tasks.map((t: any) => (t.id === 'gym' ? { ...t, maxBlock: 45 } : t)) })).render('tasks', 'gym');
+  assert.ok(byKey(used, 'f-maxBlock'), 'a non-default value is never hidden');
+});
+
+test('a due date reads back too, and has no More options', () => {
+  const el: any = setup().render('due-dates', 'new');
+  assert.equal(byClass(el, 'readback').length, 1);
+  assert.equal(findAll(el, (e: any) => e.getAttribute('data-fk') === 'more-options').length, 0);
+});
+
+test('a title that looks like markup is plain text in the read-back', () => {
+  const el: any = setup().render('commitments', 'new');
+  type(el, 'f-title', '<img src=x onerror=alert(1)>');
+  assert.match(sentence(el), /<img src=x onerror=alert\(1\)>/);
+  assert.equal(byTag(el, 'img').length, 0);
+});
+
+test('saving still validates exactly as before even with More options closed', async () => {
+  const { render, calls } = setup();
+  const el: any = render('commitments', 'new');
+  type(el, 'f-title', '');
+  await submit(el);
+  assert.equal(calls.length, 0);
+  assert.match(textOf(el), /Give it a title\./);
+});

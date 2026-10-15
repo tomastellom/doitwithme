@@ -87,6 +87,7 @@ test('add a commitment through the form: it is saved on the server and shows on 
   key(root, 'f-weekdays-2').click();
   type(root, 'f-start', '10:00');
   type(root, 'f-end', '12:00');
+  key(root, 'more-options').click();
   type(root, 'f-buffer', '30');
   await save(app, root);
   const state = await serverState();

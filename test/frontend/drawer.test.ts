@@ -425,3 +425,64 @@ test('the chooser asks in three plain sentences and says where each goes', () =>
   assert.match(notes[2], /Goes to Due dates\.$/);
   assert.equal(findAll(el, (e: any) => e.getAttribute('data-fk') === 'choose-label').length, 0);
 });
+
+const moreBtn = (root: any) => key(root, 'more-options');
+const withBuffer = (n: number) => structuredClone({ ...example, commitments: example.commitments.map((c: any) => (c.id === 'chem-lecture' ? { ...c, bufferBefore: n } : c)) });
+
+test('the quick-edit panel reads back and hides rare options until More options is pressed', () => {
+  const { drawer, itemOf } = rig(withBuffer(0));
+  drawer.open(itemOf('commitment', TUE, (i) => i.commitmentId === 'chem-lecture'));
+  assert.match(textOf(byClass(drawer.el, 'readback')[0]), /^This will be\s*Chemistry lecture/);
+  for (const k of ['f-buffer', 'f-courseId', 'f-exceptions']) assert.equal(key(drawer.el, k), undefined, k);
+  assert.equal(moreBtn(drawer.el).getAttribute('aria-expanded'), 'false');
+  moreBtn(drawer.el).click();
+  assert.ok(key(drawer.el, 'f-buffer'));
+  assert.ok(key(drawer.el, 'f-exceptions'));
+  // typing updates the sentence in place
+  const title = key(drawer.el, 'f-title');
+  title.value = 'Organic chemistry'; title.dispatch('input');
+  assert.match(textOf(byClass(drawer.el, 'readback')[0]), /Organic chemistry/);
+  assert.equal(key(drawer.el, 'f-title'), title);
+});
+
+test('the quick-edit panel opens with a used rare option shown', () => {
+  const { drawer, itemOf } = rig(withBuffer(15));
+  drawer.open(itemOf('commitment', TUE, (i) => i.commitmentId === 'chem-lecture'));
+  assert.equal(key(drawer.el, 'f-buffer').value, '15');
+  assert.equal(moreBtn(drawer.el).getAttribute('aria-expanded'), 'true');
+  const cancelled = rig(structuredClone({ ...withBuffer(0), commitments: withBuffer(0).commitments.map((c: any) => (c.id === 'chem-lecture' ? { ...c, exceptions: ['2026-10-20'] } : c)) }));
+  cancelled.drawer.open(cancelled.itemOf('commitment', TUE, (i: any) => i.commitmentId === 'chem-lecture'));
+  assert.ok(key(cancelled.drawer.el, 'f-exceptions'));
+  const course = rig(structuredClone({ ...withBuffer(0), tasks: [...example.tasks, { id: 'cc', title: 'Chem course', category: 'study', weeklyMinutes: 60, maxBlock: 60, onePerDay: false, priority: 3, course: { credits: 3, difficulty: 3, examOnly: false, weeklyGraded: false, lab: false, syllabus: '' } }], commitments: withBuffer(0).commitments.map((c: any) => (c.id === 'chem-lecture' ? { ...c, courseId: 'cc' } : c)) }));
+  course.drawer.open(course.itemOf('commitment', TUE, (i: any) => i.commitmentId === 'chem-lecture'));
+  assert.ok(key(course.drawer.el, 'f-courseId'));
+});
+
+test('the new-thing panel reads back and keeps rare options behind More options', () => {
+  const r = rig();
+  r.drawer.openNew({ date: '2026-10-15', start: 9 * 60 });
+  assert.match(textOf(byClass(r.drawer.el, 'readback')[0]), /Fill in the details/);
+  assert.equal(key(r.drawer.el, 'f-buffer'), undefined);
+  assert.equal(key(r.drawer.el, 'f-exceptions'), undefined);
+  type(r.drawer.el, 'f-title', 'Dentist');
+  assert.match(textOf(byClass(r.drawer.el, 'readback')[0]), /Dentist/);
+  moreBtn(r.drawer.el).click();
+  assert.ok(key(r.drawer.el, 'f-buffer'));
+});
+
+test('More options never leaks from one item to the next', () => {
+  const r = rig(withBuffer(0));
+  const open = (id: string) => r.drawer.open(r.itemOf('commitment', TUE, (i: any) => i.commitmentId === id));
+  open('chem-lecture');
+  moreBtn(r.drawer.el).click();
+  assert.equal(moreBtn(r.drawer.el).getAttribute('aria-expanded'), 'true');
+  r.drawer.close();
+  open('chem-lecture');
+  assert.equal(moreBtn(r.drawer.el).getAttribute('aria-expanded'), 'false');
+  moreBtn(r.drawer.el).click();
+  r.drawer.openNew({ date: '2026-10-15', start: 540 });
+  assert.equal(moreBtn(r.drawer.el).getAttribute('aria-expanded'), 'false');
+  moreBtn(r.drawer.el).click();
+  open('chem-lecture');
+  assert.equal(moreBtn(r.drawer.el).getAttribute('aria-expanded'), 'false');
+});

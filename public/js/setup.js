@@ -3,7 +3,7 @@ import { foundFor, renderMapsBlock } from './maps-ui.js';
 import { labelOptions, lookClass, paint } from './labels.js';
 import { findByKey } from './focus.js';
 import { isValidDate } from './time.js';
-import { COPY } from './setup-copy.js';
+import { BLANK_READBACK, COPY, readBack } from './setup-copy.js';
 import { CATEGORIES, DEADLINE_KINDS, KINDS, PLACE_KINDS, TRAVEL_MODES, applyItem, itemsOf, newId, parseDecimal, parseWhole, removeItem } from './setup-model.js';
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -66,21 +66,56 @@ function estimateBlock(dom, est) {
   return h('div', { class: 'estwrap' }, ...parts);
 }
 
+// Rare options stay behind "More options", but a value that is not the default is never hidden from the person who set it.
+const EXTRAS = { commitments: ['buffer', 'courseId', 'exceptions'], tasks: ['maxBlock', 'priority', 'onePerDay'] };
+
+export function moreOpen(kindId, draft, ctx) {
+  if (typeof ctx.scratch.more === 'boolean') return ctx.scratch.more;
+  const blank = KINDS[kindId].kind.blank('2000-01-01', ctx.state);
+  return EXTRAS[kindId].some((k) => JSON.stringify(draft[k]) !== JSON.stringify(blank[k]));
+}
+
+const moreField = (kindId) => ({
+  name: 'more', type: 'custom', span: 3,
+  render: (dom, d, ctx) => {
+    const open = moreOpen(kindId, d, ctx);
+    return dom.h('button', { type: 'button', class: 'more mono', 'data-fk': 'more-options', 'aria-expanded': String(open), onclick: () => { ctx.scratch.more = !open; ctx.rerender(); } },
+      open ? 'Fewer options' : 'More options');
+  },
+});
+
+// The sentence is a paragraph kept in ctx.scratch.rb so typing can update it in place, with no redraw and no lost focus.
+const readbackField = (kindId) => ({
+  name: 'readback', type: 'custom', span: 3,
+  render: (dom, d, ctx) => {
+    const p = dom.h('p', {}, readBack(kindId, d, ctx.state) || BLANK_READBACK);
+    ctx.scratch.rb = p;
+    return dom.h('div', { class: 'readback' }, dom.h('span', { class: 'mono cap' }, 'This will be'), p);
+  },
+});
+
+export const readBackUpdater = (kindId, draft, ctx) => () => {
+  if (ctx.scratch.rb) ctx.scratch.rb.textContent = readBack(kindId, draft, ctx.state) || BLANK_READBACK;
+};
+const extra = (kindId) => (d, ctx) => moreOpen(kindId, d, ctx);
+
 export const FIELDS = {
   commitments: [
     { name: 'title', label: 'Title', type: 'text', span: 2 },
     { name: 'category', label: 'Label', type: 'select', redraw: true, options: (state) => labelOptions(state) },
     { name: 'start', label: 'Starts', type: 'text', placeholder: '16:00' },
     { name: 'end', label: 'Ends', type: 'text', placeholder: '17:00' },
-    { name: 'buffer', label: 'Buffer before, min', type: 'text', inputmode: 'numeric' },
     { name: 'placeId', label: 'Place', type: 'select', options: (state) => [{ value: '', label: 'No place' }, ...placeOptions(state)] },
-    { name: 'courseId', label: 'Course', type: 'select', options: (state) => courseOptions(state), show: classes },
     { name: 'repeats', label: 'Repeats', type: 'choice', options: [{ value: 'once', label: 'Once' }, { value: 'weekly', label: 'Weekly' }] },
     { name: 'weekdays', label: 'Weekdays', type: 'weekdays', span: 2, show: weekly },
     { name: 'date', label: 'Date', type: 'date', show: once },
     { name: 'from', label: 'From', type: 'date', show: weekly },
     { name: 'to', label: 'To', type: 'date', show: weekly },
-    { name: 'exceptions', label: 'Cancelled dates', type: 'dates', span: 2, show: weekly },
+    readbackField('commitments'),
+    moreField('commitments'),
+    { name: 'buffer', label: 'Buffer before, min', type: 'text', inputmode: 'numeric', show: extra('commitments') },
+    { name: 'courseId', label: 'Course', type: 'select', options: (state) => courseOptions(state), show: (d, ctx) => classes(d) && moreOpen('commitments', d, ctx) },
+    { name: 'exceptions', label: 'Cancelled dates', type: 'dates', span: 2, show: (d, ctx) => weekly(d) && moreOpen('commitments', d, ctx) },
   ],
   labels: [
     { name: 'name', label: 'Name', type: 'text', span: 2 },
@@ -92,9 +127,11 @@ export const FIELDS = {
     { name: 'title', label: 'Title', type: 'text', span: 2 },
     { name: 'category', label: 'Label', type: 'select', options: (state) => labelOptions(state) },
     { name: 'weekly', label: 'Minutes a week, blank for none', type: 'text', inputmode: 'numeric' },
-    { name: 'maxBlock', label: 'Longest block, min', type: 'text', inputmode: 'numeric' },
-    { name: 'priority', label: 'Priority', type: 'select', options: () => [1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: n === 1 ? '1 (highest)' : n === 5 ? '5 (lowest)' : String(n) })) },
-    { name: 'onePerDay', label: 'One session a day', type: 'choice', options: [{ value: false, label: 'No' }, { value: true, label: 'Yes' }] },
+    readbackField('tasks'),
+    moreField('tasks'),
+    { name: 'maxBlock', label: 'Longest block, min', type: 'text', inputmode: 'numeric', show: extra('tasks') },
+    { name: 'priority', label: 'Priority', type: 'select', options: () => [1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: n === 1 ? '1 (highest)' : n === 5 ? '5 (lowest)' : String(n) })), show: extra('tasks') },
+    { name: 'onePerDay', label: 'One session a day', type: 'choice', options: [{ value: false, label: 'No' }, { value: true, label: 'Yes' }], show: extra('tasks') },
     { name: 'courseTitle', type: 'custom', span: 3, show: study, render: (dom) => dom.h('div', { class: 'sec' }, dom.h('b', {}, 'Course details'), dom.h('span', { class: 'mono ai' }, 'Study tasks only')) },
     { name: 'credits', label: 'Credits', type: 'text', inputmode: 'decimal', show: study },
     { name: 'difficulty', label: 'Difficulty', type: 'select', options: difficultyOptions, show: study },
@@ -112,6 +149,7 @@ export const FIELDS = {
     { name: 'kind', label: 'Kind', type: 'select', options: fixed(DEADLINE_KINDS) },
     { name: 'dueDate', label: 'Due date', type: 'date' },
     { name: 'effort', label: 'Effort, min', type: 'text', inputmode: 'numeric' },
+    readbackField('due-dates'),
   ],
   places: [
     { name: 'name', label: 'Name', type: 'text', span: 2 },
@@ -319,8 +357,8 @@ export function createSetup(dom, deps) {
     if (!sel.editing) return h('div', { class: 'form' }, h('p', { class: 'hint' }, 'Pick one from the list, or add a new one.'));
     const error = local.error ?? (local.submittedKey === key ? s.formError : null);
     const ctx = { state: s.state, maps: s.maps, mapsUsage: s.mapsUsage, mapsNote: s.mapsNote, busy: s.busy, item: sel.item, lookup: (id) => store.lookupCommute(id), scratch: local.scratch, rerender, estimate: estimateApi() };
-    const fields = FIELDS[kindId].filter((f) => !f.show || f.show(draft)).map((f) => renderField(dom, f, draft, ctx)).filter(Boolean);
-    return h('form', { class: 'form', novalidate: true, onsubmit: (e) => { e.preventDefault(); save(sel); } },
+    const fields = FIELDS[kindId].filter((f) => !f.show || f.show(draft, ctx)).map((f) => renderField(dom, f, draft, ctx)).filter(Boolean);
+    return h('form', { class: 'form', novalidate: true, onsubmit: (e) => { e.preventDefault(); save(sel); }, oninput: readBackUpdater(kindId, draft, ctx), onchange: readBackUpdater(kindId, draft, ctx) },
       error && h('div', { class: 'err', role: 'alert' }, h('b', {}, 'Nothing was saved.'), h('span', { class: 'mono msg' }, error)),
       h('div', { class: 'fg' }, fields),
       h('div', { class: 'btns' },

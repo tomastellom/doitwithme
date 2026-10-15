@@ -486,3 +486,13 @@ test('More options never leaks from one item to the next', () => {
   open('chem-lecture');
   assert.equal(moreBtn(r.drawer.el).getAttribute('aria-expanded'), 'false');
 });
+
+test('More options stays open after it opened on its own, even when the field that opened it is cleared and the panel redraws', () => {
+  const { drawer, itemOf } = rig(withBuffer(15));
+  drawer.open(itemOf('commitment', TUE, (i) => i.commitmentId === 'chem-lecture'));
+  assert.ok(key(drawer.el, 'f-buffer'));
+  type(drawer.el, 'f-buffer', '0');
+  key(drawer.el, 'f-weekdays-3').click(); // a weekday button redraws the panel
+  assert.ok(key(drawer.el, 'f-buffer'), 'the buffer field is still shown');
+  assert.equal(moreBtn(drawer.el).getAttribute('aria-expanded'), 'true');
+});

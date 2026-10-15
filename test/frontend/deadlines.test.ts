@@ -84,3 +84,17 @@ test('the add button is there even when there are no due dates', () => {
   const empty = draw(state({ deadlines: [] }));
   assert.equal(findAll(empty, (e: any) => e.tag === 'a' && e.getAttribute('href') === '#/due-dates/new').length >= 1, true);
 });
+
+test('the status list explains itself: a purpose sentence, example chips and a next hint, in order', () => {
+  const el = draw();
+  const purpose = textOf(byClass(el, 'purpose')[0]);
+  assert.match(purpose, /\.$/);
+  assert.ok(byClass(el, 'chip').filter((c: any) => !c.getAttribute('class').includes('dl-chip')).length >= 2);
+  assert.match(textOf(byClass(el, 'next-hint')[0]), /^Next:/);
+  const kids = el.children.map((c: any) => c.getAttribute('class'));
+  assert.deepEqual(kids, ['hero', 'purpose', 'chips', 'dl-list', 'next-hint']);
+  const empty = draw(state({ deadlines: [] }));
+  assert.match(textOf(empty), /No due dates yet/);
+  assert.equal(byClass(empty, 'purpose').length, 1);
+  assert.equal(byClass(empty, 'next-hint').length, 1);
+});

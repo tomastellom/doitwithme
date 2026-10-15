@@ -803,3 +803,22 @@ test('saving still validates exactly as before even with More options closed', a
   assert.equal(calls.length, 0);
   assert.match(textOf(el), /Give it a title\./);
 });
+
+test('More options stays open after it opened on its own, even when the buffer is cleared and the form redraws', () => {
+  const el: any = setup().render('commitments', 'lesson-1');
+  assert.ok(byKey(el, 'f-buffer'));
+  const buf = byKey(el, 'f-buffer'); buf.value = '0'; buf.dispatch('input'); buf.dispatch('change');
+  const label = byKey(el, 'f-category'); label.value = 'work'; label.dispatch('change');
+  assert.ok(byKey(el, 'f-buffer'), 'the buffer field is still shown after the redraw');
+  assert.equal(moreBtn(el).getAttribute('aria-expanded'), 'true');
+});
+
+test('the examples row is a direct child of the page, so the Cancelled dates field is not styled by it', () => {
+  const el: any = setup().render('commitments', 'lesson-1');
+  const row = byClass(el, 'chips').filter((c: any) => c.getAttribute('aria-label') === 'Examples');
+  assert.equal(row.length, 1);
+  assert.ok(el.children.includes(row[0]), 'a direct child of the page section');
+  const dates = byKey(el, 'f-exceptions');
+  assert.ok(dates, 'the Cancelled dates field is shown');
+  assert.equal(findAll(dates, (e: any) => e === row[0]).length, 0);
+});

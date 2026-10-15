@@ -182,3 +182,9 @@ test('pressing n in a narrow window closes the sidebar first', async () => {
   assert.equal(appEl.getAttribute('data-side'), null);
   assert.equal(app.drawer.isOpen(), true);
 });
+
+test('#/setup marks Fixed times in the sidebar', async () => {
+  const { root, go, settle } = await bootWithData();
+  go('#/setup'); await settle();
+  assert.equal(findAll(root, (e: any) => e.getAttribute('data-fk') === 'side-commitments')[0].getAttribute('aria-current'), 'page');
+});

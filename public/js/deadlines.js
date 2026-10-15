@@ -1,4 +1,5 @@
 import { duration } from './time.js';
+import { COPY } from './setup-copy.js';
 
 export function renderDeadlines(dom, view) {
   const { h, svg } = dom;
@@ -36,11 +37,16 @@ export function renderDeadlines(dom, view) {
         model.shorts > 0 && h('span', { class: 'dl-bad' }, `${model.shorts} short`),
         model.rows.length > 0 && h('span', {}, 'Click a row to edit it'))));
 
+  const copy = COPY['due-dates'];
+  const purpose = h('p', { class: 'purpose' }, copy.lead);
+  const chips = h('div', { class: 'chips', 'aria-label': 'Examples' }, copy.examples.map((e) => h('span', { class: 'chip' }, e)));
+  const next = h('p', { class: 'next-hint' }, copy.next);
   if (model.rows.length === 0) {
-    return h('section', { class: 'deadlines' }, hero,
+    return h('section', { class: 'deadlines' }, hero, purpose, chips,
       h('div', { class: 'lead' },
         h('p', {}, 'No due dates yet. Add an exam or an assignment and I plan study time for it.'),
-        h('div', { class: 'cta' }, h('a', { class: 'btn y', href: '#/due-dates/new' }, 'Add a due date'))));
+        h('div', { class: 'cta' }, h('a', { class: 'btn y', href: '#/due-dates/new' }, 'Add a due date'))),
+      next);
   }
-  return h('section', { class: 'deadlines' }, hero, h('div', { class: 'dl-list' }, model.rows.map(row)));
+  return h('section', { class: 'deadlines' }, hero, purpose, chips, h('div', { class: 'dl-list' }, model.rows.map(row)), next);
 }

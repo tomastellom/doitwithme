@@ -59,7 +59,7 @@ export function renderDay(dom, view, actions) {
         h('p', {}, 'Nothing planned yet. Start with what is fixed: classes, work, lessons. I plan everything else around it.'),
         h('div', { class: 'cta' },
           h('button', { type: 'button', class: 'btn y', 'data-fk': 'example', onclick: () => actions.loadExample() }, 'Load the example'),
-          actions.canAdd && h('a', { class: 'btn', href: '#/commitments/new' }, 'Add a commitment'))));
+          actions.canAdd && h('a', { class: 'btn', href: '#/commitments/new' }, 'Add a fixed time'))));
   }
 
   const side = h('div', { class: 'dv-side' },

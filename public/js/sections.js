@@ -1,6 +1,6 @@
 export const GROUPS = [
-  { id: 'views', label: 'Views', description: 'Your plan, by day, by week and by due date.' },
-  { id: 'setup', label: 'Plan', description: 'What is fixed, what needs time, what is due, and the labels and places they use.' },
+  { id: 'views', label: 'Views', description: 'Your plan, by day, by week and by month.' },
+  { id: 'setup', label: 'What goes in', description: 'What is fixed, what needs time, what is due, and the places and labels they use.' },
   { id: 'settings', label: 'Settings', description: 'The hours shown, the look, notifications, and how I plan.' },
   { id: 'connections', label: 'Connections', description: 'Where outside services will live.' },
 ];

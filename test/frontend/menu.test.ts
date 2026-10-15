@@ -36,11 +36,11 @@ test('open shows the groups that have sections, marks the current one and focuse
   assert.equal(menu.isOpen(), true);
   assert.equal(menu.el.hasAttribute('hidden'), false);
   assert.equal(doc.activeElement, input());
-  assert.deepEqual(byClass(menu.el, 'gh').map(textOf), ['Views', 'Plan']);
+  assert.deepEqual(byClass(menu.el, 'gh').map(textOf), ['Views', 'What goes in']);
   assert.deepEqual(links().map((l: any) => l.getAttribute('href')), ['#/week', '#/day', '#/commitments']);
   assert.equal(links()[0].getAttribute('aria-current'), 'page');
   assert.equal(links()[1].hasAttribute('aria-current'), false);
-  assert.match(textOf(menu.el), /Your plan, by day, by week and by due date\./);
+  assert.match(textOf(menu.el), /Your plan, by day, by week and by month\./);
   assert.equal(input().getAttribute('placeholder'), 'Type to find anything');
 });
 
@@ -49,7 +49,7 @@ test('typing filters the links and hides empty groups', () => {
   menu.open(opener);
   type('comm');
   assert.deepEqual(links().map((l: any) => l.getAttribute('href')), ['#/commitments']);
-  assert.deepEqual(byClass(menu.el, 'gh').map(textOf), ['Plan']);
+  assert.deepEqual(byClass(menu.el, 'gh').map(textOf), ['What goes in']);
   type('zzz');
   assert.equal(links().length, 0);
   assert.match(textOf(menu.el), /No match/);

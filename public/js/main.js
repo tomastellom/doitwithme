@@ -229,15 +229,15 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     id: 'setup', title: 'Plan', group: 'setup', primary: true, inMenu: false,
     activeFor: ['commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes'], render: setupPage('commitments'),
   });
-  registry.register({ id: 'commitments', title: COPY.commitments.title, group: 'setup', description: 'Classes, work, lessons, gym: things at a set time.', render: setupPage('commitments') });
-  registry.register({ id: 'tasks', title: COPY.tasks.title, group: 'setup', description: 'Things that need time but no set time, like study.', render: setupPage('tasks') });
+  registry.register({ id: 'commitments', title: COPY.commitments.title, group: 'setup', description: 'Commitments: classes, work, lessons, gym, things at a set time.', activeFor: ['setup'], render: setupPage('commitments') });
+  registry.register({ id: 'tasks', title: COPY.tasks.title, group: 'setup', description: 'Tasks: things that need time but no set time, like study.', render: setupPage('tasks') });
   // With nothing after it, Due dates is the status list; with an item or "new" it is the form.
   registry.register({
-    id: 'due-dates', title: COPY['due-dates'].title, group: 'setup', description: 'What is due, whether it is covered, and add or edit.',
+    id: 'due-dates', title: COPY['due-dates'].title, group: 'setup', description: 'Deadlines: what is due, whether it is covered, and add or edit.',
     render: (ctx) => (ctx.route.param ? setup.render('due-dates', ctx) : renderDeadlines(dom, { model: deadlinesModel(ctx.s.state, getClock()), isEmpty: ctx.s.isEmpty })),
   });
   registry.register({ id: 'labels', title: COPY.labels.title, group: 'setup', description: 'Your own kinds of things, each with a color.', render: setupPage('labels') });
-  registry.register({ id: 'places', title: COPY.places.title, group: 'setup', description: 'Where things happen, and how long it takes to get there.', activeFor: ['commutes'], render: setupPage('places') });
+  registry.register({ id: 'places', title: COPY.places.title, group: 'setup', description: 'Places, and commutes: where things happen and how long it takes to get there.', activeFor: ['commutes'], render: setupPage('places') });
   registry.register({ id: 'commutes', title: COPY.commutes.title, group: 'setup', inMenu: false, description: 'How long each trip takes.', render: setupPage('commutes') });
 
   const ui = createUiPrefs(win);

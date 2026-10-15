@@ -72,7 +72,10 @@ const EXTRAS = { commitments: ['buffer', 'courseId', 'exceptions'], tasks: ['max
 export function moreOpen(kindId, draft, ctx) {
   if (typeof ctx.scratch.more === 'boolean') return ctx.scratch.more;
   const blank = KINDS[kindId].kind.blank('2000-01-01', ctx.state);
-  return EXTRAS[kindId].some((k) => JSON.stringify(draft[k]) !== JSON.stringify(blank[k]));
+  const differs = EXTRAS[kindId].some((k) => JSON.stringify(draft[k]) !== JSON.stringify(blank[k]));
+  // Once it has opened on its own it stays open, so clearing the field that opened it does not make it vanish mid-edit.
+  if (differs) ctx.scratch.more = true;
+  return differs;
 }
 
 const moreField = (kindId) => ({

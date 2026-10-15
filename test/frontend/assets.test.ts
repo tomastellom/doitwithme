@@ -323,6 +323,7 @@ test('the controls section makes buttons soft, with one vermilion main action an
   assert.match(k, /\.btn\.dark[^{]*\{[^}]*background: var\(--ink\)/);
   assert.doesNotMatch(k, /:hover[^{]*\{[^}]*background: var\(--ink\);[^}]*color: var\(--paper\)/, 'no hover flips to solid ink except the dark button');
   assert.doesNotMatch(k, HEAVY_BORDER, 'no heavy 2px+ border or bar in this section (focus outlines are fine)');
+  assert.match(k, /\.btn\.side-toggle \{[^}]*border: 1px solid var\(--edge\)/, 'the mobile menu toggle keeps its edge');
 });
 
 test('the controls section gives fields a soft fill and a clear focus', () => {

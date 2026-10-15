@@ -166,6 +166,9 @@ button.more:hover { color: var(--ink); background: transparent; }
 .btns .del, .drawer .dbtns .del { background: transparent; color: var(--muted); font-weight: 500; }
 .btns .del:hover:not(:disabled), .drawer .dbtns .del:hover:not(:disabled) { background: transparent; color: var(--ink); text-decoration: underline; }
 
+.btn.side-toggle { border: 1px solid var(--edge); border-radius: 8px; background: var(--panel); color: var(--ink); }
+.btn.side-toggle:hover:not(:disabled) { background: var(--btn-hover); }
+
 /* Fields: a soft fill with no border until focused, then a dark edge and a soft ring. */
 .fld input, .fld select, .tx, .row3 input, .row3 select, .chips input, .hrs select { background: var(--soft); border: 1px solid transparent; border-radius: 9px; color: var(--ink); font-family: inherit; }
 .fld input, .fld select { height: 40px; padding: 0 12px; font-size: 14px; }

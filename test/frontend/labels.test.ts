@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_LABELS, LOCKED_IDS, labelFor, labelOptions, labelsOf, lookClass, paint, paintTile, wash } from '../../public/js/labels.js';
-import { mixHex } from '../../public/js/colors.js';
+import { PALETTE, contrast, mixHex } from '../../public/js/colors.js';
 import { KINDS, applyItem, itemsOf, labelKind, removeItem } from '../../public/js/setup-model.js';
 import { FakeDocument, FakeElement } from './fakedom.ts';
 
@@ -101,18 +101,40 @@ test('paintTile tints a filled tile, keeps an outline an outline, and washes a d
   assert.match(fill.style.background, /^#[0-9A-F]{6}$/i);
   const outline = doc.createElement('div');
   paintTile(outline, '#1746F0', 'outline');
-  assert.equal(outline.style.borderColor, mixHex('#1746F0', '#FFFFFF', 0.55));
+  assert.ok(contrast(outline.style.borderColor, '#FFFFFF') >= 3);
   const done = doc.createElement('div');
   paintTile(done, '#FF4B1F', 'fill', { done: true });
-  assert.equal(done.style.color, '#2B2E31');
+  assert.equal(done.style.color, '#55585C');
 });
 
 test('paintTile gives an outlined label a thin soft border in its own hue, on paper', () => {
   const doc: any = new FakeDocument();
   const outline = doc.createElement('div');
   paintTile(outline, '#1746F0', 'outline');
-  assert.equal(outline.style.borderColor, mixHex('#1746F0', '#FFFFFF', 0.55));
+  // The soft mix is only 2:1 on white, so it is darkened toward ink in 0.05 steps until it reaches 3:1.
+  assert.equal(outline.style.borderColor, mixHex('#1746F0', '#111111', 0.05));
   assert.notEqual(outline.style.borderColor, '#111111', 'never a black frame');
   assert.equal(outline.style.background, '#FFFFFF');
   assert.equal(outline.style.color, '#40454D');
+});
+
+test('a done filled tile is fainter than the planned tint and its text still reads', () => {
+  const doc: any = new FakeDocument();
+  for (const color of ['#111111', '#FF4B1F', '#1746F0', '#F5B400']) {
+    const planned = doc.createElement('div');
+    const done = doc.createElement('div');
+    paintTile(planned, color, 'fill');
+    paintTile(done, color, 'fill', { done: true });
+    assert.ok(contrast(done.style.background, '#FFFFFF') <= contrast(planned.style.background, '#FFFFFF'), `${color}: done is closer to white`);
+    assert.ok(contrast(done.style.color, done.style.background) >= 4.5, `${color}: done text reads`);
+  }
+});
+
+test('an outline border keeps 3:1 against white for every palette colour', () => {
+  const doc: any = new FakeDocument();
+  for (const c of PALETTE) {
+    const o = doc.createElement('div');
+    paintTile(o, c.hex, 'outline');
+    assert.ok(contrast(o.style.borderColor, '#FFFFFF') >= 3, `${c.hex} outline is visible`);
+  }
 });

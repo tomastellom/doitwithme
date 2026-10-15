@@ -1,4 +1,4 @@
-import { PALETTE, mixHex, onColor, tintOf } from './colors.js';
+import { PALETTE, contrast, mixHex, onColor, tintOf } from './colors.js';
 
 // Labels are what a commitment or a task is filed under. A label's id is what the item stores,
 // so renaming never breaks anything, and the planner still finds the built-in 'study' by its id.
@@ -68,10 +68,18 @@ export function paint(node, color, style, { onInk = false, done = false } = {}) 
 }
 // A block on the Week and the Day: filled labels are a soft tint with text from the same hue; outlines and done blocks keep their look.
 export function paintTile(node, color, style, { done = false } = {}) {
-  if (done) return paint(node, color, style, { done });
+  if (done) {
+    if (style === 'outline') return paint(node, color, style, { done });
+    // A done block is fainter than a planned one: a very light wash, with muted text.
+    node.style.background = mixHex('#FFFFFF', color, 0.08);
+    node.style.color = '#55585C';
+    return;
+  }
   if (style === 'outline') {
-    // A thin soft border in the label's own hue, on paper: outlined, never a black frame.
-    node.style.borderColor = mixHex(color, '#FFFFFF', 0.55);
+    // A thin soft border in the label's own hue, on paper, darkened just enough to stay visible (3:1), never a black frame by default.
+    let border = mixHex(color, '#FFFFFF', 0.55);
+    for (let step = 0.05; contrast(border, '#FFFFFF') < 3 && step <= 1.0001; step += 0.05) border = mixHex(color, '#111111', step);
+    node.style.borderColor = border;
     node.style.background = '#FFFFFF';
     node.style.color = '#40454D';
     return;

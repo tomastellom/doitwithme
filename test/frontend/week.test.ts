@@ -263,8 +263,8 @@ test('a done tile is faded with its box ticked; a not-done tile is dashed with a
   const mon = byClass(el, 'day')[0];
   const find = (name: string) => byClass(mon, 'blk').find((b: any) => textOf(b).includes(name))!;
   assert.ok(find('Chemistry').hasClass('is-done'));
-  assert.equal(find('Chemistry').style.background, '#FFBBAA', 'a done tile is its own color washed pale and solid, so the hour lines never show through');
-  assert.equal(find('Chemistry').style.color, '#2B2E31');
+  assert.equal(find('Chemistry').style.background, '#FFF1ED', 'a done tile is its own color at a very light, solid wash, so the hour lines never show through');
+  assert.equal(find('Chemistry').style.color, '#55585C');
   assert.match(find('Chemistry').getAttribute('aria-label'), /done/);
   const done = byClass(mon, 'tick').find((b: any) => b.getAttribute('aria-pressed') === 'true')!;
   assert.match(done.getAttribute('aria-label'), /Chemistry is done/);

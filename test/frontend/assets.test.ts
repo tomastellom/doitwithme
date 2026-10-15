@@ -290,4 +290,10 @@ test('blocks are soft: no thick black borders on tiles, ticks, commutes or not-d
   assert.match(calm, /\.dv-buf\.tile \{[^}]*border: 1px dashed/);
   assert.doesNotMatch(calm, /\.tile\.one\.travel[^{]*\{[^}]*padding-left: 32px/, 'commutes have no tick, so no tick gutter');
   assert.match(calm, /\.tile\.is-done \.n[^{]*\{[^}]*text-decoration-thickness: 1px/);
+  assert.doesNotMatch(calm, /\.t\b[^{]*\{[^}]*opacity: \.7/, 'time lines are not faded below 4.5:1');
+  assert.match(calm, /\.dv-col \.cbody \{[^}]*border-top: 1px solid/);
+  assert.doesNotMatch(css, /\.tile[^{,]*\{[^}]*border-radius: 10px/, 'one radius for every tile');
+  assert.match(calm, /\.tile \.tag \{[^}]*text-transform: none/);
+  assert.match(calm, /\.dv-blk\.tile\.one\.travel \.n/);
+  assert.match(calm, /\.dv-buf\.tile \{[^}]*display: flex/);
 });

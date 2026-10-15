@@ -426,3 +426,21 @@ test('the menu overlay is light with small plain type and a readable current scr
   assert.match(k, /\.menu :focus-visible \{[^}]*outline-color: var\(--ink\)/);
   assert.doesNotMatch(k, HEAVY_BORDER, 'no heavy 2px+ border or bar in this section (focus outlines are fine)');
 });
+
+test('every heavy ink rule in app.css has an override in shell.css (the calm guard)', () => {
+  const app = readFileSync('public/css/app.css', 'utf8');
+  const shell = readFileSync('public/css/shell.css', 'utf8');
+  // Rules that are deliberately still heavy: focus outlines, the selected colour swatch, and rules that shell.css overrides only through a more specific selector listed here.
+  // Dead rules (class no longer rendered anywhere in public/js): .tab (old top tabs, replaced by the sidebar), .dv-rt and .dv-rt.dashed (old day-view rule, replaced by the quiet column).
+  const ALLOWED = new Set<string>([':focus-visible', '.pk[aria-pressed="true"]', '.tab', '.dv-rt', '.dv-rt.dashed']);
+  const heavy = /(^|\n)([^{}\n@][^{}]*)\{([^}]*(?:2px solid var\(--ink\)|2px dashed var\(--ink\)|4px solid var\(--ink\)|3px solid var\(--ink\)|6px solid var\(--ink\))[^}]*)\}/g;
+  const missing: string[] = [];
+  for (const m of app.matchAll(heavy)) {
+    for (const raw of m[2].split(',')) {
+      const selector = raw.trim().replace(/\s+/g, ' ');
+      if (!selector || ALLOWED.has(selector) || /focus-visible/.test(selector)) continue;
+      if (!shell.includes(selector)) missing.push(selector);
+    }
+  }
+  assert.deepEqual(missing, [], `these heavy app.css selectors have no override in shell.css: ${missing.join(' | ')}`);
+});

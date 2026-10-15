@@ -191,3 +191,18 @@ Start the planner and load the example if the Week is empty.
 8. The hour labels, weekday names, date numbers and the "Booked" line are in the new font (Hanken Grotesk: a calm, friendly sans-serif). The titles and the sidebar are still Bricolage. Digits line up evenly down the hour column.
 9. Open a Day: its blocks look the same way, and a tall block shows its time and its length ("10:00–12:00 · 120 min").
 10. Known rough edges until slice 3: Month, Settings and the forms are not part of this pass.
+
+## The calm look everywhere (slice 3)
+
+1. Open each screen in turn: Month, Settings, Fixed times, To do, Due dates, Places and travel, Labels, and the Day. None of them has a thick black border, a thick black bar across the top, or a big black filled block any more.
+2. Buttons are soft grey with rounded corners. Only the one main action on a screen (Save, Add a fixed time, Add a due date, Replan's neighbour + New) is vermilion. Hovering a button makes it slightly darker grey; it never flips to solid black.
+3. Fields (title, times, selects) are soft grey boxes with no border. Click into one: it gets a dark edge and a soft ring. Small labels above fields are normal lowercase text, not tiny capitals.
+4. The switches (Once/Weekly, Ask first/Automatic) are a soft pill with the chosen option raised and white.
+5. Settings: each row has its title and a short explanation on the left and its control on the right, with a thin line between rows.
+6. Month: soft cells, small round coloured dots, today tinted warm with a vermilion date (not a black cell). Hover a day: a small round plus (and a check) appears. The header has the same Day / Week / Month switch as the Week.
+7. The Day: the same header switch, the Booked line under the date, and a quiet column on the right ("Today by label", the free time as a modest number).
+8. Due dates: thin lines between rows, a short bar for each, and small soft chips ("Covered" green, "Short" red).
+9. Click a block on the Week: the side panel is a soft white card with a shadow and a smaller title; its choices are soft bordered buttons with one vermilion one.
+10. Press /: the jump-to is a light panel with small type; type "tasks" and the matching screen is listed; the current screen is in vermilion.
+11. Resize the window narrow: the Settings rows stack (title, explanation, then the control).
+12. Known rough edges: the Places list does not yet show each place's trips underneath it, and some small old words ("commute", "task") remain in the Places delete note and the drawer's travel and task panels.

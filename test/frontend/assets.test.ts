@@ -8,6 +8,17 @@ import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import { createApp } from '../../src/server.ts';
 
+// A border or bar that is 2px or thicker (outline: and box-shadow are not borders, so focus rings pass).
+const HEAVY_BORDER = /border(-top|-bottom|-left|-right)?: (2|3|4|6)px/;
+
+const kit = (name: string) => {
+  const css = readFileSync('public/css/shell.css', 'utf8');
+  const start = css.indexOf(`/* Calm kit: ${name}`);
+  assert.ok(start >= 0, `the "${name}" section exists`);
+  const next = css.indexOf('/* Calm kit:', start + 10);
+  return css.slice(start, next === -1 ? undefined : next);
+};
+
 let server: Server;
 let base: string;
 
@@ -296,4 +307,42 @@ test('blocks are soft: no thick black borders on tiles, ticks, commutes or not-d
   assert.match(calm, /\.tile \.tag \{[^}]*text-transform: none/);
   assert.match(calm, /\.dv-blk\.tile\.one\.travel \.n/);
   assert.match(calm, /\.dv-buf\.tile \{[^}]*display: flex/);
+});
+
+test('tokens.css has the calm kit tokens', () => {
+  const css = readFileSync('public/css/tokens.css', 'utf8');
+  for (const t of ['--btn', '--btn-hover', '--study-hover', '--ink-hover', '--tint-red', '--tint-green']) assert.ok(css.includes(`${t}:`), t);
+});
+
+test('the controls section makes buttons soft, with one vermilion main action and no ink inversion on hover', () => {
+  const k = kit('controls');
+  assert.match(k, /\.btn, \.step button[^{]*\{[^}]*border: 0[^}]*background: var\(--btn\)/);
+  assert.match(k, /\.btn\.go, \.btn\.new, \.hero-add[^{]*\{[^}]*background: var\(--study\)/);
+  assert.match(k, /\.btn:hover:not\(:disabled\), \.step button:hover[^{]*\{[^}]*background: var\(--btn-hover\)/);
+  assert.match(k, /\.btn\.go:hover:not\(:disabled\)[^{]*\{[^}]*background: var\(--study-hover\)/);
+  assert.match(k, /\.btn\.dark[^{]*\{[^}]*background: var\(--ink\)/);
+  assert.doesNotMatch(k, /:hover[^{]*\{[^}]*background: var\(--ink\);[^}]*color: var\(--paper\)/, 'no hover flips to solid ink except the dark button');
+  assert.doesNotMatch(k, HEAVY_BORDER, 'no heavy 2px+ border or bar in this section (focus outlines are fine)');
+});
+
+test('the controls section gives fields a soft fill and a clear focus', () => {
+  const k = kit('controls');
+  assert.match(k, /\.fld input, \.fld select[^{]*\{[^}]*background: var\(--soft\)[^}]*border: 1px solid transparent/);
+  assert.match(k, /\.fld input:focus[^{]*\{[^}]*border-color: var\(--ink\)[^}]*box-shadow/);
+  assert.match(k, /\.fld label, \.fld \.cap \{[^}]*text-transform: none/);
+});
+
+test('the controls section restyles the switch, chips, notices and tags', () => {
+  const k = kit('controls');
+  assert.match(k, /\.seg \{[^}]*background: var\(--soft\)/);
+  assert.match(k, /\.seg \{[^}]*border-radius: 10px/);
+  assert.match(k, /\.seg button\.on \{[^}]*background: var\(--paper\)/);
+  assert.match(k, /\.chp \{[^}]*border: 0/);
+  assert.match(k, /\.err \{[^}]*background: var\(--tint-red\)/);
+  assert.match(k, /\.banner \{[^}]*border: 0/);
+  assert.match(k, /\.tag \{[^}]*text-transform: none/);
+});
+
+test('shell.css still has no gradient word', () => {
+  assert.doesNotMatch(readFileSync('public/css/shell.css', 'utf8'), /gradient/i);
 });

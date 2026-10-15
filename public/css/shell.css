@@ -148,3 +148,49 @@ button.more:hover { color: var(--ink); background: transparent; }
 .tick.on::before { background: var(--ink); opacity: .85; }
 .tick svg { position: absolute; width: 10px; height: 10px; }
 .tick:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+/* Calm kit: controls (buttons, fields, switches, chips, notices) */
+
+/* Buttons: soft by default, ink for the dark one, vermilion only for the one main action. */
+.btn, .step button, .btns button, .estbtns button, .drawer .dbtns button, .drawer .skip button, .drawer .x, .addbtn, .fl-all, .row3 button, .go2 { border: 0; border-radius: 9px; background: var(--btn); color: var(--ink); font-weight: 600; }
+.btn { min-height: 40px; padding: 8px 18px; }
+.step button { padding: 7px 12px; }
+.btns button, .estbtns button, .drawer .dbtns button { padding: 10px 18px; }
+.btn:hover:not(:disabled), .step button:hover, .btns button:hover:not(:disabled), .estbtns button:hover, .drawer .dbtns button:hover:not(:disabled), .drawer .skip button:hover, .addbtn:hover, .fl-all:hover, .row3 button:hover { background: var(--btn-hover); color: var(--ink); }
+.btn.go, .btn.new, .hero-add, .cta .btn.y, .btns button.y, .estbtns button.y, .drawer .dbtns button.y, .choice.y { background: var(--study); color: var(--on-study); }
+.btn.go:hover:not(:disabled), .btn.new:hover:not(:disabled), .cta .btn.y:hover:not(:disabled), .btns button.y:hover:not(:disabled), .estbtns button.y:hover, .drawer .dbtns button.y:hover:not(:disabled), .hero-add:hover, .choice.y:hover:not(:disabled) { background: var(--study-hover); color: var(--on-study); }
+.btn.dark { background: var(--ink); color: var(--paper); }
+.btn.dark:hover:not(:disabled) { background: var(--ink-hover); }
+.hero-add { border: 0; border-radius: 9px; padding: 9px 16px; margin-bottom: 0; }
+.cta .btn { padding: 10px 18px; font-size: 14px; }
+.btns .del, .drawer .dbtns .del { background: transparent; color: var(--muted); font-weight: 500; }
+.btns .del:hover:not(:disabled), .drawer .dbtns .del:hover:not(:disabled) { background: transparent; color: var(--ink); text-decoration: underline; }
+
+/* Fields: a soft fill with no border until focused, then a dark edge and a soft ring. */
+.fld input, .fld select, .tx, .row3 input, .row3 select, .chips input, .hrs select { background: var(--soft); border: 1px solid transparent; border-radius: 9px; color: var(--ink); font-family: inherit; }
+.fld input, .fld select { height: 40px; padding: 0 12px; font-size: 14px; }
+.tx { padding: 9px 12px; font-size: 14px; }
+.fld input:focus, .fld select:focus, .tx:focus, .row3 input:focus, .row3 select:focus, .chips input:focus, .hrs select:focus { background: var(--paper); border-color: var(--ink); box-shadow: 0 0 0 3px rgba(20, 22, 26, .12); outline: none; }
+.fld label, .fld .cap { font-family: var(--font-sans); font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.fld .seg { display: flex; }
+
+/* The switch: a soft pill with the chosen option raised. */
+.seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 10px; background: var(--soft); }
+.seg button { flex: 1; height: auto; min-height: 34px; margin: 0; padding: 6px 14px; border: 0; border-radius: 8px; background: transparent; color: #40454D; font-size: 14px; font-weight: 500; }
+.seg button:first-child { margin-left: 0; }
+.seg button.on { background: var(--paper); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgba(20, 22, 26, .15); }
+.seg button:disabled { border: 0; color: var(--muted); opacity: .6; }
+
+/* Chips (cancelled dates), their add button, and the small remove buttons. */
+.chp { height: 32px; padding: 0 6px 0 12px; border: 0; border-radius: 99px; background: var(--soft); font-family: var(--font-sans); font-size: 13px; }
+.chp button { width: 22px; height: 22px; border-radius: 50%; color: var(--muted); }
+.addbtn { height: 36px; padding: 0 14px; font-family: var(--font-sans); font-size: 13px; text-transform: none; letter-spacing: 0; }
+.row3 button { width: 40px; }
+
+/* Notices and tags. */
+.err { background: var(--tint-red); color: #8A2A12; border-radius: 10px; padding: 10px 14px; }
+.err b { font-weight: 700; }
+.err .msg { font-family: var(--font-sans); font-size: 13px; letter-spacing: 0; }
+.banner { border: 0; border-radius: 10px; background: var(--soft); padding: 10px 14px; }
+.banner.off { border: 0; background: var(--soft); }
+.tag { font-family: var(--font-sans); font-size: 11px; letter-spacing: 0; text-transform: none; border: 0; border-radius: 99px; background: var(--soft); color: var(--muted); padding: 2px 8px; }

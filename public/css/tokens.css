@@ -50,5 +50,11 @@
   --hair: #ECEEF1;
   --soft: #F4F5F8;
   --today: #FFF3EE;
+  --btn: #EEF0F3;
+  --btn-hover: #E4E7EC;
+  --study-hover: #E8431C;
+  --ink-hover: #2B2E33;
+  --tint-red: #FDECE6;
+  --tint-green: #E1F3E7;
   --shadow: 0 2px 14px rgba(20, 22, 26, .08);
 }

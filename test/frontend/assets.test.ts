@@ -287,5 +287,7 @@ test('blocks are soft: no thick black borders on tiles, ticks, commutes or not-d
   assert.doesNotMatch(calm, /border: 2px solid var\(--ink\)/);
   assert.match(calm, /\.tile\.travel \{[^}]*border: 1px dashed/);
   assert.match(calm, /\.tile\.is-missed \{[^}]*border: 1px dashed/);
+  assert.match(calm, /\.dv-buf\.tile \{[^}]*border: 1px dashed/);
+  assert.doesNotMatch(calm, /\.tile\.one\.travel[^{]*\{[^}]*padding-left: 32px/, 'commutes have no tick, so no tick gutter');
   assert.match(calm, /\.tile\.is-done \.n[^{]*\{[^}]*text-decoration-thickness: 1px/);
 });

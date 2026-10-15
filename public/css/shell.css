@@ -125,11 +125,15 @@ button.more:hover { color: var(--ink); background: transparent; }
 .tile .t, .tile.one .t, .tile.two .t, .tile.full .t, .dv-blk.tile .t { font-family: var(--font-cal); font-size: 11px; font-weight: 400; letter-spacing: 0; opacity: .7; }
 .tile.is-outline { border-width: 1px; border-style: solid; }
 .tile.is-outline, .tile.travel { padding-top: 5px; padding-bottom: 5px; }
-.tile.one.is-outline, .tile.one.travel { padding-top: 0; padding-bottom: 0; padding-left: 32px; }
+.tile.one.is-outline { padding-top: 0; padding-bottom: 0; padding-left: 32px; }
+.tile.one.travel, .dv-blk.tile.one.travel { padding-top: 0; padding-bottom: 0; padding-left: 8px; }
 
 /* Commutes: a flat light tile with a thin dashed edge (the hatch and its black frame are gone). */
 .tile.travel { border: 1px dashed var(--edge); background: var(--soft); color: var(--muted); }
 .tile.travel .n { font-size: 12px; font-weight: 500; }
+.dv-buf.tile { border: 1px dashed var(--edge); background: var(--soft); color: var(--muted); }
+.dv-buf.tile .n { font-size: 12px; font-weight: 500; }
+.dv-buf.tile .t { font-size: 11px; font-weight: 400; }
 
 /* Done is faded and struck with a thin line; not done is dashed and thin. */
 .tile.is-done .n, .drow.is-done .dname b { text-decoration-thickness: 1px; }

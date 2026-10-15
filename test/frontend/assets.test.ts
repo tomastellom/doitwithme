@@ -368,3 +368,14 @@ test('the setup section calms the estimate card, the label swatches and the prev
   assert.match(k, /\.strip \.b\.com \{[^}]*border: 1px dashed var\(--edge\)/);
   assert.match(k, /\.travel \{[^}]*border: 1px dashed var\(--edge\)/);
 });
+
+test('the settings section lays each row out as text on the left and the control on the right, with hairlines', () => {
+  const k = kit('settings');
+  assert.match(k, /\.st \{[^}]*display: grid[^}]*grid-template-columns: minmax\(0, 1fr\) auto/);
+  assert.match(k, /\.st \{[^}]*border-top: 1px solid var\(--hair\)/);
+  assert.match(k, /\.st b \{[^}]*font-size: 14px[^}]*font-weight: 600/);
+  assert.match(k, /\.st \.seg, \.st \.hrs-row \{[^}]*grid-column: 2/);
+  assert.match(k, /\.st-grp \{[^}]*border-top: 0/);
+  assert.match(k, /\.st-grp \.st-gh \{[^}]*text-transform: uppercase/);
+  assert.doesNotMatch(k, HEAVY_BORDER, 'no heavy 2px+ border or bar in this section (focus outlines are fine)');
+});

@@ -238,3 +238,27 @@ button.more:hover { color: var(--ink); background: transparent; }
 .strip .b.cls { background: var(--tint-red); color: #A93219; }
 .strip .b.com { border: 1px dashed var(--edge); background: var(--soft); color: var(--muted); }
 .travel { border: 1px dashed var(--edge); background: var(--soft); color: var(--muted); }
+
+/* Calm kit: settings (a row is text on the left and its control on the right) */
+.st-two { gap: 48px; margin: 24px 28px 0; }
+.st-grp { border-top: 0; padding-top: 0; }
+.st-grp .st-gh { margin-bottom: 4px; font-family: var(--font-sans); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.st-rows { gap: 0; }
+.st { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 20px; row-gap: 2px; align-items: center; padding: 14px 0; border-top: 1px solid var(--hair); }
+.st-rows > .st:first-child { border-top: 0; }
+.st b { grid-column: 1; grid-row: 1; font-size: 14px; font-weight: 600; letter-spacing: 0; line-height: 1.25; }
+.st p { grid-column: 1; grid-row: 2; margin: 0; max-width: 380px; font-size: 13px; line-height: 1.4; color: var(--muted); }
+.st .seg, .st .hrs-row { grid-column: 2; grid-row: 1 / span 2; width: auto; }
+.st .seg { font-family: var(--font-sans); font-size: 13px; letter-spacing: 0; text-transform: none; }
+.st .seg button { height: auto; min-height: 34px; font-size: 13px; }
+.st .seg button:disabled { border: 0; color: var(--muted); gap: 6px; }
+.st .hint { grid-column: 1 / -1; margin: 6px 0 0; font-family: var(--font-sans); font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.hrs-row { display: flex; gap: 8px; }
+.hrs { display: flex; flex-direction: column; gap: 4px; }
+.hrs span { font-family: var(--font-sans); font-size: 11px; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.hrs select { height: 38px; padding: 0 10px; font-size: 14px; }
+.st-rules { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--hair); }
+.st-rules b { font-size: 14px; font-weight: 600; letter-spacing: 0; }
+.st-rules > p { font-size: 13px; }
+.st-err { margin: 20px 28px 0; }
+@media (max-width: 700px) { .st { grid-template-columns: 1fr; } .st .seg, .st .hrs-row { grid-column: 1; grid-row: auto; margin-top: 8px; } .st .hint { grid-column: 1; } }

@@ -315,3 +315,42 @@ button.more:hover { color: var(--ink); background: transparent; }
 .dl-chip.ok { padding: 6px 12px; border: 0; background: var(--tint-green); color: #14582B; }
 
 .lead p { font-size: 18px; font-weight: 500; letter-spacing: -.01em; }
+
+/* Calm kit: side panel and menu */
+
+/* The side panel. */
+.drawer { padding: 22px 24px; border-left: 0; border-radius: 16px 0 0 16px; box-shadow: -8px 0 28px rgba(20, 22, 26, .18); }
+.drawer-root .scrim { background: rgba(20, 22, 26, .3); }
+.drawer h2 { font-size: 26px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; }
+.drawer .skip { padding: 12px 14px; border: 0; border-radius: 12px; background: var(--soft); }
+.drawer .skip span { color: #40454D; }
+.advice { border-top: 1px solid var(--hair); }
+.choices { gap: 8px; }
+.choice { padding: 12px 14px; border: 1px solid #DFE2E7; border-radius: 12px; background: var(--paper); }
+.choice b { font-size: 15px; font-weight: 600; letter-spacing: 0; }
+.choice span { font-size: 13px; }
+.choice:hover { background: var(--soft); color: var(--ink); }
+.choice:hover span { color: var(--muted); }
+.choice.y { border-color: var(--study); }
+.choice.off, .choice:disabled { border-style: solid; opacity: .6; }
+.choice.off:hover, .choice:disabled:hover { background: var(--paper); color: var(--muted); }
+.drow { border-bottom: 1px solid var(--hair); }
+.drow .dname b { font-size: 15px; font-weight: 600; letter-spacing: 0; }
+
+/* The Menu overlay (the / jump-to): light, with small plain type. */
+.menu { background: var(--canvas); color: var(--ink); }
+.menu :focus-visible { outline-color: var(--ink); }
+.menu .close { border: 0; border-radius: 9px; background: var(--btn); color: var(--ink); }
+.jump { margin: 20px 28px 0; padding-bottom: 10px; border-bottom: 1px solid var(--edge); }
+.jump label { color: var(--muted); }
+.jump input { color: var(--ink); font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+.jump input::placeholder { color: var(--muted); }
+.jump input:focus-visible { outline: 2px solid var(--ink); outline-offset: 6px; }
+.jump .key { border: 1px solid var(--edge); border-radius: 6px; color: var(--muted); }
+.menu .cols { margin: 32px 28px 0; gap: 24px; }
+.menu .gh { padding-top: 0; border-top: 0; color: var(--muted); }
+.it { padding: 5px 0; color: var(--ink); font-size: 18px; font-weight: 600; letter-spacing: 0; }
+.it.on { color: var(--study-text); }
+.menu .desc, .menu .none, .foot-note { color: var(--muted); }
+.menu .bar { padding: 0 28px; }
+.foot-note { margin: 40px 28px; }

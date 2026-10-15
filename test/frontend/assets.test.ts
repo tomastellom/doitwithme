@@ -403,3 +403,23 @@ test('the day and due dates section is calm: quiet side column, hairline rows, s
   assert.match(k, /\.lead p \{[^}]*font-size: 18px/);
   assert.doesNotMatch(k, HEAVY_BORDER, 'no heavy 2px+ border or bar in this section (focus outlines are fine)');
 });
+
+test('the side panel is a soft card with a shadow and a calm title, not a black bar', () => {
+  const k = kit('side panel and menu');
+  assert.match(k, /\.drawer \{[^}]*border-left: 0[^}]*box-shadow/);
+  assert.match(k, /\.drawer h2 \{[^}]*font-size: 26px/);
+  assert.match(k, /\.drawer \.skip \{[^}]*border: 0[^}]*background: var\(--soft\)/);
+  assert.match(k, /\.choice \{[^}]*border: 1px solid/);
+  assert.match(k, /\.choice:hover \{[^}]*background: var\(--soft\)/);
+  assert.match(k, /\.drow \.dname b \{[^}]*font-size: 15px/);
+});
+
+test('the menu overlay is light with small plain type and a readable current screen', () => {
+  const k = kit('side panel and menu');
+  assert.match(k, /\.menu \{[^}]*background: var\(--canvas\)[^}]*color: var\(--ink\)/);
+  assert.match(k, /\.jump input \{[^}]*color: var\(--ink\)[^}]*font-size: 26px/);
+  assert.match(k, /\.it \{[^}]*color: var\(--ink\)[^}]*font-size: 18px/);
+  assert.match(k, /\.it\.on \{[^}]*color: var\(--study-text\)/);
+  assert.match(k, /\.menu :focus-visible \{[^}]*outline-color: var\(--ink\)/);
+  assert.doesNotMatch(k, HEAVY_BORDER, 'no heavy 2px+ border or bar in this section (focus outlines are fine)');
+});

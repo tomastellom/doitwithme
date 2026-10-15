@@ -2,6 +2,7 @@ import { usedMinutes } from './maps-ui.js';
 import { DEFAULT_LABELS, LOCKED_IDS, labelsOf } from './labels.js';
 import { PALETTE } from './colors.js';
 import { WEEKDAYS, addDays, hhmm, isValidDate, longDate, shortDate } from './time.js';
+import { COPY } from './setup-copy.js';
 
 export const CATEGORIES = {
   commitments: ['class', 'lesson', 'mass', 'work', 'volunteering', 'meeting', 'social', 'other'],
@@ -376,11 +377,11 @@ export const commuteKind = {
 
 export const KINDS = {
   commitments: {
-    id: 'commitments', title: 'Commitments', list: 'commitments', add: 'Add a commitment', prefix: 'c', kind: commitmentKind,
+    id: 'commitments', title: COPY.commitments.title, list: 'commitments', add: COPY.commitments.add, prefix: 'c', kind: commitmentKind,
     itemTitle: (c) => c.title, itemLabel: (c) => c.category,
   },
   tasks: {
-    id: 'tasks', title: 'Tasks', list: 'tasks', add: 'Add a task', prefix: 't', kind: taskKind,
+    id: 'tasks', title: COPY.tasks.title, list: 'tasks', add: COPY.tasks.add, prefix: 't', kind: taskKind,
     itemTitle: (t) => t.title, itemLabel: (t) => t.category,
     confirmNote(state, id) {
       const n = state.deadlines.filter((d) => d.taskId === id).length;
@@ -388,7 +389,7 @@ export const KINDS = {
     },
   },
   labels: {
-    id: 'labels', title: 'Labels', list: 'labels', add: 'New label', prefix: 'label', kind: labelKind,
+    id: 'labels', title: COPY.labels.title, list: 'labels', add: COPY.labels.add, prefix: 'label', kind: labelKind,
     itemTitle: (l) => l.name, itemLabel: (l) => (l.style === 'outline' ? 'outlined' : 'filled'),
     // Study and Other hold the planner together, so they can be renamed and recolored but not deleted.
     keep: (l) => (LOCKED_IDS.includes(l.id) ? `${l.name} is built in: you can rename and recolor it, but it cannot be deleted.` : null),
@@ -398,7 +399,7 @@ export const KINDS = {
     },
   },
   'due-dates': {
-    id: 'due-dates', title: 'Due dates', list: 'deadlines', add: 'Add a due date', prefix: 'd', kind: deadlineKind,
+    id: 'due-dates', title: COPY['due-dates'].title, list: 'deadlines', add: COPY['due-dates'].add, prefix: 'd', kind: deadlineKind,
     itemTitle: (d, state) => {
       const task = state.tasks.find((t) => t.id === d.taskId);
       return `${task ? task.title : 'Unknown task'} ${d.kind}`;
@@ -406,7 +407,7 @@ export const KINDS = {
     itemLabel: (d) => d.kind,
   },
   places: {
-    id: 'places', title: 'Places', list: 'places', add: 'Add a place', prefix: 'p', kind: placeKind,
+    id: 'places', title: COPY.places.title, list: 'places', add: COPY.places.add, prefix: 'p', kind: placeKind,
     itemTitle: (p) => p.name, itemLabel: (p) => p.kind,
     confirmNote(state, id) {
       const routes = (state.commutes ?? []).filter((c) => c.fromPlaceId === id || c.toPlaceId === id).length;
@@ -418,7 +419,7 @@ export const KINDS = {
     },
   },
   commutes: {
-    id: 'commutes', title: 'Commutes', list: 'commutes', add: 'Add a commute', prefix: 'r', kind: commuteKind,
+    id: 'commutes', title: COPY.commutes.title, list: 'commutes', add: COPY.commutes.add, prefix: 'r', kind: commuteKind,
     itemTitle: (c, state) => `${placeName(state, c.fromPlaceId)} to ${placeName(state, c.toPlaceId)}`,
     itemLabel: repeatsLabel,
   },

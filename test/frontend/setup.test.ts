@@ -46,7 +46,7 @@ test('the hero and the sub-navigation point at the setup screens', () => {
   const el: any = render('tasks');
   assert.equal(textOf(byTag(el, 'h1')[0]), 'Plan');
   const links = byClass(el, 'sub')[0].children.filter((c: any) => c.tag === 'a');
-  assert.deepEqual(links.map((l: any) => textOf(l)), ['Commitments', 'Tasks', 'Due dates', 'Labels', 'Places', 'Commutes']);
+  assert.deepEqual(links.map((l: any) => textOf(l)), ['Fixed times', 'To do', 'Due dates', 'Labels', 'Places and travel', 'Travel']);
   assert.deepEqual(links.map((l: any) => l.getAttribute('href')), ['#/commitments', '#/tasks', '#/due-dates', '#/labels', '#/places', '#/commutes']);
   assert.deepEqual(links.map((l: any) => l.getAttribute('aria-current')), [null, 'page', null, null, null, null]);
 });
@@ -65,7 +65,7 @@ test('the list shows title, label and summary like board H, and marks the select
   assert.equal(lesson.getAttribute('href'), '#/commitments/lesson-1');
   assert.equal(items.filter((i: any) => i.hasClass('on')).length, 1);
   const add = byClass(el, 'add')[0];
-  assert.equal(textOf(add), 'Add a commitment');
+  assert.equal(textOf(add), 'Add a fixed time');
   assert.equal(add.getAttribute('href'), '#/commitments/new');
 });
 
@@ -285,7 +285,7 @@ test('the sub-navigation lists the screens with Places and Commutes', () => {
   const { render } = setup();
   const el: any = render('places');
   const links = byClass(el, 'sub')[0].children.filter((c: any) => c.tag === 'a');
-  assert.deepEqual(links.map((l: any) => textOf(l)), ['Commitments', 'Tasks', 'Due dates', 'Labels', 'Places', 'Commutes']);
+  assert.deepEqual(links.map((l: any) => textOf(l)), ['Fixed times', 'To do', 'Due dates', 'Labels', 'Places and travel', 'Travel']);
 });
 
 test('the places list shows address or "Address missing", and the form edits the place', async () => {

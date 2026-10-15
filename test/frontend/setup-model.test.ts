@@ -155,7 +155,11 @@ test('KINDS describes the setup screens', () => {
   assert.deepEqual(KIND_IDS, ['commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes']);
   assert.equal(KINDS['due-dates'].list, 'deadlines');
   assert.equal(KINDS.preferences.single, true);
-  assert.equal(KINDS.commitments.add, 'Add a commitment');
+  assert.equal(KINDS.commitments.add, 'Add a fixed time');
+  assert.equal(KINDS.commitments.title, 'Fixed times');
+  assert.equal(KINDS.tasks.title, 'To do');
+  assert.equal(KINDS.tasks.add, 'Add something to do');
+  assert.equal(KINDS.places.title, 'Places and travel');
   assert.equal(KINDS['due-dates'].itemTitle(example.deadlines[0], example), 'Chemistry exam');
   assert.equal(KINDS.tasks.itemLabel(task()), 'study');
   assert.equal(KINDS['due-dates'].itemLabel(example.deadlines[0]), 'exam');

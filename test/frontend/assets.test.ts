@@ -419,7 +419,10 @@ test('the menu overlay is light with small plain type and a readable current scr
   assert.match(k, /\.menu \{[^}]*background: var\(--canvas\)[^}]*color: var\(--ink\)/);
   assert.match(k, /\.jump input \{[^}]*color: var\(--ink\)[^}]*font-size: 26px/);
   assert.match(k, /\.it \{[^}]*color: var\(--ink\)[^}]*font-size: 18px/);
-  assert.match(k, /\.it\.on \{[^}]*color: var\(--study-text\)/);
+  assert.match(k, /\.it\.on \{[^}]*color: #B5330F/, 'darker than study-text: 5.2:1 on the canvas');
+  assert.match(k, /\.it:hover \{[^}]*background: var\(--btn-hover\)[^}]*color: var\(--ink\)/);
+  assert.match(k, /\.advice\[data-verdict="skippable"\] \.tag \{[^}]*background: var\(--soft\)[^}]*color: var\(--muted\)/);
+  assert.match(k, /\.choice\.y:hover span[^{]*\{[^}]*color: inherit/);
   assert.match(k, /\.menu :focus-visible \{[^}]*outline-color: var\(--ink\)/);
   assert.doesNotMatch(k, HEAVY_BORDER, 'no heavy 2px+ border or bar in this section (focus outlines are fine)');
 });

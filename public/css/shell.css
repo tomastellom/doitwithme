@@ -325,12 +325,14 @@ button.more:hover { color: var(--ink); background: transparent; }
 .drawer .skip { padding: 12px 14px; border: 0; border-radius: 12px; background: var(--soft); }
 .drawer .skip span { color: #40454D; }
 .advice { border-top: 1px solid var(--hair); }
+.advice[data-verdict="skippable"] .tag { background: var(--soft); color: var(--muted); border: 0; }
 .choices { gap: 8px; }
 .choice { padding: 12px 14px; border: 1px solid #DFE2E7; border-radius: 12px; background: var(--paper); }
 .choice b { font-size: 15px; font-weight: 600; letter-spacing: 0; }
 .choice span { font-size: 13px; }
 .choice:hover { background: var(--soft); color: var(--ink); }
 .choice:hover span { color: var(--muted); }
+.choice.y:hover span, .choice.y:hover:not(:disabled) span { color: inherit; }
 .choice.y { border-color: var(--study); }
 .choice.off, .choice:disabled { border-style: solid; opacity: .6; }
 .choice.off:hover, .choice:disabled:hover { background: var(--paper); color: var(--muted); }
@@ -350,7 +352,8 @@ button.more:hover { color: var(--ink); background: transparent; }
 .menu .cols { margin: 32px 28px 0; gap: 24px; }
 .menu .gh { padding-top: 0; border-top: 0; color: var(--muted); }
 .it { padding: 5px 0; color: var(--ink); font-size: 18px; font-weight: 600; letter-spacing: 0; }
-.it.on { color: var(--study-text); }
+.it:hover { background: var(--btn-hover); color: var(--ink); }
+.it.on { color: #B5330F; }
 .menu .desc, .menu .none, .foot-note { color: var(--muted); }
 .menu .bar { padding: 0 28px; }
 .foot-note { margin: 40px 28px; }

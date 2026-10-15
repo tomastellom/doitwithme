@@ -167,3 +167,10 @@ test('the today cell is not an ink cell: its dots and buttons are painted the sa
   assert.notEqual(outline.style.borderColor, '#FFFFFF', 'an outlined dot on the today cell does not flip to paper');
   assert.notEqual(outline.style.background, '#111111', 'nor does its inside turn to ink');
 });
+
+test('the step buttons and the view switch are the last two things in the header, so they do not move between views', () => {
+  const right = byClass(draw().el, 'right')[0];
+  const classes = right.children.map((c: any) => String(c.className ?? c.attrs?.class ?? ''));
+  assert.match(classes[classes.length - 1], /switch/);
+  assert.match(classes[classes.length - 2], /step/);
+});

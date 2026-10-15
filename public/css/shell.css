@@ -41,9 +41,10 @@ body { background: var(--canvas); }
 /* Week header */
 .hero .titles .sub { margin: 4px 0 0; color: var(--muted); }
 .hero .right { align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
-.step { padding-bottom: 0; }
+.step { padding-bottom: 0; flex: none; }
+.step button { min-width: 84px; text-align: center; white-space: nowrap; }
 .step button { border: 1px solid var(--edge); border-radius: 8px; padding: 7px 12px; font-size: 14px; }
-.switch { display: inline-flex; gap: 2px; padding: 2px; border-radius: 10px; background: var(--soft); }
+.switch { flex: none; display: inline-flex; gap: 2px; padding: 2px; border-radius: 10px; background: var(--soft); }
 .switch a { padding: 7px 12px; border-radius: 8px; text-decoration: none; color: var(--ink); font-family: var(--font-sans); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .switch a.on { background: var(--ink); color: var(--paper); }
 .hero button.needs { font-size: 13px; }

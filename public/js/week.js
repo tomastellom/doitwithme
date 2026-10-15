@@ -57,12 +57,12 @@ export function renderWeek(dom, view, actions) {
       }, model.title),
       h('p', { class: 'sub mono' }, `Week ${model.week} / ${model.year}`)),
     h('div', { class: 'right' },
+      status,
       h('div', { class: 'step mono' },
         h('button', { type: 'button', 'data-fk': 'prev', 'aria-label': 'Previous week', onclick: () => actions.go(-1) }, 'Prev'),
         h('button', { type: 'button', 'data-fk': 'today', onclick: () => actions.today() }, 'Today'),
         h('button', { type: 'button', 'data-fk': 'next', 'aria-label': 'Next week', onclick: () => actions.go(1) }, 'Next')),
-      switcher,
-      status));
+      switcher));
 
   const grid = h('div', { class: 'grid' }, axisEl(dom, hours), model.days.map(day));
 

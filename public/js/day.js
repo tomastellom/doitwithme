@@ -52,13 +52,13 @@ export function renderDay(dom, view, actions) {
       }, model.label),
       h('p', { class: 'sub mono' }, `${model.weekLine} / Booked ${duration(model.booked)}`)),
     h('div', { class: 'right' },
+      status,
+      view.light && h('span', { class: 'tag' }, 'Light day'),
       h('div', { class: 'step mono' },
         h('button', { type: 'button', 'data-fk': 'prev', 'aria-label': `Previous day, ${prevLabel}`, onclick: () => actions.go(-1) }, prevLabel),
         h('button', { type: 'button', 'data-fk': 'today', onclick: () => actions.today() }, 'Today'),
         h('button', { type: 'button', 'data-fk': 'next', 'aria-label': `Next day, ${nextLabel}`, onclick: () => actions.go(1) }, nextLabel)),
-      switcher,
-      status,
-      view.light && h('span', { class: 'tag' }, 'Light day')));
+      switcher));
 
   if (isEmpty) {
     return h('section', { class: 'dayv' }, hero,

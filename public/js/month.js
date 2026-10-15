@@ -51,12 +51,12 @@ export function renderMonth(dom, view, actions) {
       }, model.title),
       h('p', { class: 'sub mono' }, `${model.year} / ${model.due} due this month`)),
     h('div', { class: 'right' },
+      h('span', { class: 'status' }, isEmpty ? 'Click a day to open it' : status),
       h('div', { class: 'step mono' },
         h('button', { type: 'button', 'data-fk': 'prev', 'aria-label': 'Previous month', onclick: () => actions.go(-1) }, 'Prev'),
         h('button', { type: 'button', 'data-fk': 'today', onclick: () => actions.today() }, 'Today'),
         h('button', { type: 'button', 'data-fk': 'next', 'aria-label': 'Next month', onclick: () => actions.go(1) }, 'Next')),
-      switcher,
-      h('span', { class: 'status' }, isEmpty ? 'Click a day to open it' : status)));
+      switcher));
 
   const heads = h('div', { class: 'heads mono' }, HEADS.map((d) => h('span', {}, d)));
   const grid = h('div', { class: 'mgrid' }, model.cells.map(cell));

@@ -430,7 +430,7 @@ test('the menu overlay is light with small plain type and a readable current scr
 test('every heavy ink rule in app.css has an override in shell.css (the calm guard)', () => {
   const app = readFileSync('public/css/app.css', 'utf8');
   const shell = readFileSync('public/css/shell.css', 'utf8');
-  // Rules that are deliberately still heavy: focus outlines, the selected colour swatch, and rules that shell.css overrides only through a more specific selector listed here.
+  // Rules that are deliberately still heavy: focus outlines, the selected colour swatch, and rules whose selector is listed in this set.
   // Dead rules (class no longer rendered anywhere in public/js): .tab (old top tabs, replaced by the sidebar), .dv-rt and .dv-rt.dashed (old day-view rule, replaced by the quiet column).
   const ALLOWED = new Set<string>([':focus-visible', '.pk[aria-pressed="true"]', '.tab', '.dv-rt', '.dv-rt.dashed']);
   const heavy = /(^|\n)([^{}\n@][^{}]*)\{([^}]*(?:2px solid var\(--ink\)|2px dashed var\(--ink\)|4px solid var\(--ink\)|3px solid var\(--ink\)|6px solid var\(--ink\))[^}]*)\}/g;
@@ -443,4 +443,22 @@ test('every heavy ink rule in app.css has an override in shell.css (the calm gua
     }
   }
   assert.deepEqual(missing, [], `these heavy app.css selectors have no override in shell.css: ${missing.join(' | ')}`);
+});
+
+test('final fixes: no ink hover in shell.css, month mobile sizes, soft hover list, forced colors', () => {
+  const css = readFileSync('public/css/shell.css', 'utf8');
+  for (const m of css.matchAll(/(^|\n)([^{}\n@][^{}]*:hover[^{}]*)\{([^}]*)\}/g)) {
+    if (/\.btn\.dark|\.newb/.test(m[2])) continue;
+    assert.doesNotMatch(m[3], /background: var\(--ink\)/, `ink hover: ${m[2].trim()}`);
+  }
+  assert.match(css, /@media \(max-width: 1100px\) \{ \.mgrid \{ grid-auto-rows: 84px; \} \.cell \{ padding: 6px; \} \}/);
+  assert.match(css, /\.drawer \.x:hover, \.go2:hover:not\(:disabled\), \.menu \.close:hover \{[^}]*var\(--btn-hover\)/);
+  assert.match(css, /outline: 2px solid transparent; outline-offset: 0;/);
+  assert.match(css, /@media \(forced-colors: active\)/);
+  assert.match(css, /\.choice\.y span \{ opacity: 1; \}/);
+  assert.match(css, /\.cell\.today \.dn \{ color: #B5330F; \}/);
+  assert.match(css, /button\.addbtn \{/);
+  assert.match(css, /\.side \.fl \.sw\.is-outline \{ border-width: 1\.5px; \}/);
+  assert.match(css, /\.it \{ padding: 5px 8px; margin: 0 -8px; border-radius: 8px;/);
+  assert.doesNotMatch(css, /gradient/);
 });

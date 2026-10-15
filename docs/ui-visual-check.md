@@ -195,7 +195,7 @@ Start the planner and load the example if the Week is empty.
 ## The calm look everywhere (slice 3)
 
 1. Open each screen in turn: Month, Settings, Fixed times, To do, Due dates, Places and travel, Labels, and the Day. None of them has a thick black border, a thick black bar across the top, or a big black filled block any more.
-2. Buttons are soft grey with rounded corners. Only the one main action on a screen (Save, Add a fixed time, Add a due date, Replan's neighbour + New) is vermilion. Hovering a button makes it slightly darker grey; it never flips to solid black.
+2. Buttons are soft grey with rounded corners. Only the one main action on a screen (Save, Add a fixed time, Add a due date) is vermilion. The sidebar + New stays dark. Hovering a button makes it slightly darker grey; it never flips to solid black.
 3. Fields (title, times, selects) are soft grey boxes with no border. Click into one: it gets a dark edge and a soft ring. Small labels above fields are normal lowercase text, not tiny capitals.
 4. The switches (Once/Weekly, Ask first/Automatic) are a soft pill with the chosen option raised and white.
 5. Settings: each row has its title and a short explanation on the left and its control on the right, with a thin line between rows.

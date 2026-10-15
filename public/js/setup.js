@@ -380,8 +380,7 @@ export function createSetup(dom, deps) {
       items.map((item) => {
         const on = item.id === current.route.param;
         return h('a', { class: on ? 'item on' : 'item', href: `#/${kindId}/${encodeURIComponent(item.id)}`, 'aria-current': on ? 'true' : null },
-          kindId === 'labels' && labelSwatch(dom, item),
-          h('span', { class: 'n' }, sel.spec.itemTitle(item, s.state)),
+          h('span', { class: 'n' }, kindId === 'labels' && labelSwatch(dom, item), sel.spec.itemTitle(item, s.state)),
           h('span', { class: 'mono' }, sel.spec.itemLabel(item)),
           h('span', { class: 'd' }, sel.spec.kind.summary(item, s.state)));
       }),

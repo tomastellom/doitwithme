@@ -624,6 +624,9 @@ test('the Labels page lists every label with its look, and a new one is made wit
   const names = byClass(el, 'item').map((i: any) => textOf(byClass(i, 'n')[0]));
   assert.ok(names.includes('Study') && names.includes('Gym') && names.includes('Other'), names.join(', '));
   assert.ok(byClass(byClass(el, 'item')[0], 'lsw').length === 1, 'each row has its swatch');
+  const row0: any = byClass(el, 'item')[0];
+  assert.equal(byClass(byClass(row0, 'n')[0], 'lsw').length, 1, 'the dot sits inside the name');
+  assert.ok(!row0.children.some((c: any) => c.hasClass?.('lsw')), 'the dot is not a direct child of the row');
   const form: any = render('labels', 'new');
   assert.equal(findAll(form, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('f-color-')).length, 12);
   type(form, 'f-name', 'Piano');

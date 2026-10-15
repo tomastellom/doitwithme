@@ -20,6 +20,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'Hanken Grotesk';
+  src: url('/fonts/hanken-grotesk.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   --paper: #FFFFFF;
   --ink: #111111;
@@ -36,6 +44,7 @@
   --on-admin: #111111;
   --font-sans: 'Bricolage Grotesque', ui-sans-serif, system-ui, sans-serif;
   --font-mono: 'DM Mono', ui-monospace, Menlo, monospace;
+  --font-cal: 'Hanken Grotesk', var(--font-sans);
   --canvas: #ECEEF2;
   --panel: #FFFFFF;
   --hair: #ECEEF1;

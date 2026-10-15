@@ -246,3 +246,21 @@ test('final review: small-text and edge colors pass contrast, and the shell rule
   const pads = [...shell.matchAll(/\.app \{[^}]*padding:\s*\d+px \d+px (\d+)px/g)].map((m) => Number(m[1]));
   assert.ok(pads.length >= 2 && pads.every((n) => n >= 220), 'bottom padding clears the Nudge corner');
 });
+
+test('Hanken Grotesk is self-hosted as a real woff2 and declared in tokens.css only', () => {
+  const path = join('public/fonts', 'hanken-grotesk.woff2');
+  const bytes = readFileSync(path);
+  assert.equal(bytes.subarray(0, 4).toString('latin1'), 'wOF2', 'it is a woff2 file');
+  assert.ok(bytes.length > 10_000 && bytes.length < 400_000, `a plausible size (${bytes.length})`);
+  const tokens = readFileSync('public/css/tokens.css', 'utf8');
+  assert.match(tokens, /font-family: 'Hanken Grotesk'/);
+  assert.match(tokens, /url\('\/fonts\/hanken-grotesk\.woff2'\)/);
+  assert.match(tokens, /font-weight: 400 700/);
+  assert.match(tokens, /--font-cal: 'Hanken Grotesk'/);
+  assert.doesNotMatch(tokens, /https?:\/\//);
+});
+
+test('the font is served by the local server with the right type', () => {
+  const server = readFileSync('src/server.ts', 'utf8');
+  assert.match(server, /'\.woff2': 'font\/woff2'/);
+});

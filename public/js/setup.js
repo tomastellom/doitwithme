@@ -3,7 +3,8 @@ import { foundFor, renderMapsBlock } from './maps-ui.js';
 import { labelOptions, lookClass, paint } from './labels.js';
 import { findByKey } from './focus.js';
 import { isValidDate } from './time.js';
-import { CATEGORIES, DEADLINE_KINDS, KINDS, KIND_IDS, PLACE_KINDS, TRAVEL_MODES, applyItem, itemsOf, newId, parseDecimal, parseWhole, removeItem } from './setup-model.js';
+import { COPY } from './setup-copy.js';
+import { CATEGORIES, DEADLINE_KINDS, KINDS, PLACE_KINDS, TRAVEL_MODES, applyItem, itemsOf, newId, parseDecimal, parseWhole, removeItem } from './setup-model.js';
 
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 const fixed = (list) => () => list.map((v) => ({ value: v, label: cap(v) }));
@@ -343,7 +344,7 @@ export function createSetup(dom, deps) {
           h('span', { class: 'mono' }, sel.spec.itemLabel(item)),
           h('span', { class: 'd' }, sel.spec.kind.summary(item, s.state)));
       }),
-      h('a', { class: 'add mono', href: `#/${kindId}/new` }, sel.spec.add));
+      h('a', { class: 'add mono', href: `#/${kindId}/new` }, COPY[kindId]?.add ?? sel.spec.add));
   }
 
   function build() {
@@ -352,12 +353,19 @@ export function createSetup(dom, deps) {
     ensureDraft(sel);
     // Embedded (the planning rules inside Settings) it is just the form, with no title row of its own.
     if (current.embedded) return [formColumn(sel)];
+    const copy = COPY[kindId];
+    // A kind with no copy (the preferences form) is just its columns.
+    if (!copy) return [h('div', { class: 'cols' }, listColumn(sel), formColumn(sel))];
+    // Places and Travel are one place in the sidebar; inside, a switch moves between them.
+    const travelSwitch = (kindId === 'places' || kindId === 'commutes') && h('div', { class: 'switch mono', role: 'group', 'aria-label': 'Places or travel' },
+      [['places', 'Places'], ['commutes', 'Travel']].map(([id, name]) =>
+        h('a', { class: id === kindId ? 'on' : '', href: `#/${id}`, 'aria-current': id === kindId ? 'page' : null }, name)));
     return [
-      h('div', { class: 'hero' },
-        h('h1', {}, 'Plan'),
-        h('div', { class: 'sub mono' }, KIND_IDS.map((id) =>
-          h('a', { href: `#/${id}`, 'aria-current': id === kindId ? 'page' : null }, KINDS[id].title)))),
+      h('div', { class: 'hero' }, h('h1', {}, copy.title), travelSwitch),
+      h('p', { class: 'purpose' }, copy.lead),
+      h('div', { class: 'chips', 'aria-label': 'Examples' }, copy.examples.map((e) => h('span', { class: 'chip' }, e))),
       h('div', { class: 'cols' }, listColumn(sel), formColumn(sel)),
+      copy.next && h('p', { class: 'next-hint' }, copy.next),
     ];
   }
 

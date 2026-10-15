@@ -41,14 +41,43 @@ function setup(state: any = stateWith(), opts: any = {}) {
 const type = (root: any, key: string, value: string) => { const el = byKey(root, key); el.value = value; el.dispatch('input'); };
 const submit = async (root: any) => { byTag(root, 'form')[0].dispatch('submit'); await tick(); };
 
-test('the hero and the sub-navigation point at the setup screens', () => {
+test('every setup page says what it is for: title, a purpose sentence, example chips', () => {
   const { render } = setup();
-  const el: any = render('tasks');
-  assert.equal(textOf(byTag(el, 'h1')[0]), 'Plan');
-  const links = byClass(el, 'sub')[0].children.filter((c: any) => c.tag === 'a');
-  assert.deepEqual(links.map((l: any) => textOf(l)), ['Fixed times', 'To do', 'Due dates', 'Labels', 'Places and travel', 'Travel']);
-  assert.deepEqual(links.map((l: any) => l.getAttribute('href')), ['#/commitments', '#/tasks', '#/due-dates', '#/labels', '#/places', '#/commutes']);
-  assert.deepEqual(links.map((l: any) => l.getAttribute('aria-current')), [null, 'page', null, null, null, null]);
+  for (const [kind, title] of [['commitments', 'Fixed times'], ['tasks', 'To do'], ['due-dates', 'Due dates'], ['labels', 'Labels'], ['places', 'Places and travel'], ['commutes', 'Travel']] as const) {
+    const el: any = render(kind);
+    assert.equal(textOf(byTag(el, 'h1')[0]), title, kind);
+    assert.match(textOf(byClass(el, 'purpose')[0]), /\.$/, kind);
+    assert.ok(byClass(el, 'chip').length >= 2, `${kind} has example chips`);
+  }
+});
+
+test('the old row of kind links is gone; Places and Travel have a switch between them', () => {
+  const { render } = setup();
+  const places: any = render('places');
+  assert.equal(byClass(places, 'sub').length, 0);
+  const sw = byClass(places, 'switch')[0];
+  assert.deepEqual(byClass(sw, 'on').map((e: any) => textOf(e)), ['Places']);
+  const links = sw.children.filter((c: any) => c.tag === 'a');
+  assert.deepEqual(links.map((l: any) => l.getAttribute('href')), ['#/places', '#/commutes']);
+  assert.deepEqual(links.map((l: any) => l.getAttribute('aria-current')), ['page', null]);
+  const travel: any = render('commutes');
+  assert.deepEqual(byClass(byClass(travel, 'switch')[0], 'on').map((e: any) => textOf(e)), ['Travel']);
+  assert.equal(byClass(render('tasks'), 'switch').length, 0);
+});
+
+test('the add button and the next hint use the new copy', () => {
+  const { render } = setup();
+  const el: any = render('commitments');
+  assert.match(textOf(byClass(el, 'add')[0]), /Add a fixed time/);
+  assert.match(textOf(byClass(el, 'next-hint')[0]), /^Next: tell me what needs time/);
+  assert.equal(byClass(render('labels'), 'next-hint').length, 0, 'labels have no next step');
+});
+
+test('the embedded preferences form has no title row, purpose or chips', () => {
+  const { ctl, store } = setup();
+  const el: any = ctl.renderEmbedded('preferences', { s: store.get(), route: { id: 'preferences', param: null } });
+  assert.equal(byTag(el, 'h1').length, 0);
+  assert.equal(byClass(el, 'purpose').length, 0);
 });
 
 test('the list shows title, label and summary like board H, and marks the selected item', () => {
@@ -279,13 +308,6 @@ test('a cancelled date that was picked but not added is saved with the item', as
   type(el, 'f-exceptions', '2026-10-18');
   await submit(el);
   assert.ok(calls[0].commitments.find((c: any) => c.id === 'mass').exceptions.includes('2026-10-18'));
-});
-
-test('the sub-navigation lists the screens with Places and Commutes', () => {
-  const { render } = setup();
-  const el: any = render('places');
-  const links = byClass(el, 'sub')[0].children.filter((c: any) => c.tag === 'a');
-  assert.deepEqual(links.map((l: any) => textOf(l)), ['Fixed times', 'To do', 'Due dates', 'Labels', 'Places and travel', 'Travel']);
 });
 
 test('the places list shows address or "Address missing", and the form edits the place', async () => {

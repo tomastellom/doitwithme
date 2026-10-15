@@ -91,7 +91,7 @@ test('a planned block leads to its task form, and a trip leads to the commute', 
   blk(root, 'block:').click();
   key(root, 'drawer-link-task').click();
   assert.match(win.location.hash, /^#\/tasks\//);
-  assert.equal(textOf(byTag(root, 'h1')[0]), 'Plan');
+  assert.equal(textOf(byTag(root, 'h1')[0]), 'To do');
   app.navigate('#/week');
   blk(root, 'travel:').click();
   assert.match(textOf(byClass(root, 'drawer')[0]), /Travel \//);
@@ -127,7 +127,7 @@ test('the Deadlines page adds and edits through the existing form', async () => 
   const add = findAll(root, (e: any) => e.tag === 'a' && e.getAttribute('href') === '#/due-dates/new')[0];
   assert.ok(add);
   app.navigate(add.getAttribute('href'));
-  assert.equal(textOf(byTag(root, 'h1')[0]), 'Plan');
+  assert.equal(textOf(byTag(root, 'h1')[0]), 'Due dates');
   app.navigate('#/deadlines');
   app.navigate(byClass(root, 'dl')[0].getAttribute('href'));
   assert.match(win.location.hash, /^#\/due-dates\/.+/);

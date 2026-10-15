@@ -59,15 +59,16 @@ test('the sidebar links and Menu entries exist, and the link is current on every
   const links = () => findAll(root, (e) => e.tag === 'a' && e.hasClass('sl'));
   const link = (id: string) => links().find((l: any) => l.getAttribute('data-fk') === `side-${id}`)!;
   assert.equal(links().length, 9);
+  const TITLES: Record<string, string> = { commitments: 'Fixed times', tasks: 'To do', 'due-dates': 'Due dates', labels: 'Labels', places: 'Places and travel', commutes: 'Travel' };
   for (const id of ['commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes']) {
     app.navigate(`#/${id}`);
     const side = id === 'commutes' ? 'places' : id; // Travel sits under Places and travel
     assert.equal(link(side).getAttribute('aria-current'), 'page', id);
     assert.equal(links().filter((l: any) => l.getAttribute('aria-current') === 'page').length, 1, `only ${side} is current`);
-    assert.equal(textOf(byTag(root, 'h1')[0]), id === 'due-dates' ? 'Due dates' : 'Plan', `${id} titles itself ${id === 'due-dates' ? 'Due dates (the status list)' : 'Plan'}`);
+    assert.equal(textOf(byTag(root, 'h1')[0]), TITLES[id], `${id} titles itself ${TITLES[id]}`);
   }
   app.navigate('#/setup');
-  assert.equal(textOf(byTag(root, 'h1')[0]), 'Plan');
+  assert.equal(textOf(byTag(root, 'h1')[0]), 'Fixed times');
   app.navigate('#/week');
   assert.equal(link('commitments').getAttribute('aria-current'), null);
   assert.equal(link('week').getAttribute('aria-current'), 'page');

@@ -178,3 +178,16 @@ Start the planner and load the example if the Week is empty.
 7. Do the same with To do: the weekly time shows, the longest block, priority and one-session-a-day are behind More options, and the sentence says "Chemistry needs 6 h a week, in blocks of up to 2 h."
 8. Click a block on the Week: the quick-edit panel shows the same read-back and More options.
 9. Known rough edges until slice 3: the Day, Month and Settings screens still have their old headers; each place does not yet list its trips under it.
+
+## Calm blocks and the calendar font
+
+1. Open the Week with the example loaded. Blocks are soft tinted shapes with no black borders. Names are small and semibold; times are smaller and softer.
+2. Each block has a small light circle on its left (not a big black square). Hover it: it darkens. Press it: it fills with a check and the block fades and strikes through. Press Tab to reach a tick: it shows a clear focus ring.
+3. A short block (under about three-quarters of an hour) shows only its name, on one line, with nothing cut off. Hover it, or click it: the time is in the tooltip and the side panel.
+4. A tall block shows its name and, under it, the time. There is no small "CLASS" line above the name any more.
+5. Outlined labels (like Social or Personal project) show a thin soft grey border, not a thick black one.
+6. A commute is a flat light-grey block with a thin dashed edge and small grey text, with no stripes and no black frame.
+7. Mark something "I did not do this one": it becomes a thin dashed block with a small grey "Not done" tag.
+8. The hour labels, weekday names, date numbers and the "Booked" line are in the new font (Hanken Grotesk: a calm, friendly sans-serif). The titles and the sidebar are still Bricolage. Digits line up evenly down the hour column.
+9. Open a Day: its blocks look the same way, and a tall block shows its time and its length ("10:00–12:00 · 120 min").
+10. Known rough edges until slice 3: Month, Settings and the forms are not part of this pass.

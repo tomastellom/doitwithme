@@ -347,3 +347,24 @@ test('the controls section restyles the switch, chips, notices and tags', () => 
 test('shell.css still has no gradient word', () => {
   assert.doesNotMatch(readFileSync('public/css/shell.css', 'utf8'), /gradient/i);
 });
+
+test('the setup section makes list rows soft, with no black bars', () => {
+  const k = kit('setup');
+  assert.match(k, /\.item \{[^}]*border: 0[^}]*border-radius: 10px/);
+  assert.match(k, /\.item\.on \{[^}]*background: var\(--soft\)/);
+  assert.match(k, /\.item \.n \{[^}]*font-size: 14px/);
+  assert.match(k, /\.form \{[^}]*border-top: 0/);
+  assert.match(k, /\.sec \{[^}]*border-top: 0/);
+  assert.match(k, /\.add \{[^}]*border: 0/);
+  assert.doesNotMatch(k, HEAVY_BORDER, 'no heavy 2px+ border or bar in this section (focus outlines are fine)');
+});
+
+test('the setup section calms the estimate card, the label swatches and the previews', () => {
+  const k = kit('setup');
+  assert.match(k, /\.est \{[^}]*border: 0[^}]*background: var\(--soft\)/);
+  assert.match(k, /\.est \.bar2 \{[^}]*display: none/);
+  assert.match(k, /\.lsw \{[^}]*border-radius: 50%/);
+  assert.match(k, /\.strip \.b \{[^}]*border: 0/);
+  assert.match(k, /\.strip \.b\.com \{[^}]*border: 1px dashed var\(--edge\)/);
+  assert.match(k, /\.travel \{[^}]*border: 1px dashed var\(--edge\)/);
+});

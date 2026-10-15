@@ -197,3 +197,44 @@ button.more:hover { color: var(--ink); background: transparent; }
 .banner { border: 0; border-radius: 10px; background: var(--soft); padding: 10px 14px; }
 .banner.off { border: 0; background: var(--soft); }
 .tag { font-family: var(--font-sans); font-size: 11px; letter-spacing: 0; text-transform: none; border: 0; border-radius: 99px; background: var(--soft); color: var(--muted); padding: 2px 8px; }
+
+/* Calm kit: setup pages (lists, forms, the estimate card, labels, previews) */
+.setup .list { gap: 2px; }
+@media (min-width: 1101px) { .setup .list { width: 320px; } }
+.item { grid-template-columns: 1fr auto; gap: 2px 12px; padding: 10px 12px; border: 0; border-radius: 10px; color: var(--ink); }
+.item:hover { background: var(--soft); }
+.item.on { background: var(--soft); color: var(--ink); }
+.item:last-of-type { border: 0; }
+.item .n { font-size: 14px; font-weight: 600; letter-spacing: 0; line-height: 1.25; }
+.item .mono { font-family: var(--font-sans); font-size: 12px; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.item .d { font-family: var(--font-sans); font-size: 12.5px; letter-spacing: 0; opacity: 1; color: var(--muted); }
+.add { margin-top: 6px; padding: 8px 12px; border: 0; border-radius: 9px; font-weight: 600; }
+.add:hover { background: var(--soft); }
+.form { border-top: 0; padding-top: 0; }
+.sec { margin-top: 14px; padding: 0 0 6px; border-top: 0; border-bottom: 1px solid var(--hair); }
+.sec b { font-size: 15px; font-weight: 700; letter-spacing: 0; }
+.btns { margin-top: 18px; }
+
+/* The estimate card. */
+.est { grid-template-columns: 1fr; gap: 0; border: 0; border-radius: 12px; background: var(--soft); }
+.est .bar2 { display: none; }
+.est .in { padding: 14px 16px; gap: 6px; }
+.est .big { font-size: 30px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+.est .tg { border: 0; border-radius: 99px; background: var(--paper); font-family: var(--font-sans); font-size: 11px; letter-spacing: 0; text-transform: none; padding: 2px 8px; }
+
+/* Labels: a round colour dot in lists, soft swatches, a calm preview. */
+.pk { border-radius: 10px; }
+.pk[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 2px; }
+.lsw { width: 14px; height: 14px; border-radius: 50%; margin-right: 8px; }
+.lsw.is-outline { border-width: 1.5px; }
+.ptile { padding: 6px 12px; border-radius: 8px; font-size: 14px; }
+.ptile.is-outline { padding: 5px 11px; border-width: 1px; border-style: solid; }
+.prev { border-top: 0; padding-top: 0; }
+.fl .sw { border-radius: 50%; }
+.fl .sw.is-outline, .dv-tot .sw.is-outline { border-width: 1.5px; }
+
+/* The commute preview strip and any other travel block: flat and light, no hatch. */
+.strip .b { border: 0; border-radius: 8px; background: var(--soft); font-size: 13px; }
+.strip .b.cls { background: var(--tint-red); color: #A93219; }
+.strip .b.com { border: 1px dashed var(--edge); background: var(--soft); color: var(--muted); }
+.travel { border: 1px dashed var(--edge); background: var(--soft); color: var(--muted); }

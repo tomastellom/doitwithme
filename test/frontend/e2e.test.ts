@@ -56,7 +56,7 @@ async function settled(app: any) {
 }
 const click = (root: any, label: string) => byTag(root, 'button').find((b: any) => textOf(b).trim() === label)!.click();
 // The sidebar links in order, as the groups lay them out.
-const SIDE_TITLES = ['Week', 'Day', 'Month', 'Deadlines', 'Commitments', 'Tasks', 'Due dates', 'Labels', 'Places', 'Commutes', 'Settings'];
+const SIDE_TITLES = ['Week', 'Day', 'Month', 'Fixed times', 'To do', 'Due dates', 'Places and travel', 'Labels', 'Settings'];
 const fridayColumn = (root: any) => byClass(root, 'day')[4];
 
 test('the real server serves the page and its script', async () => {

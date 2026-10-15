@@ -14,10 +14,11 @@ export function parseHash(hash) {
   return { id: m[1], param: m[2] ? decode(m[2]) : null };
 }
 
-export function resolveRoute(hash, ids, fallback = 'week') {
-  const { id, param } = parseHash(hash);
+export function resolveRoute(hash, ids, fallback = 'week', aliases = {}) {
+  const parsed = parseHash(hash);
+  const id = parsed.id !== null && Object.hasOwn(aliases, parsed.id) ? aliases[parsed.id] : parsed.id;
   const known = id !== null && ids.includes(id);
-  return { id: known ? id : fallback, param: known ? param : null };
+  return { id: known ? id : fallback, param: known ? parsed.param : null };
 }
 
 export const weekParam = (param, today) => (isValidDate(param) ? param : today);

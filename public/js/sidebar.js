@@ -2,9 +2,9 @@ import { lookClass, paint } from './labels.js';
 
 // Where each screen sits in the sidebar. Titles come from the registry, so renaming a screen renames its link.
 export const SIDE_GROUPS = [
-  { title: 'Plan', ids: ['week', 'day', 'month', 'deadlines'] },
+  { title: 'Plan', ids: ['week', 'day', 'month'] },
   { title: 'What goes in', ids: ['commitments', 'tasks', 'due-dates'] },
-  { title: 'Details', ids: ['labels', 'places', 'commutes'] },
+  { title: 'Details', ids: ['places', 'labels'] },
   { title: null, ids: ['settings'] },
 ];
 

@@ -58,12 +58,13 @@ test('the sidebar links and Menu entries exist, and the link is current on every
   await settled(app);
   const links = () => findAll(root, (e) => e.tag === 'a' && e.hasClass('sl'));
   const link = (id: string) => links().find((l: any) => l.getAttribute('data-fk') === `side-${id}`)!;
-  assert.equal(links().length, 11);
+  assert.equal(links().length, 9);
   for (const id of ['commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes']) {
     app.navigate(`#/${id}`);
-    assert.equal(link(id).getAttribute('aria-current'), 'page', id);
-    assert.equal(links().filter((l: any) => l.getAttribute('aria-current') === 'page').length, 1, `only ${id} is current`);
-    assert.equal(textOf(byTag(root, 'h1')[0]), 'Plan', `${id} still titles itself Plan`);
+    const side = id === 'commutes' ? 'places' : id; // Travel sits under Places and travel
+    assert.equal(link(side).getAttribute('aria-current'), 'page', id);
+    assert.equal(links().filter((l: any) => l.getAttribute('aria-current') === 'page').length, 1, `only ${side} is current`);
+    assert.equal(textOf(byTag(root, 'h1')[0]), id === 'due-dates' ? 'Due dates' : 'Plan', `${id} titles itself ${id === 'due-dates' ? 'Due dates (the status list)' : 'Plan'}`);
   }
   app.navigate('#/setup');
   assert.equal(textOf(byTag(root, 'h1')[0]), 'Plan');
@@ -72,7 +73,7 @@ test('the sidebar links and Menu entries exist, and the link is current on every
   assert.equal(link('week').getAttribute('aria-current'), 'page');
   app.menu.open(null);
   const menuLinks = byClass(app.menu.el, 'it').map((l: any) => l.getAttribute('href'));
-  assert.deepEqual(menuLinks, ['#/day', '#/week', '#/month', '#/deadlines', '#/commitments', '#/tasks', '#/due-dates', '#/labels', '#/places', '#/commutes', '#/settings']);
+  assert.deepEqual(menuLinks, ['#/day', '#/week', '#/month', '#/commitments', '#/tasks', '#/due-dates', '#/labels', '#/places', '#/settings']);
 });
 
 test('add a commitment through the form: it is saved on the server and shows on the week', async () => {

@@ -71,12 +71,12 @@ test('the Day tab shows today, steps to the next day, and reads a date from the 
   assert.equal(key(root, 'side-day').getAttribute('aria-current'), 'page');
 });
 
-test('the Deadlines tab lists the example due dates with a shortfall for the exam', async () => {
+test('the Due dates screen lists the example due dates with a shortfall for the exam', async () => {
   assert.equal((await put(await exampleState())).status, 200);
   const { app, root } = boot();
   await settled(app);
   app.navigate('#/deadlines');
-  assert.equal(textOf(byTag(root, 'h1')[0]), 'Deadlines');
+  assert.equal(textOf(byTag(root, 'h1')[0]), 'Due dates');
   assert.match(textOf(root), /Chemistry exam/);
   assert.ok(byClass(root, 'dl').length >= 1);
 });

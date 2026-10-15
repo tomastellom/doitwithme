@@ -24,8 +24,11 @@ import { createUiPrefs } from './ui-prefs.js';
 import { WEEKDAYS, addDays, currentClock, weekStart, weekdayOf } from './time.js';
 import { createSidebar } from './sidebar.js';
 import { createSetup } from './setup.js';
+import { COPY } from './setup-copy.js';
 import { renderWeek } from './week.js';
 
+// Old addresses that still work: Deadlines became Due dates.
+const ROUTE_ALIASES = { deadlines: 'due-dates' };
 const STORE_KEY = 'doitwithme.hidden';
 const RENDER_FAILED = 'Something unexpected happened. Reload the page.';
 
@@ -220,23 +223,22 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     },
   });
 
-  registry.register({
-    id: 'deadlines', title: 'Deadlines', group: 'views', description: 'What is due, and whether it is covered.', primary: true,
-    render: (ctx) => renderDeadlines(dom, { model: deadlinesModel(ctx.s.state, getClock()), isEmpty: ctx.s.isEmpty }),
-  });
-
   const setup = createSetup(dom, { store, getClock, navigate, keepFocus });
   const setupPage = (kindId) => (ctx) => setup.render(kindId, ctx);
   registry.register({
     id: 'setup', title: 'Plan', group: 'setup', primary: true, inMenu: false,
     activeFor: ['commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes'], render: setupPage('commitments'),
   });
-  registry.register({ id: 'commitments', title: 'Commitments', group: 'setup', description: 'What is fixed.', render: setupPage('commitments') });
-  registry.register({ id: 'tasks', title: 'Tasks', group: 'setup', description: 'What needs time but no fixed slot.', render: setupPage('tasks') });
-  registry.register({ id: 'due-dates', title: 'Due dates', group: 'setup', description: 'When things are due and how much effort they need.', render: setupPage('due-dates') });
-  registry.register({ id: 'labels', title: 'Labels', group: 'setup', description: 'Your own kinds of things, each with a color.', render: setupPage('labels') });
-  registry.register({ id: 'places', title: 'Places', group: 'setup', description: 'Home, campus and where your lessons are.', render: setupPage('places') });
-  registry.register({ id: 'commutes', title: 'Commutes', group: 'setup', description: 'How long it takes to get around.', render: setupPage('commutes') });
+  registry.register({ id: 'commitments', title: COPY.commitments.title, group: 'setup', description: 'Classes, work, lessons, gym: things at a set time.', render: setupPage('commitments') });
+  registry.register({ id: 'tasks', title: COPY.tasks.title, group: 'setup', description: 'Things that need time but no set time, like study.', render: setupPage('tasks') });
+  // With nothing after it, Due dates is the status list; with an item or "new" it is the form.
+  registry.register({
+    id: 'due-dates', title: COPY['due-dates'].title, group: 'setup', description: 'What is due, whether it is covered, and add or edit.',
+    render: (ctx) => (ctx.route.param ? setup.render('due-dates', ctx) : renderDeadlines(dom, { model: deadlinesModel(ctx.s.state, getClock()), isEmpty: ctx.s.isEmpty })),
+  });
+  registry.register({ id: 'labels', title: COPY.labels.title, group: 'setup', description: 'Your own kinds of things, each with a color.', render: setupPage('labels') });
+  registry.register({ id: 'places', title: COPY.places.title, group: 'setup', description: 'Where things happen, and how long it takes to get there.', activeFor: ['commutes'], render: setupPage('places') });
+  registry.register({ id: 'commutes', title: COPY.commutes.title, group: 'setup', inMenu: false, description: 'How long each trip takes.', render: setupPage('commutes') });
 
   const ui = createUiPrefs(win);
   const settings = createSettings(dom, { store, ui, keepFocus, setup });
@@ -322,7 +324,7 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
   }
 
   function draw() {
-    route = resolveRoute(win.location.hash, registry.ids());
+    route = resolveRoute(win.location.hash, registry.ids(), 'week', ROUTE_ALIASES);
     const s = store.get();
     renderSide();
     const screen = renderMain(s);

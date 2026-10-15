@@ -28,7 +28,7 @@ export function renderDeadlines(dom, view) {
       h('div', { class: 'dl-end' }, chip(r)));
 
   const hero = h('div', { class: 'hero' },
-    h('h1', {}, 'Deadlines'),
+    h('h1', {}, 'Due dates'),
     h('div', { class: 'hero-right' },
       h('a', { class: 'hero-add', href: '#/due-dates/new', 'data-fk': 'add-due' }, '+ Add a due date'),
       h('div', { class: 'meta mono' },

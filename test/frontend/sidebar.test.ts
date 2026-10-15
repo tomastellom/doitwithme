@@ -11,9 +11,9 @@ const fk = (root: any, key: string) => findAll(root, (e: any) => e.getAttribute(
 function registry() {
   const r = createRegistry();
   const add = (id: string, title: string, group: string, extra: any = {}) => r.register({ id, title, group, render: () => null, ...extra });
-  add('week', 'Week', 'views'); add('day', 'Day', 'views'); add('month', 'Month', 'views'); add('deadlines', 'Deadlines', 'views');
-  add('commitments', 'Commitments', 'setup'); add('tasks', 'Tasks', 'setup'); add('due-dates', 'Due dates', 'setup');
-  add('labels', 'Labels', 'setup'); add('places', 'Places', 'setup'); add('commutes', 'Commutes', 'setup');
+  add('week', 'Week', 'views'); add('day', 'Day', 'views'); add('month', 'Month', 'views');
+  add('commitments', 'Fixed times', 'setup'); add('tasks', 'To do', 'setup'); add('due-dates', 'Due dates', 'setup');
+  add('labels', 'Labels', 'setup'); add('places', 'Places and travel', 'setup', { activeFor: ['commutes'] });
   add('settings', 'Settings', 'settings', { activeFor: ['preferences'] });
   return r;
 }
@@ -34,7 +34,7 @@ test('the groups come in order with their headings, and the last one has none', 
   const heads = byClass(side.el, 'sgh').map((e: any) => textOf(e));
   assert.deepEqual(heads, ['Plan', 'What goes in', 'Details']);
   const links = findAll(side.el, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('side-')).map((e: any) => textOf(e));
-  assert.deepEqual(links, ['Week', 'Day', 'Month', 'Deadlines', 'Commitments', 'Tasks', 'Due dates', 'Labels', 'Places', 'Commutes', 'Settings']);
+  assert.deepEqual(links, ['Week', 'Day', 'Month', 'Fixed times', 'To do', 'Due dates', 'Places and travel', 'Labels', 'Settings']);
 });
 
 test('the current screen is marked, including a screen that belongs to another (preferences to Settings)', () => {
@@ -110,4 +110,9 @@ test('focus() can prefer the link of the current screen, and falls back to the f
   side.focus();
   const week = fk(side.el, 'side-week');
   assert.equal(week.doc.activeElement, week);
+});
+
+test('Travel (the commutes route) marks Places and travel as current', () => {
+  const { side } = make({ view: { routeId: 'commutes' } });
+  assert.equal(fk(side.el, 'side-places').getAttribute('aria-current'), 'page');
 });

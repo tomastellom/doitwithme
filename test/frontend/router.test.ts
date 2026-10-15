@@ -39,3 +39,11 @@ test('dateParam falls back to today for anything that is not a real date', () =>
   assert.equal(dateParam('2026-10-14', '2026-10-09'), '2026-10-14');
   for (const bad of [null, '', 'xyz', '2026-02-30', '2026-13-01', '../..']) assert.equal(dateParam(bad as any, '2026-10-09'), '2026-10-09');
 });
+
+test('an alias sends an old address to the current screen and keeps the parameter', () => {
+  const ids = ['week', 'due-dates'];
+  assert.deepEqual(resolveRoute('#/deadlines', ids, 'week', { deadlines: 'due-dates' }), { id: 'due-dates', param: null });
+  assert.deepEqual(resolveRoute('#/deadlines/d-1', ids, 'week', { deadlines: 'due-dates' }), { id: 'due-dates', param: 'd-1' });
+  assert.deepEqual(resolveRoute('#/week', ids, 'week', { deadlines: 'due-dates' }), { id: 'week', param: null });
+  assert.deepEqual(resolveRoute('#/nope', ids, 'week', { deadlines: 'due-dates' }), { id: 'week', param: null });
+});

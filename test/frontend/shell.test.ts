@@ -59,7 +59,8 @@ test('the app is a sidebar and a panel; the old top bar and tabs are gone', asyn
 test('every screen is a sidebar link and the current one is marked', async () => {
   const { root } = await bootWithData();
   const keys = fkStarts(root, 'side-').map((e: any) => e.getAttribute('data-fk'));
-  for (const id of ['week', 'day', 'month', 'deadlines', 'commitments', 'tasks', 'due-dates', 'labels', 'places', 'commutes', 'settings']) assert.ok(keys.includes(`side-${id}`), id);
+  for (const id of ['week', 'day', 'month', 'commitments', 'tasks', 'due-dates', 'places', 'labels', 'settings']) assert.ok(keys.includes(`side-${id}`), id);
+  assert.equal(keys.filter((k: string) => k !== 'side-toggle').length, 9);
   assert.equal(fk(root, 'side-week')[0].getAttribute('aria-current'), 'page');
 });
 
@@ -141,4 +142,19 @@ test('in a narrow window + New closes the sidebar and opens the drawer', async (
   fk(root, 'new')[0].click();
   assert.equal(appEl.getAttribute('data-side'), null);
   assert.equal(app.drawer.isOpen(), true);
+});
+
+test('the old Deadlines address opens Due dates, and Due dates shows the status list or the form', async () => {
+  const { root, go, settle } = await bootWithData();
+  go('#/deadlines'); await settle();
+  assert.equal(textOf(byTag(root, 'h1')[0]), 'Due dates');
+  assert.equal(findAll(root, (e: any) => e.getAttribute('data-fk') === 'side-due-dates')[0].getAttribute('aria-current'), 'page');
+  go('#/due-dates/new'); await settle();
+  assert.ok(findAll(root, (e: any) => e.getAttribute('data-fk') === 'setup-save').length === 1, 'the form is shown for a parameter');
+});
+
+test('Travel is part of Places and travel in the sidebar', async () => {
+  const { root, go, settle } = await bootWithData();
+  go('#/commutes'); await settle();
+  assert.equal(findAll(root, (e: any) => e.getAttribute('data-fk') === 'side-places')[0].getAttribute('aria-current'), 'page');
 });

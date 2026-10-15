@@ -21,7 +21,7 @@ const draw = (s = state(), over: any = {}) => renderDeadlines(dom, { model: dead
 
 test('the hero says how many are open and how many are short', () => {
   const el = draw();
-  assert.equal(textOf(byTag(el, 'h1')[0]), 'Deadlines');
+  assert.equal(textOf(byTag(el, 'h1')[0]), 'Due dates');
   const meta = textOf(byClass(el, 'meta')[0]);
   assert.match(meta, /2 open/);
   assert.match(meta, /1 short/);

@@ -158,3 +158,27 @@ test('Travel is part of Places and travel in the sidebar', async () => {
   go('#/commutes'); await settle();
   assert.equal(findAll(root, (e: any) => e.getAttribute('data-fk') === 'side-places')[0].getAttribute('aria-current'), 'page');
 });
+
+test('pressing n opens the chooser, except while typing, with a modifier, or with the Menu or the drawer open', async () => {
+  const { root, document, app } = await bootWithData();
+  const press = (k: string, ev: any = {}) => document.dispatch('keydown', { key: k, target: { tag: 'body' }, ...ev });
+  press('n', { target: { tag: 'input' } });
+  assert.equal(app.drawer.isOpen(), false, 'typing in a field never opens it');
+  press('n', { metaKey: true });
+  press('n', { ctrlKey: true });
+  assert.equal(app.drawer.isOpen(), false, 'a modifier key never opens it');
+  press('n');
+  assert.equal(app.drawer.isOpen(), true, 'n opens it');
+  press('n');
+  assert.equal(byClass(root, 'choice').length, 3, 'still just one chooser');
+});
+
+test('pressing n in a narrow window closes the sidebar first', async () => {
+  const { root, document, app } = await bootWithData();
+  const appEl = byClass(root, 'app')[0];
+  fk(root, 'side-toggle')[0].click();
+  assert.equal(appEl.getAttribute('data-side'), 'open');
+  document.dispatch('keydown', { key: 'n', target: { tag: 'body' } });
+  assert.equal(appEl.getAttribute('data-side'), null);
+  assert.equal(app.drawer.isOpen(), true);
+});

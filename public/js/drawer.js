@@ -235,10 +235,9 @@ export function createDrawer(dom, deps) {
   // The "+ New" chooser: what kind of thing is being added, in plain words.
   function choosePanel() {
     const options = [
-      { fk: 'choose-timed', title: 'Something at a set time', note: 'A lesson, a meeting, an appointment.', run: () => startNew({ date: item.date, start: 9 * 60, returnKey: item.returnKey }) },
-      { fk: 'choose-task', title: 'A task', note: 'Something that needs time but no fixed slot. I find the time.', run: () => go('#/tasks/new') },
-      { fk: 'choose-due', title: 'A due date', note: 'An exam or an assignment, with how long it needs.', run: () => go('#/due-dates/new') },
-      { fk: 'choose-label', title: 'A label', note: 'Your own kind of thing, with a color.', run: () => go('#/labels/new') },
+      { fk: 'choose-timed', title: 'Something at a set time', note: 'A class, a shift, a lesson, the gym. It repeats or happens once. Goes to Fixed times.', run: () => startNew({ date: item.date, start: 9 * 60, returnKey: item.returnKey }) },
+      { fk: 'choose-task', title: 'Something that needs time', note: 'Study, an assignment, a project. You say how much, I find the time. Goes to To do.', run: () => go('#/tasks/new') },
+      { fk: 'choose-due', title: 'Something with a due date', note: 'An exam, an essay, a form. I make sure there is time before it. Goes to Due dates.', run: () => go('#/due-dates/new') },
     ];
     return [
       head('New', 'What are you adding?', ''),

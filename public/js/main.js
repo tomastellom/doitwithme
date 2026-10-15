@@ -413,6 +413,11 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
       e.preventDefault();
       menu.open({ focus: () => (isNarrow() ? main.focus() : sidebar.focus({ current: true })) });
     }
+    if (e.key === 'n' && !e.metaKey && !e.ctrlKey && !e.altKey && !['input', 'textarea', 'select'].includes(tag) && !menu.isOpen() && !drawer.isOpen()) {
+      e.preventDefault();
+      closeSide();
+      drawer.openChooser({ date: getClock().today, returnKey: 'new' });
+    }
   });
   win.addEventListener('hashchange', render);
   // A page left open overnight must not keep planning for yesterday.

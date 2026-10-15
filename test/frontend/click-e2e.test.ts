@@ -161,17 +161,18 @@ test('the plus on a Month day opens the same panel for that day', async () => {
   assert.equal(key(root, 'f-start').value, '09:00');
 });
 
-test('+ New offers the four kinds of thing in plain words and each one goes to the right place', async () => {
+test('+ New offers the three kinds of thing in plain words and each one goes to the right place', async () => {
   assert.equal((await put(await exampleState())).status, 200);
   const { app, root, win } = boot();
   await settled(app);
   key(root, 'new').click();
-  assert.deepEqual(['choose-timed', 'choose-task', 'choose-due', 'choose-label'].map((k) => textOf(key(root, k)).length > 0), [true, true, true, true]);
+  assert.deepEqual(['choose-timed', 'choose-task', 'choose-due'].map((k) => textOf(key(root, k)).length > 0), [true, true, true]);
+  assert.equal(findAll(root, (e: any) => e.getAttribute('data-fk') === 'choose-label').length, 0, 'labels are no longer offered here');
   key(root, 'choose-task').click();
   assert.equal(win.location.hash, '#/tasks/new');
   key(root, 'new').click();
-  key(root, 'choose-label').click();
-  assert.equal(win.location.hash, '#/labels/new');
+  key(root, 'choose-due').click();
+  assert.equal(win.location.hash, '#/due-dates/new');
   key(root, 'new').click();
   key(root, 'choose-timed').click();
   assert.equal(key(root, 'f-start').value, '09:00', 'a set-time item opens the quick panel');

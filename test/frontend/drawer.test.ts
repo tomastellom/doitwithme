@@ -412,3 +412,16 @@ test('changing the label in the drawer keeps the same field, so keyboard focus s
   select.dispatch('change');
   assert.equal(key(drawer.el, 'f-category'), select, 'the select was not replaced');
 });
+
+test('the chooser asks in three plain sentences and says where each goes', () => {
+  const { drawer } = rig();
+  drawer.openChooser({ date: TUE, returnKey: 'new' });
+  const el = drawer.el;
+  const choices = byClass(el, 'choice');
+  assert.deepEqual(choices.map((c: any) => textOf(byTag(c, 'b')[0])), ['Something at a set time', 'Something that needs time', 'Something with a due date']);
+  const notes = choices.map((c: any) => textOf(byTag(c, 'span')[0]));
+  assert.match(notes[0], /Goes to Fixed times\.$/);
+  assert.match(notes[1], /Goes to To do\.$/);
+  assert.match(notes[2], /Goes to Due dates\.$/);
+  assert.equal(findAll(el, (e: any) => e.getAttribute('data-fk') === 'choose-label').length, 0);
+});

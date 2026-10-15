@@ -16,7 +16,7 @@ export function renderDay(dom, view, actions) {
   const lines = (r, shown, size) => {
     const off = r.status === 'missed' || r.status === 'waived';
     const when = off ? h('span', { class: 'tag' }, TAG[r.status]) : h('span', { class: 't' }, `${timeOf(r)} · ${r.end - r.start} min`);
-    return size === 'one' ? [h('span', { class: 'n' }, shown), when] : [h('span', { class: 'k' }, r.label), h('span', { class: 'n' }, shown), when];
+    return size === 'one' ? [h('span', { class: 'n' }, shown), off && when] : [h('span', { class: 'n' }, shown), when];
   };
   const tileFor = (r, size) => {
     if (r.kind === 'buffer') {

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createDom } from '../../public/js/dom.js';
 import { weekModel } from '../../public/js/model.js';
 import { renderWeek } from '../../public/js/week.js';
-import { tintOf } from '../../public/js/colors.js';
+import { mixHex, tintOf } from '../../public/js/colors.js';
 import { FakeDocument, byClass, byTag, findAll, textOf } from './fakedom.ts';
 
 const dom = createDom(new FakeDocument() as any);
@@ -64,7 +64,7 @@ test('seven day columns with weekday, number, booked time and blocks in the boar
   assert.match(chem.getAttribute('aria-label'), /Study/);
   const project = byClass(days[2], 'blk')[0];
   assert.ok(project.hasClass('is-outline'));
-  assert.equal(project.style.borderColor, '#111111');
+  assert.equal(project.style.borderColor, mixHex('#111111', '#FFFFFF', 0.55), 'a thin soft border, never a black frame');
   assert.match(project.getAttribute('aria-label'), /Personal project/);
   const mass = byClass(days[6], 'blk')[0];
   assert.ok(mass.hasClass('is-fill'));
@@ -190,8 +190,8 @@ test('tiles sit at their real time: an hour axis, heights from lengths, and the 
   const short = tiles.find((t: any) => textOf(t).includes('Email'))!;
   assert.equal(long.style.top, `${(600 - 420) * 56 / 60}px`);
   assert.equal(long.style.height, `${120 * 56 / 60 - 2}px`);
-  assert.ok(long.hasClass('full') && byClass(long, 'k').length === 1, 'a long tile has room for its label');
-  assert.ok(short.hasClass('one') && byClass(short, 'k').length === 0, 'a short tile keeps just the name and the start');
+  assert.ok(long.hasClass('full') && byClass(long, 'k').length === 0, 'a long tile shows name and time, no kind line');
+  assert.ok(short.hasClass('one') && byClass(short, 'k').length === 0 && byClass(short, 't').length === 0, 'a short tile keeps just the name');
   assert.equal(textOf(byClass(short, 'n')[0]), 'Email');
   assert.match(short.getAttribute('title'), /Email, 09:00–09:30/);
   assert.equal(byClass(tue, 'cbody')[0].style.height, `${15 * 56}px`);
@@ -309,4 +309,31 @@ test('first run offers Add a fixed time first and Load the example beside it', (
   const { el } = setup({ isEmpty: true, state: state({ blocks: [], commitments: [] }) }, { canAdd: true });
   assert.match(textOf(byClass(el, 'cta')[0]), /Add a fixed time.*Load the example/s);
   assert.equal(findAll(el, (e: any) => e.getAttribute('data-fk') === 'example').length, 1);
+});
+
+const weekTile = (b: any) => {
+  const { el } = setup({ state: state({ commitments: [], blocks: [b] }) });
+  return findAll(el, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('blk-'))[0] as any;
+};
+
+test('a short block shows only its name; its time stays in the tooltip and the screen-reader label', () => {
+  const tile = weekTile(block('2026-10-13', 600, 630, 'Quick call', 'chores'));
+  assert.ok(tile.hasClass('one'));
+  assert.equal(byClass(tile, 'n').length, 1);
+  assert.equal(byClass(tile, 't').length, 0, 'no time line on a short block');
+  assert.match(tile.getAttribute('title'), /10:00–10:30/);
+  assert.match(tile.getAttribute('aria-label'), /10:00–10:30/);
+});
+
+test('a tall block shows its name and time and no kind line', () => {
+  const tile = weekTile(block('2026-10-13', 600, 720, 'Chemistry lecture', 'study'));
+  assert.ok(tile.hasClass('full'));
+  assert.equal(byClass(tile, 'k').length, 0);
+  assert.match(textOf(byClass(tile, 't')[0]), /10:00–12:00/);
+});
+
+test('a block that was not done still says so on a short tile', () => {
+  const tile = weekTile({ ...block('2026-10-13', 600, 630, 'Quick call', 'chores'), status: 'missed' });
+  assert.ok(tile.hasClass('one'));
+  assert.equal(byClass(tile, 'tag').length, 1);
 });

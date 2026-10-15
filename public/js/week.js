@@ -17,10 +17,11 @@ export function renderWeek(dom, view, actions) {
     const time = `${hhmm(item.start)}–${hhmm(item.end)}`;
     const off = item.status === 'missed' || item.status === 'waived';
     // A tile that was not done says so in a tag instead of its time.
-    const when = off ? h('span', { class: 'tag' }, TAG[item.status]) : h('span', { class: 't' }, size === 'one' ? hhmm(item.start) : time);
-    const lines = size === 'one' || size === 'two'
-      ? [h('span', { class: 'n' }, name), when]
-      : [h('span', { class: 'k' }, item.label), h('span', { class: 'n' }, name), when];
+    const when = off ? h('span', { class: 'tag' }, TAG[item.status]) : h('span', { class: 't' }, time);
+    // A short block says only its name (its time is in the tooltip and the screen-reader label); a block that was not done keeps its tag.
+    const lines = size === 'one'
+      ? [h('span', { class: 'n' }, name), off && when]
+      : [h('span', { class: 'n' }, name), when];
     const classes = ['blk', 'tile', size, travel ? 'travel' : lookClass(item.look), travel ? '' : 'has-tick', statusClass(item.status)].filter(Boolean).join(' ');
     const node = h('button', { ...open(item), class: classes, title: `${name}, ${time}` }, lines);
     if (!travel && !off) paintTile(node, item.color, item.look, { done: item.status === 'done' });

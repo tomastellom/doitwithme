@@ -44,8 +44,9 @@ test('arrow keys on the title step through days', () => {
 test('rows show time, block, duration, gaps and buffers', () => {
   const { el } = draw();
   const text = textOf(el);
-  assert.match(text, /08:00–08:50/);
-  assert.match(text, /50 min/);
+  const chem = byClass(el, 'dv-blk').find((b: any) => textOf(b).includes('Chemistry'))!;
+  assert.ok(chem.hasClass('one'), 'a 50-minute block is a short tile that says only its name');
+  assert.match(chem.getAttribute('title'), /08:00–08:50/, 'its time is in the tooltip');
   assert.match(text, /Free 10:20–15:30 \/ 5h10/);
   assert.match(text, /Buffer before Private lesson, Anna/);
   assert.match(text, /Travel and setup/);
@@ -109,4 +110,31 @@ test('item rows in the day are buttons that open the editor; buffers and gaps ar
 test('a low day shows a Light day tag and a normal day does not', () => {
   assert.match(textOf(byClass(draw({ light: true }).el, 'meta')[0]), /Light day/);
   assert.doesNotMatch(textOf(byClass(draw({ light: false }).el, 'meta')[0]), /Light day/);
+});
+
+const dayTile = (b: any) => {
+  const { el } = draw({ model: dayModel({ ...structuredClone(example), commitments: [], blocks: [b] }, '2026-10-14') });
+  return findAll(el, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('blk-'))[0] as any;
+};
+
+test('a short block shows only its name; its time stays in the tooltip and the screen-reader label', () => {
+  const tile = dayTile(block(600, 630, 'Quick call', 'chores'));
+  assert.ok(tile.hasClass('one'));
+  assert.equal(byClass(tile, 'n').length, 1);
+  assert.equal(byClass(tile, 't').length, 0);
+  assert.match(tile.getAttribute('title'), /10:00–10:30/);
+  assert.match(tile.getAttribute('aria-label'), /10:00–10:30/);
+});
+
+test('a tall block shows its name and time with duration and no kind line', () => {
+  const tile = dayTile(block(600, 720, 'Chemistry lecture', 'study'));
+  assert.ok(tile.hasClass('full'));
+  assert.equal(byClass(tile, 'k').length, 0);
+  assert.equal(textOf(byClass(tile, 't')[0]), '10:00–12:00 · 120 min');
+});
+
+test('a block that was not done still says so on a short tile', () => {
+  const tile = dayTile({ ...block(600, 630, 'Quick call', 'chores'), status: 'missed' });
+  assert.ok(tile.hasClass('one'));
+  assert.equal(byClass(tile, 'tag').length, 1);
 });

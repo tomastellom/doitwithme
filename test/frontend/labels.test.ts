@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_LABELS, LOCKED_IDS, labelFor, labelOptions, labelsOf, lookClass, paint, paintTile, wash } from '../../public/js/labels.js';
+import { mixHex } from '../../public/js/colors.js';
 import { KINDS, applyItem, itemsOf, labelKind, removeItem } from '../../public/js/setup-model.js';
 import { FakeDocument, FakeElement } from './fakedom.ts';
 
@@ -100,8 +101,18 @@ test('paintTile tints a filled tile, keeps an outline an outline, and washes a d
   assert.match(fill.style.background, /^#[0-9A-F]{6}$/i);
   const outline = doc.createElement('div');
   paintTile(outline, '#1746F0', 'outline');
-  assert.equal(outline.style.borderColor, '#1746F0');
+  assert.equal(outline.style.borderColor, mixHex('#1746F0', '#FFFFFF', 0.55));
   const done = doc.createElement('div');
   paintTile(done, '#FF4B1F', 'fill', { done: true });
   assert.equal(done.style.color, '#2B2E31');
+});
+
+test('paintTile gives an outlined label a thin soft border in its own hue, on paper', () => {
+  const doc: any = new FakeDocument();
+  const outline = doc.createElement('div');
+  paintTile(outline, '#1746F0', 'outline');
+  assert.equal(outline.style.borderColor, mixHex('#1746F0', '#FFFFFF', 0.55));
+  assert.notEqual(outline.style.borderColor, '#111111', 'never a black frame');
+  assert.equal(outline.style.background, '#FFFFFF');
+  assert.equal(outline.style.color, '#40454D');
 });

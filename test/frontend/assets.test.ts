@@ -379,3 +379,14 @@ test('the settings section lays each row out as text on the left and the control
   assert.match(k, /\.st-grp \.st-gh \{[^}]*text-transform: uppercase/);
   assert.doesNotMatch(k, HEAVY_BORDER, 'no heavy 2px+ border or bar in this section (focus outlines are fine)');
 });
+
+test('the month section is soft: calm cells, a tinted today, small round dots, soft round buttons', () => {
+  const k = kit('month');
+  assert.match(k, /\.heads span \{[^}]*border-top: 0/);
+  assert.match(k, /\.cell \{[^}]*border-radius: 10px/);
+  assert.match(k, /\.cell\.today \{[^}]*background: var\(--today\)/);
+  assert.match(k, /\.dn \{[^}]*font-size: 15px/);
+  assert.match(k, /\.dot \{[^}]*border-radius: 50%/);
+  assert.match(k, /\.plus, \.review \{[^}]*border: 0[^}]*border-radius: 50%/);
+  assert.doesNotMatch(k, HEAVY_BORDER, 'no heavy 2px+ border or bar in this section (focus outlines are fine)');
+});

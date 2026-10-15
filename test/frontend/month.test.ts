@@ -76,7 +76,9 @@ function draw(over: any = {}, actionOver: any = {}) {
 test('the hero names the month, steps with real buttons, and arrow keys step too', () => {
   const { el, calls } = draw();
   assert.equal(textOf(byTag(el, 'h1')[0]), 'October');
-  assert.match(textOf(byClass(el, 'meta')[0]), /2026/);
+  assert.match(textOf(byClass(el, 'sub')[0]), /^2026 \/ 1 due this month$/);
+  assert.equal(byClass(el, 'meta').length, 0, 'the old meta block is gone');
+  assert.match(textOf(byClass(el, 'status')[0]), /All clear/);
   const btn = (k: string) => findAll(el, (e: any) => e.getAttribute('data-fk') === k)[0];
   btn('prev').click();
   btn('today').click();
@@ -131,4 +133,37 @@ test('a day with things planned has a check-off button, done dots fade, and an e
   assert.deepEqual(reviews, ['2026-10-12']);
   const dot = byClass(findAll(el, (e: any) => e.getAttribute('data-fk') === 'cell-2026-10-12')[0], 'dot')[0];
   assert.ok(dot.hasClass('is-done'));
+});
+
+test('the Month header has the Day, Week, Month switch with Month current, and no Add button', () => {
+  const { el } = draw({}, { add: () => {} });
+  const keys = findAll(el, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('view-')).map((e: any) => e.getAttribute('data-fk'));
+  assert.deepEqual(keys, ['view-day', 'view-week', 'view-month']);
+  assert.equal(findAll(el, (e: any) => e.getAttribute('data-fk') === 'view-month')[0].getAttribute('aria-current'), 'page');
+  assert.equal(findAll(el, (e: any) => e.getAttribute('data-fk') === 'add').length, 0);
+  assert.equal(byClass(el, 'hero-add').length, 0);
+  assert.match(textOf(byClass(el, 'sub')[0]), /due this month/);
+});
+
+test('the hero still shows the status, or the first-run hint on an empty month', () => {
+  assert.match(textOf(byClass(draw({ needsYou: 2 }).el, 'status')[0]), /2 need you/);
+  const empty = draw({ isEmpty: true, model: model(state({ commitments: [], blocks: [], deadlines: [] })) }, { canAdd: true });
+  assert.match(textOf(byClass(empty.el, 'status')[0]), /Click a day to open it/);
+  const cta = byClass(empty.el, 'cta')[0];
+  const example = findAll(cta, (e: any) => e.getAttribute('data-fk') === 'example')[0];
+  const fixed = findAll(cta, (e: any) => e.getAttribute('href') === '#/commitments/new')[0];
+  assert.ok(fixed.hasClass('y') && fixed.hasClass('btn'), 'Add a fixed time is the one vermilion action');
+  assert.ok(example.hasClass('btn') && !example.hasClass('y'));
+});
+
+test('the today cell is not an ink cell: its dots and buttons are painted the same as any other day', () => {
+  const s = state({ blocks: [block('2026-10-14', 480, 535, 'Chemistry', 'study'), block('2026-10-14', 600, 640, 'Side project', 'personal project')] });
+  const { el } = draw({ model: model(s) }, { add: () => {}, review: () => {} });
+  const today = byClass(el, 'cell').find((c: any) => c.hasClass('today'))!;
+  assert.equal(byClass(el, 'on-ink').length, 0);
+  const dots = byClass(today, 'dot');
+  const outline = dots.find((d: any) => d.hasClass('is-outline'));
+  assert.ok(outline, 'the today cell has an outline dot');
+  assert.notEqual(outline.style.borderColor, '#FFFFFF', 'an outlined dot on the today cell does not flip to paper');
+  assert.notEqual(outline.style.background, '#111111', 'nor does its inside turn to ink');
 });

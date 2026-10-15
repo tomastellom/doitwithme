@@ -19,41 +19,44 @@ export function renderMonth(dom, view, actions) {
         c.dots.length > 0 && h('span', { class: 'dots', 'aria-hidden': 'true' },
           c.dots.map((g) => {
             const dot = h('i', { class: `dot ${lookClass(g.look)}${g.status === 'done' ? ' is-done' : g.status ? ' is-missed' : ''}`, 'aria-hidden': 'true' });
-            paint(dot, g.color, g.look, { onInk: c.isToday });
+            paint(dot, g.color, g.look);
             return dot;
           }),
           c.more > 0 && h('span', { class: 'more mono' }, `+${c.more}`))),
       actions.review && c.planned > 0 && h('button', {
-        type: 'button', class: `review${c.isToday ? ' on-ink' : ''}`, 'data-fk': `review-${c.date}`,
+        type: 'button', class: 'review', 'data-fk': `review-${c.date}`,
         'aria-label': `Check off things on ${c.weekday} ${c.num} ${c.monthName}`, title: 'Check off', onclick: () => actions.review(c.date),
       }, dom.svg('svg', { viewBox: '0 0 14 14', 'aria-hidden': 'true' }, dom.svg('path', { d: 'M2 7.5 5.5 11 12 3.5', fill: 'none', 'stroke-width': '2.4' }))),
       actions.add && h('button', {
-        type: 'button', class: `plus${c.isToday ? ' on-ink' : ''}`, 'data-fk': `plus-${c.date}`,
+        type: 'button', class: 'plus', 'data-fk': `plus-${c.date}`,
         'aria-label': `Add to ${c.weekday} ${c.num} ${c.monthName}`, onclick: () => actions.add(c.date),
       }, '+'));
 
   const status = needsYou > 0 ? `${needsYou} need${needsYou === 1 ? 's' : ''} you` : 'All clear';
+  const switcher = h('div', { class: 'switch mono', role: 'group', 'aria-label': 'View' },
+    [['day', 'Day'], ['week', 'Week'], ['month', 'Month']].map(([id, name]) =>
+      h('a', { class: id === 'month' ? 'on' : '', href: `#/${id}`, 'aria-current': id === 'month' ? 'page' : null, 'data-fk': `view-${id}` }, name)));
+
   const hero = h('div', { class: 'hero' },
-    h('h1', {
-      tabindex: '0',
-      'data-fk': 'month-header',
-      onkeydown: (e) => {
-        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
-          e.preventDefault();
-          actions.go(e.key === 'ArrowRight' ? 1 : -1);
-        }
-      },
-    }, model.title),
+    h('div', { class: 'titles' },
+      h('h1', {
+        tabindex: '0',
+        'data-fk': 'month-header',
+        onkeydown: (e) => {
+          if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            e.preventDefault();
+            actions.go(e.key === 'ArrowRight' ? 1 : -1);
+          }
+        },
+      }, model.title),
+      h('p', { class: 'sub mono' }, `${model.year} / ${model.due} due this month`)),
     h('div', { class: 'right' },
-      actions.add && h('button', { type: 'button', class: 'hero-add', 'data-fk': 'add', onclick: () => actions.add(model.cells.find((c) => c.isToday)?.date ?? model.first) }, '+ Add'),
       h('div', { class: 'step mono' },
         h('button', { type: 'button', 'data-fk': 'prev', 'aria-label': 'Previous month', onclick: () => actions.go(-1) }, 'Prev'),
         h('button', { type: 'button', 'data-fk': 'today', onclick: () => actions.today() }, 'Today'),
         h('button', { type: 'button', 'data-fk': 'next', 'aria-label': 'Next month', onclick: () => actions.go(1) }, 'Next')),
-      h('div', { class: 'meta mono' },
-        h('span', {}, String(model.year)),
-        h('span', {}, `${model.due} due this month`),
-        h('span', {}, isEmpty ? 'Click a day to open it' : status))));
+      switcher,
+      h('span', { class: 'status' }, isEmpty ? 'Click a day to open it' : status)));
 
   const heads = h('div', { class: 'heads mono' }, HEADS.map((d) => h('span', {}, d)));
   const grid = h('div', { class: 'mgrid' }, model.cells.map(cell));
@@ -70,8 +73,8 @@ export function renderMonth(dom, view, actions) {
       h('div', { class: 'lead' },
         h('p', {}, 'Nothing planned yet. Start with what is fixed: classes, work, lessons. I plan everything else around it.'),
         h('div', { class: 'cta' },
-          h('button', { type: 'button', class: 'btn y', 'data-fk': 'example', onclick: () => actions.loadExample() }, 'Load the example'),
-          actions.canAdd && h('a', { class: 'btn', href: '#/commitments/new' }, 'Add a fixed time'))),
+          h('button', { type: 'button', class: 'btn', 'data-fk': 'example', onclick: () => actions.loadExample() }, 'Load the example'),
+          actions.canAdd && h('a', { class: 'btn y', href: '#/commitments/new' }, 'Add a fixed time'))),
       heads, grid);
   }
   return h('section', { class: 'month' }, hero, heads, grid, h('div', { class: 'foot' }, legend));

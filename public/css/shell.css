@@ -262,3 +262,26 @@ button.more:hover { color: var(--ink); background: transparent; }
 .st-rules > p { font-size: 13px; }
 .st-err { margin: 20px 28px 0; }
 @media (max-width: 700px) { .st { grid-template-columns: 1fr; } .st .seg, .st .hrs-row { grid-column: 1; grid-row: auto; margin-top: 8px; } .st .hint { grid-column: 1; } }
+
+/* Calm kit: month */
+.hero .status { color: var(--muted); font-size: 13px; }
+.heads { margin: 20px 28px 0; gap: 6px; }
+.heads span { padding-top: 0; border-top: 0; font-family: var(--font-sans); font-size: 12px; letter-spacing: 0; text-align: center; text-transform: none; color: var(--muted); }
+.mgrid { margin: 6px 28px 0; grid-auto-rows: 96px; gap: 6px; }
+.cell { padding: 8px 10px; border-radius: 10px; background: var(--soft); }
+.cell:hover { background: #EBEDF1; }
+.cell.out { background: transparent; color: var(--ghost); }
+.cell.out:hover { background: var(--soft); }
+.cell.today { background: var(--today); color: var(--ink); }
+.cell.today:hover { background: #FFE8DF; }
+.cell.today .dn { color: var(--study-text); }
+.cell.today .dots .more { color: var(--muted); }
+.dn { font-size: 15px; font-weight: 600; letter-spacing: 0; }
+.cell .due { padding: 1px 8px; border-radius: 99px; background: var(--tint-red); color: #A93219; font-family: var(--font-sans); font-size: 11px; letter-spacing: 0; text-transform: none; }
+.dot { width: 9px; height: 9px; border-radius: 50%; }
+.dot.is-outline { border-width: 1.5px; border-style: solid; }
+.dot.is-missed { border: 1px dashed var(--edge); }
+.plus, .review { width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--paper); color: var(--ink); box-shadow: 0 1px 3px rgba(20, 22, 26, .2); }
+.plus:hover, .review:hover { background: var(--btn-hover); color: var(--ink); }
+.review:hover svg path { stroke: var(--ink); }
+.month .legend { margin: 18px 28px 0; font-family: var(--font-sans); font-size: 13px; letter-spacing: 0; text-transform: none; }

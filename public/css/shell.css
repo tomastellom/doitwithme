@@ -285,3 +285,33 @@ button.more:hover { color: var(--ink); background: transparent; }
 .plus:hover, .review:hover { background: var(--btn-hover); color: var(--ink); }
 .review:hover svg path { stroke: var(--ink); }
 .month .legend { margin: 18px 28px 0; font-family: var(--font-sans); font-size: 13px; letter-spacing: 0; text-transform: none; }
+
+/* Calm kit: day and due dates (the header meta, the Day side column, the due dates list, the first-run lead) */
+.meta, .hero .meta { width: auto; gap: 2px; font-family: var(--font-sans); font-size: 13px; letter-spacing: 0; text-transform: none; color: var(--muted); }
+.dv-body { gap: 40px; margin: 24px 28px 0; }
+.dv-side .h { border-top: 0; padding-top: 0; font-family: var(--font-sans); font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.dv-free { font-size: 32px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+.dv-tot { border-bottom: 1px solid var(--hair); }
+.dv-tot .nm { font-size: 14px; }
+.dv-tot .v { font-family: var(--font-cal); font-size: 13px; }
+.dv-tot .sw { width: 10px; height: 10px; border-radius: 50%; }
+
+.dl-list { margin: 24px 28px 0; }
+.dl { padding: 14px 0; border-top: 1px solid var(--hair); }
+.dl:last-child { border-bottom: 1px solid var(--hair); }
+@media (min-width: 1101px) { .dl { grid-template-columns: 150px 300px minmax(0, 1fr) 170px; gap: 24px; } }
+.dl:hover { background: var(--soft); }
+.dl:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.dl-big { font-size: 30px; font-weight: 700; letter-spacing: -.02em; line-height: 1; }
+.dl-tt { font-size: 16px; font-weight: 600; letter-spacing: 0; line-height: 1.25; }
+.dl-sub { margin-top: 4px; font-family: var(--font-sans); font-size: 13px; letter-spacing: 0; text-transform: none; }
+.dl-bar { height: 10px; border-radius: 99px; overflow: hidden; }
+.dl-done { fill: #3B3F46; }
+.dl-plan { fill: #F5A890; }
+.dl-short { stroke-width: 2; }
+.dl-nums { font-family: var(--font-cal); font-size: 12px; letter-spacing: 0; text-transform: none; }
+.dl-chip { padding: 6px 12px; border-radius: 99px; font-size: 13px; }
+.dl-chip.bad { background: var(--tint-red); color: #A93219; }
+.dl-chip.ok { padding: 6px 12px; border: 0; background: var(--tint-green); color: #14582B; }
+
+.lead p { font-size: 18px; font-weight: 500; letter-spacing: -.01em; }

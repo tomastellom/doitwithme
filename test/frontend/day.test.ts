@@ -28,10 +28,24 @@ test('the hero shows the day, stepping buttons name the neighbours, and the meta
   key(el, 'today').click();
   key(el, 'next').click();
   assert.deepEqual(calls, [['go', -1], ['today'], ['go', 1]]);
-  const meta = textOf(byClass(el, 'meta')[0]);
-  assert.match(meta, /Week 42 \/ 14 Oct 2026/);
-  assert.match(meta, /Booked 2h25/);
-  assert.match(meta, /All clear/);
+  const sub = textOf(byClass(el, 'sub')[0]);
+  assert.match(sub, /Week 42 \/ 14 Oct 2026/);
+  assert.match(sub, /Booked 2h25/);
+  assert.match(textOf(byClass(el, 'status')[0]), /All clear/);
+  assert.equal(byClass(el, 'meta').length, 0, 'the old meta block is gone');
+});
+
+test('the Day header has the Day, Week, Month switch with Day current, no Add button, and keeps Booked', () => {
+  const { el } = draw({}, { add: () => {} });
+  const keys = findAll(el, (e: any) => (e.getAttribute('data-fk') ?? '').startsWith('view-')).map((e: any) => e.getAttribute('data-fk'));
+  assert.deepEqual(keys, ['view-day', 'view-week', 'view-month']);
+  assert.equal(key(el, 'view-day').getAttribute('aria-current'), 'page');
+  assert.equal(key(el, 'view-day').getAttribute('href'), '#/day');
+  assert.equal(key(el, 'view-week').getAttribute('href'), '#/week');
+  assert.equal(key(el, 'view-month').getAttribute('href'), '#/month');
+  assert.equal(key(el, 'add'), undefined);
+  assert.equal(byClass(el, 'hero-add').length, 0);
+  assert.match(textOf(byClass(el, 'sub')[0]), /Booked/);
 });
 
 test('arrow keys on the title step through days', () => {
@@ -67,7 +81,7 @@ test('the side lists the groups and the free time in the window', () => {
 
 test('needs-you count shows instead of All clear', () => {
   const { el } = draw({ needsYou: 2 });
-  assert.match(textOf(byClass(el, 'meta')[0]), /2 need you/);
+  assert.match(textOf(byClass(el, 'status')[0]), /2 need you/);
 });
 
 test('travel rows are hatched and named', () => {
@@ -84,6 +98,8 @@ test('a hostile title is text, and an empty schedule offers the example', () => 
   assert.equal(findAll(el, (e: any) => e.tag === 'img').length, 0);
   const { el: empty, calls } = draw({ isEmpty: true });
   assert.match(textOf(empty), /Nothing planned yet/);
+  assert.equal(key(empty, 'example').getAttribute('class'), 'btn', 'Load the example is the plain button');
+  assert.equal(byClass(empty, 'cta')[0].children.find((c: any) => c.tag === 'a').getAttribute('class'), 'btn y', 'Add a fixed time is the main link');
   key(empty, 'example').click();
   assert.deepEqual(calls, [['example']]);
 });
@@ -108,8 +124,8 @@ test('item rows in the day are buttons that open the editor; buffers and gaps ar
 });
 
 test('a low day shows a Light day tag and a normal day does not', () => {
-  assert.match(textOf(byClass(draw({ light: true }).el, 'meta')[0]), /Light day/);
-  assert.doesNotMatch(textOf(byClass(draw({ light: false }).el, 'meta')[0]), /Light day/);
+  assert.match(textOf(byClass(draw({ light: true }).el, 'right')[0]), /Light day/);
+  assert.doesNotMatch(textOf(byClass(draw({ light: false }).el, 'right')[0]), /Light day/);
 });
 
 const dayTile = (b: any) => {

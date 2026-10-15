@@ -390,3 +390,16 @@ test('the month section is soft: calm cells, a tinted today, small round dots, s
   assert.match(k, /\.plus, \.review \{[^}]*border: 0[^}]*border-radius: 50%/);
   assert.doesNotMatch(k, HEAVY_BORDER, 'no heavy 2px+ border or bar in this section (focus outlines are fine)');
 });
+
+test('the day and due dates section is calm: quiet side column, hairline rows, soft chips', () => {
+  const k = kit('day and due dates');
+  assert.match(k, /\.dv-side \.h \{[^}]*border-top: 0/);
+  assert.match(k, /\.dv-free \{[^}]*font-size: 32px/);
+  assert.match(k, /\.dl \{[^}]*border-top: 1px solid var\(--hair\)/);
+  assert.match(k, /\.dl-big \{[^}]*font-size: 30px/);
+  assert.match(k, /\.dl-tt \{[^}]*font-size: 16px/);
+  assert.match(k, /\.dl-chip\.bad \{[^}]*background: var\(--tint-red\)/);
+  assert.match(k, /\.dl-chip\.ok \{[^}]*background: var\(--tint-green\)/);
+  assert.match(k, /\.lead p \{[^}]*font-size: 18px/);
+  assert.doesNotMatch(k, HEAVY_BORDER, 'no heavy 2px+ border or bar in this section (focus outlines are fine)');
+});

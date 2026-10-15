@@ -264,3 +264,28 @@ test('the font is served by the local server with the right type', () => {
   const server = readFileSync('src/server.ts', 'utf8');
   assert.match(server, /'\.woff2': 'font\/woff2'/);
 });
+
+test('shell.css sets the calendar grids in the calendar font and keeps gradients out', () => {
+  const css = readFileSync('public/css/shell.css', 'utf8');
+  assert.match(css, /\.week \.grid, \.dv-grid \{[^}]*font-family: var\(--font-cal\)/);
+  assert.match(css, /font-variant-numeric: tabular-nums/);
+  assert.doesNotMatch(css, /gradient/i);
+  assert.doesNotMatch(css, /var\(--font-cal\)[^;]*;[^}]*\.side/, 'the sidebar is not set in the calendar font');
+});
+
+test('the tick is a 24px button with a small drawn circle and a visible focus ring', () => {
+  const css = readFileSync('public/css/shell.css', 'utf8');
+  assert.match(css, /\.tick \{[^}]*width: 24px[^}]*height: 24px/);
+  assert.match(css, /\.tick::before \{[^}]*width: 14px[^}]*height: 14px/);
+  assert.match(css, /\.tick:focus-visible \{[^}]*outline: 2px solid var\(--ink\)/);
+});
+
+test('blocks are soft: no thick black borders on tiles, ticks, commutes or not-done blocks', () => {
+  const css = readFileSync('public/css/shell.css', 'utf8');
+  const calm = css.slice(css.indexOf('/* Calm blocks'));
+  assert.ok(calm.length > 200, 'the calm block section exists');
+  assert.doesNotMatch(calm, /border: 2px solid var\(--ink\)/);
+  assert.match(calm, /\.tile\.travel \{[^}]*border: 1px dashed/);
+  assert.match(calm, /\.tile\.is-missed \{[^}]*border: 1px dashed/);
+  assert.match(calm, /\.tile\.is-done \.n[^{]*\{[^}]*text-decoration-thickness: 1px/);
+});

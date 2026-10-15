@@ -109,3 +109,39 @@ body { background: var(--canvas); }
 .readback p { margin: 4px 0 0; color: var(--ink); font-size: 14px; line-height: 1.35; overflow-wrap: anywhere; }
 button.more { align-self: flex-start; padding: 4px 0; border: 0; background: transparent; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
 button.more:hover { color: var(--ink); background: transparent; }
+
+/* Calm blocks (Week and Day grids): soft tints, no black borders, a small light tick, one font with even-width digits. */
+.week .grid, .dv-grid { font-family: var(--font-cal); font-variant-numeric: tabular-nums; }
+.week .grid .mono, .dv-grid .mono, .axis-body span, .booked.mono { font-family: var(--font-cal); }
+.day .dh .dd { font-weight: 700; }
+
+.tile { border-radius: 8px; }
+.tile.one, .tile.two, .tile.full { padding: 5px 8px; }
+.tile.one { padding-top: 0; padding-bottom: 0; }
+.dv-blk.tile.one, .dv-blk.tile.two, .dv-blk.tile.full { padding: 5px 8px; }
+.dv-blk.tile.one { padding-top: 0; padding-bottom: 0; }
+.tile.has-tick, .dv-blk.tile.has-tick, .dv-blk.tile.one.has-tick, .tile.one.has-tick { padding-left: 32px; }
+.tile .n, .tile.one .n, .tile.two .n, .tile.full .n, .dv-blk.tile .n, .dv-blk.tile.one .n, .dv-blk.tile.two .n, .dv-blk.tile.full .n { font-size: 13px; font-weight: 600; line-height: 1.2; letter-spacing: 0; }
+.tile .t, .tile.one .t, .tile.two .t, .tile.full .t, .dv-blk.tile .t { font-family: var(--font-cal); font-size: 11px; font-weight: 400; letter-spacing: 0; opacity: .7; }
+.tile.is-outline { border-width: 1px; border-style: solid; }
+.tile.is-outline, .tile.travel { padding-top: 5px; padding-bottom: 5px; }
+.tile.one.is-outline, .tile.one.travel { padding-top: 0; padding-bottom: 0; padding-left: 32px; }
+
+/* Commutes: a flat light tile with a thin dashed edge (the hatch and its black frame are gone). */
+.tile.travel { border: 1px dashed var(--edge); background: var(--soft); color: var(--muted); }
+.tile.travel .n { font-size: 12px; font-weight: 500; }
+
+/* Done is faded and struck with a thin line; not done is dashed and thin. */
+.tile.is-done .n, .drow.is-done .dname b { text-decoration-thickness: 1px; }
+.tile.is-missed { border: 1px dashed var(--edge); background: var(--paper); color: var(--muted); }
+.tile .tag { padding: 1px 6px; border-radius: 99px; background: var(--soft); color: var(--muted); font-family: var(--font-cal); font-size: 10px; letter-spacing: .04em; }
+
+/* The tick: still a 24px button (easy to hit and to reach by keyboard), but it draws a small light circle. */
+.tick { width: 24px; height: 24px; border: 0; border-radius: 50%; background: transparent; color: var(--ink); display: inline-flex; align-items: center; justify-content: center; }
+.tick::before { content: ''; width: 14px; height: 14px; box-sizing: border-box; border: 1.5px solid var(--ink); border-radius: 50%; opacity: .4; transition: opacity .15s ease-out; }
+.tick:hover { background: transparent; }
+.tick:hover::before { opacity: .8; }
+.tick.on { background: transparent; }
+.tick.on::before { background: var(--ink); opacity: .75; }
+.tick svg { position: absolute; width: 10px; height: 10px; }
+.tick:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }

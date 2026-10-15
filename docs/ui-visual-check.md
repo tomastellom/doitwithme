@@ -166,3 +166,15 @@ Start the planner and load the example if the Week is empty.
 9. Nudge: hover the bottom-right corner (he peeks), click him. The bubble is a white card with rounded corners. With a warning, the main button is vermilion and the others are outlined. The chat box and Earlier are readable. His face is the same as before for every situation.
 10. With an empty planner (First run): "Nothing planned yet..." with **Add a fixed time** (vermilion) and **Load the example** beside it.
 11. Known rough edges until slice 3: the Day and Month screens already use the new buttons, rounded blocks and vermilion time line but not yet the new header, so they look half-converted. Tell me anything else that looks off.
+
+## Plain names and setting things up (slice 2)
+
+1. The sidebar now reads: Plan (Week, Day, Month), What goes in (Fixed times, To do, Due dates), Details (Places and travel, Labels), Settings. There is no Deadlines, Commitments, Tasks or Commutes any more.
+2. Open Fixed times: the title is "Fixed times", under it one sentence about what it is for, grey example chips (Classes, Work...), your items as rows, **Add a fixed time**, and a "Next:" box at the bottom pointing at To do and Due dates. The old row of links across the top is gone.
+3. Do the same for To do, Due dates, Labels, Places and travel (it has a Places | Travel switch), and Travel: each has its own title, sentence and chips.
+4. Type the old address `#/deadlines` in the address bar: you land on Due dates. `#/commutes` opens Travel and the sidebar marks Places and travel.
+5. Press **+ New** (or the **n** key when no field is focused): it asks three things in plain sentences ("Something at a set time", "Something that needs time", "Something with a due date"), each ending with where it goes.
+6. Choose "Something at a set time". Fill the title, pick days, set the times. Under the fields a box says "This will be" and reads back what you typed ("Chemistry lecture, every Monday and Wednesday, 10:00 to 12:00, at North campus, starting 12 Oct."), and changes as you type. Buffer, course and cancelled dates are behind **More options**; open an item that has a buffer and More options is already open.
+7. Do the same with To do: the weekly time shows, the longest block, priority and one-session-a-day are behind More options, and the sentence says "Chemistry needs 6 h a week, in blocks of up to 2 h."
+8. Click a block on the Week: the quick-edit panel shows the same read-back and More options.
+9. Known rough edges until slice 3: the Day, Month and Settings screens still have their old headers; each place does not yet list its trips under it.

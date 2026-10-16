@@ -334,7 +334,11 @@ export function startApp({ root, document, fetch, win, now = () => new Date() })
     if (lastRouteId !== null && screen && typeof screen.setAttribute === 'function') {
       if (route.id !== lastRouteId) {
         const tabOf = (id) => registry.primary().find((x) => x.id === id || x.activeFor.includes(id))?.id ?? null;
-        if (tabOf(lastRouteId) !== null && tabOf(lastRouteId) === tabOf(route.id)) {
+        const cal = ['day', 'week', 'month'];
+        if (cal.includes(lastRouteId) && cal.includes(route.id)) {
+          // Day, Week and Month share one header: the title row and its buttons stay, only the plan slides.
+          way = cal.indexOf(route.id) > cal.indexOf(lastRouteId) ? 'step-fwd' : 'step-back';
+        } else if (tabOf(lastRouteId) !== null && tabOf(lastRouteId) === tabOf(route.id)) {
           // Moving inside one tab (Tasks to Due dates in Setup): its title row and buttons stay, only the page below slides.
           const ids = registry.ids();
           way = ids.indexOf(route.id) > ids.indexOf(lastRouteId) ? 'step-fwd' : 'step-back';

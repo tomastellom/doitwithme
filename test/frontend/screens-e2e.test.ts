@@ -120,7 +120,9 @@ test('moving between tabs marks the new screen with the way it came in; staying 
   const entering = () => findAll(root, (e: any) => e.hasAttribute('data-enter')).map((e: any) => e.getAttribute('data-enter'));
   assert.deepEqual(entering(), [], 'the first screen just appears');
   app.navigate('#/day');
-  assert.deepEqual(entering(), ['back']);
+  assert.deepEqual(entering(), ['step-back'], 'Week to Day keeps the header, only the plan slides');
+  app.navigate('#/month');
+  assert.deepEqual(entering(), ['step-fwd'], 'Day to Month keeps the header too');
   app.navigate('#/deadlines');
   assert.deepEqual(entering(), ['fwd']);
   app.navigate('#/deadlines');
@@ -151,8 +153,8 @@ test('with timers the old screen slides out while the new one slides in, then is
   assert.equal(view.children.length, 1, 'the first screen just appears');
   app.navigate('#/day');
   assert.equal(view.children.length, 2, 'old and new are both there while they slide');
-  assert.match(view.children[0].getAttribute('class'), /slide-in-back/);
-  assert.match(view.children[1].getAttribute('class'), /slide-out-back/);
+  assert.match(view.children[0].getAttribute('class'), /step-in-back/);
+  assert.match(view.children[1].getAttribute('class'), /step-out-back/);
   assert.equal(view.children[1].hasAttribute('inert'), true, 'the old copy cannot be tabbed into');
   assert.equal(view.children[1].getAttribute('aria-hidden'), 'true');
   assert.equal(view.getAttribute('data-sliding'), 'back');
